@@ -66,7 +66,7 @@ Každý projekt si v kořeni drží `.readme-kontrola.json`:
 | Profil   | Pro koho                                   | Povinné sekce |
 |----------|--------------------------------------------|---------------|
 | `plny`   | onlinefakturuj, vyridimestavbu, trenwise, Project-Igris | Hlavní funkce, Tech Stack, Struktura, Instalace, Nasazení, Licence |
-| `slim`   | steelset, LabProtocol, labprotocol-web     | totéž bez Hlavních funkcí |
+| `slim`   | steelset, LabProtocol, nastroje            | totéž bez Hlavních funkcí |
 
 Igris měl do 15. 9. 2026 vlastní profil `igris` se sadou nadpisů bez emoji.
 Zadavatel pak rozhodl, že se má sladit se zbytkem, takže přešel na `plny`

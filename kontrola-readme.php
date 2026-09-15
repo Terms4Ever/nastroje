@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE = '1.0.0';
+const VERZE = '1.1.0';
 
 /** Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát. */
 const PROFILY = [
