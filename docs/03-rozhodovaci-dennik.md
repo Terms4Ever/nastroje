@@ -108,3 +108,20 @@ dostane vlastní popis.
 každý projekt potřebuje něco jiného. Pevný seznam dokumentů by u menších
 projektů vyrobil prázdnou formu. Dohledatelnost dává užitek bez té ceny:
 agent i člověk vidí v README, co už je napsané, a nepíšou to znovu.
+
+---
+
+## N9 - Brána na dokumentaci ověřena v ostrém běhu (15. 9. 2026)
+
+**Co se zkoušelo.** Commit, který mění kód a na `docs/` nesahá, byl schválně
+pushnut přes `--no-verify`, aby se ukázalo, jestli ho zastaví i kontrola na
+GitHubu, nebo jen hook na počítači.
+
+**Výsledek.** Zastavily obě. Hook push nepustil, a po obejití skončil běh
+`#34974598711` červeně na kroku Zkontrolovat dokumentaci.
+
+**Proč to stálo za zkoušku.** Při ladění se našly tři vady, které všechny
+vedly k tichému průchodu: cesta ve tvaru `/c/...`, kterou git na Windows
+nezná, stříška v `^{commit}` jako únikový znak v cmd.exe a selhání gitu
+vracející prázdný seznam místo výjimky. Kontrola, která tiše projde, je horší
+než žádná, takže samotné "napsal jsem to" nestačilo.
