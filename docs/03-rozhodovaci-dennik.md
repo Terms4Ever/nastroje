@@ -125,3 +125,20 @@ vedly k tichému průchodu: cesta ve tvaru `/c/...`, kterou git na Windows
 nezná, stříška v `^{commit}` jako únikový znak v cmd.exe a selhání gitu
 vracející prázdný seznam místo výjimky. Kontrola, která tiše projde, je horší
 než žádná, takže samotné "napsal jsem to" nestačilo.
+
+---
+
+## N10 - Pomlčka v obrácených apostrofech se toleruje (15. 9. 2026)
+
+**Stav.** Dokument, který popisuje zákaz dlouhé pomlčky, musí ten znak umět
+ukázat. Kontrola ho nahlásila jako porušení.
+
+**Rozhodnutí.** Text uvnitř obrácených apostrofů se z kontroly pomlček
+vynechává. Tam se znak cituje, nepoužívá.
+
+**Co zůstává.** Pomlčka v běžné větě i v bloku kódu se hlásí dál. Ověřeno
+třemi zkouškami: pomlčka ve větě README zastavena, pomlčka ve větě dokumentu
+zastavena, pomlčka v apostrofech prošla.
+
+**Poznámka.** Chybu našla kontrola sama, ne člověk při čtení kódu. To je ten
+lepší způsob, jak takovou mezeru objevit.

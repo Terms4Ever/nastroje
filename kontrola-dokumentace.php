@@ -113,7 +113,7 @@ foreach ($dokumenty as $dokument) {
     $radky = explode("\n", str_replace("\r\n", "\n", (string) file_get_contents($dokument)));
 
     foreach ($radky as $i => $radek) {
-        if (!preg_match('/[\x{2013}\x{2014}]/u', $radek)) {
+        if (!preg_match('/[\x{2013}\x{2014}]/u', bezKodu($radek))) {
             continue;
         }
         $hlaska = sprintf('%s:%d  dlouhá pomlčka, použij krátkou "-"', $nazev, $i + 1);
@@ -317,4 +317,16 @@ function existuje(string $koren, string $cesta, array $bezKontroly): bool
     }
 
     return file_exists($koren . '/' . $cesta);
+}
+
+/**
+ * Text bez vnitrnich kousku kodu.
+ *
+ * Uvnitr obracenych apostrofu se znak cituje, nepouziva. Dokument, ktery
+ * popisuje zakaz dlouhe pomlcky, ji musi umet ukazat (nalez 15. 9. 2026,
+ * kontrola spadla na vlastnim zadani pro testovaciho agenta).
+ */
+function bezKodu(string $radek): string
+{
+    return preg_replace('/`[^`]*`/u', '', $radek) ?? $radek;
 }

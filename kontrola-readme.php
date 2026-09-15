@@ -227,7 +227,7 @@ if (PROFILY[$profil]['hlavicka']) {
 // platí všude.
 
 foreach ($radky as $i => $radek) {
-    if (preg_match_all('/[\x{2013}\x{2014}]/u', $radek, $shodyPomlcek, PREG_OFFSET_CAPTURE)) {
+    if (preg_match_all('/[\x{2013}\x{2014}]/u', bezKodu($radek), $shodyPomlcek, PREG_OFFSET_CAPTURE)) {
         $nalezy[] = new Nalez(
             $i + 1,
             sprintf(
@@ -593,4 +593,16 @@ function konciNejakaCesta(string $koren, string $kus): bool
     }
 
     return false;
+}
+
+/**
+ * Text bez vnitrnich kousku kodu.
+ *
+ * Uvnitr obracenych apostrofu se znak cituje, nepouziva. Dokument, ktery
+ * popisuje zakaz dlouhe pomlcky, ji musi umet ukazat (nalez 15. 9. 2026,
+ * kontrola spadla na vlastnim zadani pro testovaciho agenta).
+ */
+function bezKodu(string $radek): string
+{
+    return preg_replace('/`[^`]*`/u', '', $radek) ?? $radek;
 }
