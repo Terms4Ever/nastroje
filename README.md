@@ -12,7 +12,7 @@ na GitHubu, takže se pravidla mění na jednom místě a platí všude.
 
 ---
 
-## 🎯 Co to řeší
+## ✨ Hlavní funkce
 
 Sedm projektů mělo sedm různých README. Tytéž sekce se jmenovaly pokaždé jinak
 (`Stack`, `Tech Stack`, `Použité technologie`), dva projekty README neměly
@@ -20,8 +20,8 @@ vůbec a jeden popisoval instalaci, která nefungovala.
 
 Kontrola hlídá dvě věci:
 
-- **Kostru** — povinné sekce, jejich názvy a pořadí.
-- **Pravdivost** — každá cesta a odkaz, o kterých README mluví, musí existovat.
+- **Kostru** - povinné sekce, jejich názvy a pořadí.
+- **Pravdivost** - každá cesta a odkaz, o kterých README mluví, musí existovat.
 
 Druhá půlka je ta cennější. Rozbitá kostra je nepříjemná, README, které lže,
 stojí čas.
@@ -46,7 +46,8 @@ takže kontrola na GitHubu nepotřebuje jediný instalační krok.
 ```
 nastroje/
 ├── kontrola-readme.php          # samotná kontrola
-├── sablony/                     # vzory k opsání
+├── sablony/readme-plny.md       # vzor k opsání
+├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
 ```
 
@@ -63,22 +64,32 @@ Každý projekt si v kořeni drží `.readme-kontrola.json`:
 }
 ```
 
-| Profil   | Pro koho                                   | Povinné sekce |
-|----------|--------------------------------------------|---------------|
-| `plny`   | onlinefakturuj, vyridimestavbu, trenwise, Project-Igris | Hlavní funkce, Tech Stack, Struktura, Instalace, Nasazení, Licence |
-| `slim`   | steelset, LabProtocol, nastroje            | totéž bez Hlavních funkcí |
+Jediný profil je `plny`. Zkrácená varianta existovala do 15. 9. 2026, ale
+dělila projekty na dvě třídy bez užitku: i drobná aplikace umí říct, co dělá.
+Kdo má málo funkcí, napíše krátkou sekci.
 
-Igris měl do 15. 9. 2026 vlastní profil `igris` se sadou nadpisů bez emoji.
-Zadavatel pak rozhodl, že se má sladit se zbytkem, takže přešel na `plny`
-a profil zmizel; svoje vlastní sekce (Dokumentace, Kontroly, Kontrola na
-GitHubu, Prostředí) si drží jako nepovinné, s emoji.
+Povinné sekce, v tomhle pořadí: Hlavní funkce, Tech Stack, Struktura projektu,
+Instalace (lokální vývoj), Nasazení, Licence. Nepovinné sekce smí být jakékoli,
+ale s emoji v nadpisu.
 
-Nad kostrou má Igris navíc **vlastní testy na obsah** README - pravdivost
-tvrzení, existenci cest, čísla, verze v odznacích. Dělba je záměrná: kostru
-hlídá tahle kontrola, obsah jeho vlastní sada.
+Když má projekt složku `docs/`, README ji musí vypsat v sekci Dokumentace,
+každý dokument s vlastním popisem. Co v docs/ leží, si řídí každý projekt sám.
+
+Text nesmí obsahovat dlouhou ani polovičnou pomlčku, jen krátkou.
 
 Klíč `cesty-bez-kontroly` je pro soubory, o kterých README mluví, ale
-v repozitáři nejsou — typicky `config.local.php` nebo složka s logy.
+v repozitáři nejsou - typicky `config.local.php` nebo složka s logy.
+
+---
+
+## 📚 Dokumentace
+
+| Dokument | K čemu |
+|---|---|
+| `docs/00-stav-projektu.md` | živý stav: co je hotové, co se dělá, co je dál, a které repozitáře jsou zapojené |
+| `docs/03-rozhodovaci-dennik.md` | co bylo kdy rozhodnuto a proč. Nové rozhodnutí je nový záznam, staré se nepřepisuje |
+
+Stav vždy platný je v `docs/00-stav-projektu.md`, ne v tomhle souboru.
 
 ---
 

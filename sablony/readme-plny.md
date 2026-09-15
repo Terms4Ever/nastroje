@@ -3,7 +3,7 @@
 **Jedna věta, která řekne, co to je**
 
 Odstavec pro člověka, který sem přišel poprvé. Co aplikace dělá, pro koho je
-a čím se liší. Tři až pět řádků, ne víc — kdo chce podrobnosti, čte dál.
+a čím se liší. Tři až pět řádků, ne víc - kdo chce podrobnosti, čte dál.
 
 ![PHP](https://img.shields.io/badge/PHP-8.3+-777BB4?logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MariaDB-11.2+-003545?logo=mariadb&logoColor=white)
@@ -35,7 +35,7 @@ a čím se liší. Tři až pět řádků, ne víc — kdo chce podrobnosti, čt
 | Platby     | Stripe               |
 
 Verze piš tak, jak je opravdu používáš. Číslo, které zastará, je horší než
-žádné — a kontrola ti ho jednou vytkne.
+žádné - a kontrola ti ho jednou vytkne.
 
 ---
 
@@ -75,7 +75,7 @@ php -S 127.0.0.1:8000
 ```
 
 Popiš postup tak, aby podle něj projekt rozjel někdo, kdo ho nezná. Soubory,
-které v návodu jmenuješ, musí v repozitáři být — jinak kontrola neprojde.
+které v návodu jmenuješ, musí v repozitáři být - jinak kontrola neprojde.
 
 ---
 

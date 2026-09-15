@@ -22,11 +22,16 @@
  */
 declare(strict_types=1);
 
-const VERZE = '1.1.0';
+const VERZE = '2.0.0';
 
-/** Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát. */
+/**
+ * Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát.
+ *
+ * Profil je jen jeden. Zkrácená varianta existovala do 15. 9. 2026, ale
+ * dělila projekty na dvě třídy bez užitku: i drobná aplikace umí říct,
+ * co dělá. Kdo má málo funkcí, napíše krátkou sekci.
+ */
 const PROFILY = [
-    // Velké projekty: onlinefakturuj, vyridimestavbu, trenwise-app
     'plny' => [
         'nadpisy' => [
             '## ✨ Hlavní funkce',
@@ -38,18 +43,10 @@ const PROFILY = [
         ],
         'hlavicka' => true,
     ],
-    // Drobnější aplikace: steelset, LabProtocol, labprotocol-web
-    'slim' => [
-        'nadpisy' => [
-            '## 🛠️ Tech Stack',
-            '## 📁 Struktura projektu',
-            '## 🚀 Instalace (lokální vývoj)',
-            '## 📦 Nasazení',
-            '## 📄 Licence',
-        ],
-        'hlavicka' => true,
-    ],
 ];
+
+/** Nadpis sekce, která vypisuje obsah složky docs/. */
+const NADPIS_DOKUMENTACE = '## 📚 Dokumentace';
 
 /** Cesty, které v repozitáři nikdy nejsou a přesto se o nich píše. */
 const VZDY_BEZ_KONTROLY = [
@@ -221,7 +218,91 @@ if (PROFILY[$profil]['hlavicka']) {
 }
 
 // ---------------------------------------------------------------------------
-// 3. Pravdivost: cesty a odkazy, o kterých README mluví, musí existovat
+// 3. Jen krátké pomlčky
+// ---------------------------------------------------------------------------
+//
+// Dlouhá pomlčka a polovičná pomlčka se v českém textu pletou s krátkou,
+// v terminálu a v jednoduchých fontech vypadají jako chyba a při kopírování
+// do příkazové řádky rozbijí příkaz. Igris je zakazuje od R177, teď to
+// platí všude.
+
+foreach ($radky as $i => $radek) {
+    if (preg_match_all('/[\x{2013}\x{2014}]/u', $radek, $shodyPomlcek, PREG_OFFSET_CAPTURE)) {
+        $nalezy[] = new Nalez(
+            $i + 1,
+            sprintf(
+                'dlouhá pomlčka (%dx), použij krátkou "-": %s',
+                count($shodyPomlcek[0]),
+                mb_strimwidth(trim($radek), 0, 60, '…')
+            )
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 4. Dokumentace ve složce docs/ musí být z README dohledatelná
+// ---------------------------------------------------------------------------
+//
+// Co v docs/ leží, si řídí každý projekt sám. Povinné je jen to, aby se
+// k tomu dalo dostat: README vypisuje každý dokument s vlastním popisem.
+// Bez toho agent i člověk hledají naslepo a píšou znovu, co už je napsané.
+
+$slozkaDocs = $korenRepozitare . '/docs';
+
+if (is_dir($slozkaDocs)) {
+    $dokumenty = array_values(array_filter(
+        scandir($slozkaDocs) ?: [],
+        static fn (string $s): bool => $s !== '.' && $s !== '..' && is_file($slozkaDocs . '/' . $s)
+    ));
+
+    if ($dokumenty !== [] && !isset($poziceNadpisu[NADPIS_DOKUMENTACE])) {
+        $nalezy[] = new Nalez(
+            0,
+            sprintf(
+                'složka docs/ má %d dokumentů, ale README nemá sekci "%s"',
+                count($dokumenty),
+                NADPIS_DOKUMENTACE
+            )
+        );
+    } else {
+        foreach ($dokumenty as $dokument) {
+            $hledany = 'docs/' . $dokument;
+            $nalezen = false;
+
+            foreach ($radky as $radek) {
+                // Jen řádek tabulky "| `docs/...` | k čemu je |".
+                //
+                // Volnější pravidlo (stačí zmínka a deset znaků za ní) se
+                // neosvědčilo: smazaný řádek tabulky prošel, protože se
+                // chytila náhodná zmínka téhož souboru jinde v textu.
+                if (!preg_match('/^\s*\|([^|]*)\|(.*)\|\s*$/u', $radek, $bunky)) {
+                    continue;
+                }
+                if (!str_contains($bunky[1], $hledany)) {
+                    continue;
+                }
+                if (mb_strlen(trim($bunky[2])) >= 10) {
+                    $nalezen = true;
+                    break;
+                }
+            }
+
+            if (!$nalezen) {
+                $nalezy[] = new Nalez(
+                    0,
+                    sprintf(
+                        'dokument "%s" chybí v tabulce sekce Dokumentace (| `%s` | k čemu je |)',
+                        $hledany,
+                        $hledany
+                    )
+                );
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 5. Pravdivost: cesty a odkazy, o kterých README mluví, musí existovat
 // ---------------------------------------------------------------------------
 
 $kotvy = [];
