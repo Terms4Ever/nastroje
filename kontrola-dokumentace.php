@@ -318,3 +318,6 @@ function existuje(string $koren, string $cesta, array $bezKontroly): bool
 
     return file_exists($koren . '/' . $cesta);
 }
+
+// Zkouska brany 15. 9. 2026: tenhle commit meni kod a na docs nesaha.
+// Ma ho zastavit pre-push hook i kontrola na GitHubu. Nasleduje revert.
