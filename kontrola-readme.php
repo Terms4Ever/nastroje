@@ -277,9 +277,17 @@ foreach ($radky as $i => $radek) {
             if (!vypadaJakoCesta($slovo)) {
                 continue;
             }
-            if (!existujeCesta($korenRepozitare, $slovo, $bezKontroly)) {
-                $nalezy[] = new Nalez($cislo, sprintf('příkaz zmiňuje "%s", ten v repozitáři není', $slovo));
+            if (existujeCesta($korenRepozitare, $slovo, $bezKontroly)) {
+                continue;
             }
+            // Stromy složek se píšou se zanořením: pod "assets/" stojí
+            // "js/app.js", což je ve skutečnosti "assets/js/app.js".
+            // Řádek sám o sobě nic o rodiči neví, tak uznáme i cestu,
+            // která v repozitáři existuje jako zakončení delší cesty.
+            if (konciNejakaCesta($korenRepozitare, $slovo)) {
+                continue;
+            }
+            $nalezy[] = new Nalez($cislo, sprintf('příkaz zmiňuje "%s", ten v repozitáři není', $slovo));
         }
         continue;
     }
@@ -467,4 +475,48 @@ function klicNadpisu(string $nadpis): string
     $s = preg_replace('/[^\p{L}\p{N}\s]/u', '', $s) ?? $s;
 
     return mb_strtolower(trim($s));
+}
+
+/**
+ * Existuje v repozitáři soubor, jehož cesta končí zadaným kusem?
+ *
+ * Slouží jen pro stromy složek v blocích kódu, kde se zanoření píše
+ * odsazením a samotný řádek o svém rodiči nic neví. Seznam souborů se
+ * sestaví jednou a pak se drží.
+ */
+function konciNejakaCesta(string $koren, string $kus): bool
+{
+    static $seznam = null;
+
+    $kus = trim($kus, '/');
+    if ($kus === '') {
+        return false;
+    }
+
+    if ($seznam === null) {
+        $seznam = [];
+        $prochazeni = new RecursiveIteratorIterator(
+            new RecursiveCallbackFilterIterator(
+                new RecursiveDirectoryIterator($koren, FilesystemIterator::SKIP_DOTS),
+                static function (SplFileInfo $polozka): bool {
+                    return !in_array($polozka->getFilename(), ['node_modules', 'vendor', '.git'], true);
+                }
+            ),
+            RecursiveIteratorIterator::SELF_FIRST
+        );
+
+        $delkaKorene = strlen($koren) + 1;
+        foreach ($prochazeni as $polozka) {
+            $cesta = substr((string) $polozka->getPathname(), $delkaKorene);
+            $seznam[] = str_replace(DIRECTORY_SEPARATOR, '/', $cesta);
+        }
+    }
+
+    foreach ($seznam as $cesta) {
+        if ($cesta === $kus || str_ends_with($cesta, '/' . $kus)) {
+            return true;
+        }
+    }
+
+    return false;
 }
