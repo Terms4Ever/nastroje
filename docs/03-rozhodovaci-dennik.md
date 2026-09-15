@@ -195,3 +195,32 @@ pět řádků, které nikdo nevolal.
 oznámí úspěch, aniž cokoli ověřila. Je to nejnebezpečnější druh chyby, protože
 zvenčí vypadá stejně jako úspěch. Zkoušky naprázdno je hledat musí cíleně,
 samy od sebe nevyplavou.
+
+---
+
+## N13 - Druhé kolo tichých průchodů (15. 9. 2026)
+
+**Jak se to našlo.** Druhý běh adversariálního agenta, poté co se opravila
+první vlna. Našel, že pojistka z N12 nestačí.
+
+**Prázdné pole projde jako nastavení.** `is_array()` je u `json_decode` pravda
+i pro seznam, takže `[]` novou pojistkou prošlo, `array_merge` nechal
+`docs-kontrola` na false a brána byla pryč. Nastavení musí být objekt, tedy
+asociativní pole.
+
+**Hláška u `null` lhala.** `json_decode("null")` uspěje, takže
+`json_last_error_msg()` řekl „No error". Výsledek byl správný, vysvětlení
+matoucí.
+
+**Typová kontrola byla jen na jednom klíči.** `docs-vymahat-aktualizaci`
+nastavené na `0` tiše vyplo pravidlo o dávce, přesně jako předtím
+`docs-kontrola` jako řetězec. Kontrola teď platí na oba.
+
+**Neznámý základ rozsahu mlčel.** Když základ v repozitáři není, pravidlo
+o dávce se neuplatní. To se stane u mělkého klonu nebo zastaralého `origin`
+a výstup u toho hlásil „v pořádku". Nově se to říká nahlas jako poznámka.
+Nová větev, kde základ jsou samé nuly, se hlásit nemá a nehlásí.
+
+**Poučení podruhé.** Pojistka proti tiché chybě sama potřebuje zkoušku
+naprázdno. První verze guardu vypadala správně a přitom měla díru hned
+v prvním řádku.

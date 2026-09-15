@@ -21,7 +21,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.2.0';
+const VERZE_DOKUMENTACE = '1.3.0';
 
 /** Soubory, které se při rozhodování "sáhlo se na kód" nepočítají. */
 const NENI_KOD = [
@@ -50,12 +50,19 @@ if (is_file($cestaNastaveni)) {
     // nechaly vychozi hodnoty, tedy docs-kontrola => false, a skript ohlasil
     // "neni zapnuta" s navratovym kodem 0. Jeden preklep nebo nedoresenej
     // merge konflikt tim vypnul celou branu a push presel.
-    if (!is_array($syrove)) {
+    // is_array() je pravda i pro seznam, takze "[]" prvni verzi pojistky
+    // proslo, array_merge nechal docs-kontrola na false a brana byla pryc
+    // (nalez N18). Nastaveni musi byt objekt, tedy asociativni pole.
+    if (!is_array($syrove) || array_is_list($syrove)) {
         fwrite(STDERR, sprintf(
             "\n  %s neni platny JSON: %s\n"
             . "  -> Dokud se to neopravi, kontrola dokumentace nevi, co ma delat.\n\n",
             $cestaNastaveni,
-            json_last_error_msg()
+            // json_decode("null") uspeje, takze json_last_error_msg() by rekl
+            // "No error" a hlaska by matla. Vlastni popis je srozumitelnejsi.
+            json_last_error() === JSON_ERROR_NONE
+                ? 'ceka se objekt se nastavenim, prislo neco jineho'
+                : json_last_error_msg()
         ));
         exit(1);
     }
@@ -65,14 +72,18 @@ if (is_file($cestaNastaveni)) {
 
 // Klic musi byt skutecne true, ne retezec "true" nebo cislo 1. Kdyby se
 // takova hodnota brala jako vypnuto, tise by to obeslo celou kontrolu.
-if (array_key_exists('docs-kontrola', $nastaveni) && !is_bool($nastaveni['docs-kontrola'])) {
-    fwrite(STDERR, sprintf(
-        "\n  docs-kontrola v %s neni true ani false, ale %s.\n"
-        . "  -> Napis true bez uvozovek, jinak neni jasne, jestli ma kontrola bezet.\n\n",
-        $cestaNastaveni,
-        var_export($nastaveni['docs-kontrola'], true)
-    ));
-    exit(1);
+foreach (['docs-kontrola', 'docs-vymahat-aktualizaci'] as $klic) {
+    if (array_key_exists($klic, $nastaveni) && !is_bool($nastaveni[$klic])) {
+        fwrite(STDERR, sprintf(
+            "\n  %s v %s neni true ani false, ale %s.\n"
+            . "  -> Napis true nebo false bez uvozovek. Cokoli jineho by se tise\n"
+            . "     vyhodnotilo jako vypnuto a kontrola by presla bez prace.\n\n",
+            $klic,
+            $cestaNastaveni,
+            var_export($nastaveni[$klic], true)
+        ));
+        exit(1);
+    }
 }
 
 $slozka = $koren . '/docs';
@@ -182,6 +193,17 @@ foreach ($dokumenty as $dokument) {
 
 if ($nastaveni['docs-vymahat-aktualizaci'] && $zaklad !== null && $cil !== null) {
     $rozsah = overRozsah($koren, $zaklad, $cil);
+
+    // Nova vetev nema proti cemu merit, to je v poradku. Neznamy zaklad ale
+    // znamena melky klon nebo zastaraly origin, a pravidlo by tise neplatilo
+    // (nalez N12). Radsi to rict nahlas.
+    if ($rozsah === null && !jeNovaVetev($zaklad)) {
+        $varovani[] = sprintf(
+            'zaklad rozsahu "%s" v repozitari neni, pravidlo o davce se neuplatnilo'
+            . ' (melky klon nebo zastaraly origin?)',
+            $zaklad
+        );
+    }
 
     if ($rozsah !== null) {
         $zmenene = zmeneneSoubory($koren, $rozsah);
@@ -344,4 +366,10 @@ function nazevDokumentu(string $koren, string $cesta): string
 function platnyRadek(string $radek): ?string
 {
     return mb_check_encoding($radek, 'UTF-8') ? $radek : null;
+}
+
+/** Je to zaklad, ktery znamena "nova vetev, neni proti cemu merit"? */
+function jeNovaVetev(string $zaklad): bool
+{
+    return $zaklad === '' || $zaklad === str_repeat('0', 40);
 }

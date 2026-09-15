@@ -11,7 +11,7 @@ hlavní větev:     main
 ## Co je hotové
 
 - `kontrola-readme.php` ve verzi 2.0.0, čisté PHP bez závislostí
-- `kontrola-dokumentace.php` ve verzi 1.2.0, zapíná se přihlášením,
+- `kontrola-dokumentace.php` ve verzi 1.3.0, zapíná se přihlášením,
   složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení
   a neplatné UTF-8 hlásí jako chybu, ne jako důvod k přeskočení
 - `stav-projektu.php`, generátor bloku se skutečnými čísly
