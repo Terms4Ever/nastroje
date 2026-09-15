@@ -21,7 +21,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.0.0';
+const VERZE_DOKUMENTACE = '1.1.0';
 
 /** Soubory, které se při rozhodování "sáhlo se na kód" nepočítají. */
 const NENI_KOD = [
@@ -68,7 +68,18 @@ if (($nastaveni['docs-kontrola'] ?? false) !== true) {
 $chyby = [];
 $varovani = [];
 
-$dokumenty = glob($slozka . '/*.md') ?: [];
+// Rekurzivne, ne jen koren docs/. Nerekurzivni glob znamenal, ze dokument
+// v podslozce prosel bez kontroly (nalez overovaciho agenta 15. 9. 2026).
+$dokumenty = [];
+$prochazeni = new RecursiveIteratorIterator(
+    new RecursiveDirectoryIterator($slozka, FilesystemIterator::SKIP_DOTS)
+);
+foreach ($prochazeni as $polozka) {
+    if ($polozka->isFile() && strtolower($polozka->getExtension()) === 'md') {
+        $dokumenty[] = $polozka->getPathname();
+    }
+}
+sort($dokumenty);
 
 // ---------------------------------------------------------------------------
 // 1. Generovaný blok ve stavu projektu musí odpovídat skutečnosti
@@ -109,7 +120,7 @@ if (!is_file($cestaStavu)) {
 $rezimPomlcek = (string) $nastaveni['docs-pomlcky'];
 
 foreach ($dokumenty as $dokument) {
-    $nazev = 'docs/' . basename($dokument);
+    $nazev = nazevDokumentu($koren, $dokument);
     $radky = explode("\n", str_replace("\r\n", "\n", (string) file_get_contents($dokument)));
 
     foreach ($radky as $i => $radek) {
@@ -329,4 +340,12 @@ function existuje(string $koren, string $cesta, array $bezKontroly): bool
 function bezKodu(string $radek): string
 {
     return preg_replace('/`[^`]*`/u', '', $radek) ?? $radek;
+}
+
+/** Cesta dokumentu relativne ke koreni repozitare, s lomitky dopredu. */
+function nazevDokumentu(string $koren, string $cesta): string
+{
+    $relativni = substr($cesta, strlen($koren) + 1);
+
+    return str_replace(DIRECTORY_SEPARATOR, '/', $relativni);
 }

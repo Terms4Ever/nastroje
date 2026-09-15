@@ -142,3 +142,25 @@ zastavena, pomlčka v apostrofech prošla.
 
 **Poznámka.** Chybu našla kontrola sama, ne člověk při čtení kódu. To je ten
 lepší způsob, jak takovou mezeru objevit.
+
+---
+
+## N11 - Kontrola prochází docs/ rekurzivně (15. 9. 2026)
+
+**Stav.** Skript hledal dokumenty přes `glob('docs/*.md')`, tedy jen v kořeni
+složky. Dokument v podsložce se nekontroloval vůbec.
+
+**Jak se to našlo.** Ověřovací agent, kterého si vyžádala brána Igrisu.
+Vložil dlouhou pomlčku do `docs/predlohy/sprity-zdroje/README.md`, kontrola
+hlásila v pořádku a skončila nulou.
+
+**Rozhodnutí.** Procházet rekurzivně. Název dokumentu v hlášce je nově celá
+cesta od kořene repozitáře, ne jen jméno souboru, aby šlo najít i ten
+v podsložce.
+
+**Cena.** Igris hlásí 17 dokumentů místo 16. To je správný počet, ten
+sedmnáctý se do té doby jen přehlížel.
+
+**Poučení.** Zkoušel jsem tu kontrolu pěti sabotážemi a všechny mířily na
+soubory v kořeni `docs/`. Zkouška, která nesahá do podsložky, o podsložce nic
+neřekne.
