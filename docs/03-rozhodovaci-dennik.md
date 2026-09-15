@@ -164,3 +164,34 @@ sedmnáctý se do té doby jen přehlížel.
 **Poučení.** Zkoušel jsem tu kontrolu pěti sabotážemi a všechny mířily na
 soubory v kořeni `docs/`. Zkouška, která nesahá do podsložky, o podsložce nic
 neřekne.
+
+---
+
+## N12 - Kontrola nesmí tiše projít, když neví, co má dělat (15. 9. 2026)
+
+**Jak se to našlo.** Adversariální běh nad Igrisem. Jeho zadání znělo rozbít
+to, ne ověřit, že to funguje, a rozbil tři věci naráz.
+
+**Vadné nastavení se přecházelo mlčky.** Při chybě v `.readme-kontrola.json`
+se jen nechaly výchozí hodnoty, tedy `docs-kontrola` nastavené na false,
+a skript ohlásil „kontrola není zapnutá" s návratovým kódem 0. Jeden překlep
+nebo nedořešený merge konflikt tím vypnul naráz pomlčky, generovaný blok
+i pravidlo o dávce, lokálně i na GitHubu, a push prošel.
+
+**Rozhodnutí.** Vadný JSON je chyba, ne důvod k přeskočení. Stejně tak hodnota
+`docs-kontrola`, která není `true` ani `false`: řetězec `"true"` se dřív
+choval jako vypnuto.
+
+**Neplatné UTF-8 skrylo zakázaný znak.** `preg_match` s modifikátorem `/u`
+vrátí na neplatném vstupu `false`, ne `0`, takže podmínka „řádek neobsahuje
+pomlčku" vyšla jako pravda. Stačil jeden vadný bajt na řádku a pomlčka na
+témže řádku prošla. Nově se takový řádek hlásí jako nález.
+
+**Smazán mrtvý kód.** Funkce `vypadaJakoCesta()` a `existuje()` zůstaly
+v souboru poté, co se kontrola cest uvnitř dokumentů zrušila jako N8. Čtyřicet
+pět řádků, které nikdo nevolal.
+
+**Poučení.** Všechny tři vady patří do téže rodiny jako nálezy u N9: kontrola
+oznámí úspěch, aniž cokoli ověřila. Je to nejnebezpečnější druh chyby, protože
+zvenčí vypadá stejně jako úspěch. Zkoušky naprázdno je hledat musí cíleně,
+samy od sebe nevyplavou.

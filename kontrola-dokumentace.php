@@ -21,7 +21,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.1.0';
+const VERZE_DOKUMENTACE = '1.2.0';
 
 /** Soubory, které se při rozhodování "sáhlo se na kód" nepočítají. */
 const NENI_KOD = [
@@ -45,9 +45,34 @@ $nastaveni = [
 $cestaNastaveni = $koren . '/.readme-kontrola.json';
 if (is_file($cestaNastaveni)) {
     $syrove = json_decode((string) file_get_contents($cestaNastaveni), true);
-    if (is_array($syrove)) {
-        $nastaveni = array_merge($nastaveni, $syrove);
+
+    // Vadny JSON se NESMI prejit mlcky. Do 15. 9. 2026 se pri chybe jen
+    // nechaly vychozi hodnoty, tedy docs-kontrola => false, a skript ohlasil
+    // "neni zapnuta" s navratovym kodem 0. Jeden preklep nebo nedoresenej
+    // merge konflikt tim vypnul celou branu a push presel.
+    if (!is_array($syrove)) {
+        fwrite(STDERR, sprintf(
+            "\n  %s neni platny JSON: %s\n"
+            . "  -> Dokud se to neopravi, kontrola dokumentace nevi, co ma delat.\n\n",
+            $cestaNastaveni,
+            json_last_error_msg()
+        ));
+        exit(1);
     }
+
+    $nastaveni = array_merge($nastaveni, $syrove);
+}
+
+// Klic musi byt skutecne true, ne retezec "true" nebo cislo 1. Kdyby se
+// takova hodnota brala jako vypnuto, tise by to obeslo celou kontrolu.
+if (array_key_exists('docs-kontrola', $nastaveni) && !is_bool($nastaveni['docs-kontrola'])) {
+    fwrite(STDERR, sprintf(
+        "\n  docs-kontrola v %s neni true ani false, ale %s.\n"
+        . "  -> Napis true bez uvozovek, jinak neni jasne, jestli ma kontrola bezet.\n\n",
+        $cestaNastaveni,
+        var_export($nastaveni['docs-kontrola'], true)
+    ));
+    exit(1);
 }
 
 $slozka = $koren . '/docs';
@@ -124,7 +149,12 @@ foreach ($dokumenty as $dokument) {
     $radky = explode("\n", str_replace("\r\n", "\n", (string) file_get_contents($dokument)));
 
     foreach ($radky as $i => $radek) {
-        if (!preg_match('/[\x{2013}\x{2014}]/u', bezKodu($radek))) {
+        $cisty = platnyRadek($radek);
+        if ($cisty === null) {
+            $chyby[] = sprintf('%s:%d  neplatne UTF-8, radek nejde zkontrolovat', $nazev, $i + 1);
+            continue;
+        }
+        if (!preg_match('/[\x{2013}\x{2014}]/u', bezKodu($cisty))) {
             continue;
         }
         $hlaska = sprintf('%s:%d  dlouhá pomlčka, použij krátkou "-"', $nazev, $i + 1);
@@ -281,54 +311,7 @@ function zmeneneSoubory(string $koren, string $rozsah): array
     return array_values(array_filter(array_map('trim', $vystup)));
 }
 
-function vypadaJakoCesta(string $kus): bool
-{
-    $kus = trim($kus);
 
-    if ($kus === '' || str_contains($kus, ' ')) {
-        return false;
-    }
-    if (preg_match('/^[$\-<#]/', $kus) || str_starts_with($kus, '/')) {
-        return false;
-    }
-    if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $kus) || preg_match('/[?=@]/', $kus)) {
-        return false;
-    }
-    if (str_contains($kus, '*') || str_contains($kus, '…')) {
-        return false;
-    }
-    if (preg_match('/^\d+(\.\d+)+$/', $kus) || str_starts_with($kus, '.git/')) {
-        return false;
-    }
-    if (str_contains($kus, '/')) {
-        return true;
-    }
-
-    return preg_match('/(?<=.)\.(php|js|mjs|cjs|ts|tsx|jsx|json|sql|md|ya?ml|css|scss|html?|sh|lock|toml|xml|txt|svg|png|ico|webp)$/i', $kus) === 1;
-}
-
-/** @param string[] $bezKontroly */
-function existuje(string $koren, string $cesta, array $bezKontroly): bool
-{
-    $cesta = trim($cesta);
-    while (str_starts_with($cesta, './')) {
-        $cesta = substr($cesta, 2);
-    }
-    $cesta = rtrim($cesta, '/');
-
-    if ($cesta === '') {
-        return true;
-    }
-
-    foreach ($bezKontroly as $vyjimka) {
-        $vyjimka = rtrim(trim($vyjimka), '/');
-        if ($vyjimka !== '' && ($cesta === $vyjimka || str_starts_with($cesta . '/', $vyjimka . '/'))) {
-            return true;
-        }
-    }
-
-    return file_exists($koren . '/' . $cesta);
-}
 
 /**
  * Text bez vnitrnich kousku kodu.
@@ -348,4 +331,17 @@ function nazevDokumentu(string $koren, string $cesta): string
     $relativni = substr($cesta, strlen($koren) + 1);
 
     return str_replace(DIRECTORY_SEPARATOR, '/', $relativni);
+}
+
+/**
+ * Radek v platnem UTF-8, nebo null.
+ *
+ * preg_match s modifikatorem /u vrati na neplatnem UTF-8 false, ne 0, takze
+ * se podminka "neobsahuje pomlcku" vyhodnoti jako pravda a radek se preskoci.
+ * Adversarialni beh 15. 9. 2026 to vyuzil: staci jeden vadny bajt na radku
+ * a zakazany znak na temze radku projde.
+ */
+function platnyRadek(string $radek): ?string
+{
+    return mb_check_encoding($radek, 'UTF-8') ? $radek : null;
 }

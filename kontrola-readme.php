@@ -227,7 +227,12 @@ if (PROFILY[$profil]['hlavicka']) {
 // platí všude.
 
 foreach ($radky as $i => $radek) {
-    if (preg_match_all('/[\x{2013}\x{2014}]/u', bezKodu($radek), $shodyPomlcek, PREG_OFFSET_CAPTURE)) {
+    $cistyRadek = platnyRadek($radek);
+    if ($cistyRadek === null) {
+        $nalezy[] = new Nalez($i + 1, 'neplatne UTF-8, radek nejde zkontrolovat');
+        continue;
+    }
+    if (preg_match_all('/[\x{2013}\x{2014}]/u', bezKodu($cistyRadek), $shodyPomlcek, PREG_OFFSET_CAPTURE)) {
         $nalezy[] = new Nalez(
             $i + 1,
             sprintf(
@@ -605,4 +610,17 @@ function konciNejakaCesta(string $koren, string $kus): bool
 function bezKodu(string $radek): string
 {
     return preg_replace('/`[^`]*`/u', '', $radek) ?? $radek;
+}
+
+/**
+ * Radek v platnem UTF-8, nebo null.
+ *
+ * preg_match s modifikatorem /u vrati na neplatnem UTF-8 false, ne 0, takze
+ * se podminka "neobsahuje pomlcku" vyhodnoti jako pravda a radek se preskoci.
+ * Adversarialni beh 15. 9. 2026 to vyuzil: staci jeden vadny bajt na radku
+ * a zakazany znak na temze radku projde.
+ */
+function platnyRadek(string $radek): ?string
+{
+    return mb_check_encoding($radek, 'UTF-8') ? $radek : null;
 }
