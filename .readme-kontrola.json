@@ -1,4 +1,10 @@
 {
   "profil": "plny",
-  "cesty-bez-kontroly": [".git-hooks", "config.local.php"]
+  "cesty-bez-kontroly": [
+    ".git-hooks",
+    "config.local.php"
+  ],
+  "docs-kontrola": true,
+  "docs-pomlcky": "blokovat",
+  "docs-vymahat-aktualizaci": true
 }

@@ -1,4 +1,4 @@
-name: Kontrola README
+name: Kontrola README a dokumentace
 
 # Volá se z ostatních repozitářů jedním odkazem, takže pravidla žijí
 # na jednom místě:
@@ -22,6 +22,10 @@ jobs:
     steps:
       - name: Stáhnout projekt
         uses: actions/checkout@v7
+        with:
+          # Kontrola dokumentace porovnává rozsah commitů, takže potřebuje
+          # historii, ne jen poslední commit.
+          fetch-depth: 0
 
       - name: Stáhnout kontrolu
         uses: actions/checkout@v7
@@ -34,3 +38,17 @@ jobs:
 
       - name: Zkontrolovat README
         run: php .nastroje/kontrola-readme.php "$GITHUB_WORKSPACE"
+
+      - name: Zkontrolovat dokumentaci
+        env:
+          ZAKLAD: ${{ github.event.before }}
+          CIL: ${{ github.sha }}
+        run: |
+          # Při pull requestu a při první vlně commitů na nové větvi žádný
+          # použitelný základ není. Tehdy se ověří jen obsah dokumentů.
+          if [ -n "$ZAKLAD" ] && [ "$ZAKLAD" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$ZAKLAD^{commit}" 2>/dev/null; then
+            php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$CIL"
+          else
+            php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE"
+          fi

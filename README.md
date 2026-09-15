@@ -18,13 +18,14 @@ Sedm projektů mělo sedm různých README. Tytéž sekce se jmenovaly pokaždé
 (`Stack`, `Tech Stack`, `Použité technologie`), dva projekty README neměly
 vůbec a jeden popisoval instalaci, která nefungovala.
 
-Kontrola hlídá dvě věci:
+Kontrola hlídá tři věci:
 
 - **Kostru** - povinné sekce, jejich názvy a pořadí.
 - **Pravdivost** - každá cesta a odkaz, o kterých README mluví, musí existovat.
+- **Aktualizaci** - dávka, která sáhla na kód, musí sáhnout i na dokumentaci.
 
-Druhá půlka je ta cennější. Rozbitá kostra je nepříjemná, README, které lže,
-stojí čas.
+Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
+dokumentace, která lže nebo zůstala pozadu, stojí čas.
 
 ---
 
@@ -45,7 +46,9 @@ takže kontrola na GitHubu nepotřebuje jediný instalační krok.
 
 ```
 nastroje/
-├── kontrola-readme.php          # samotná kontrola
+├── kontrola-readme.php          # kontrola README
+├── kontrola-dokumentace.php     # kontrola složky docs/
+├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── sablony/readme-plny.md       # vzor k opsání
 ├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
@@ -79,6 +82,43 @@ Text nesmí obsahovat dlouhou ani polovičnou pomlčku, jen krátkou.
 
 Klíč `cesty-bez-kontroly` je pro soubory, o kterých README mluví, ale
 v repozitáři nejsou - typicky `config.local.php` nebo složka s logy.
+
+---
+
+## 🔎 Kontrola dokumentace
+
+Zapíná se přihlášením, aby repozitář s jinak uspořádanou složkou `docs/`
+nespadl dřív, než si ji srovná:
+
+```json
+{
+  "docs-kontrola": true,
+  "docs-pomlcky": "blokovat",
+  "docs-vymahat-aktualizaci": true
+}
+```
+
+Co ověřuje:
+
+| Pravidlo | Co dělá |
+|---|---|
+| generovaný blok | `docs/00-stav-projektu.md` musí nést blok se skutečnými čísly a ten musí sedět na to, co by generátor vypsal teď |
+| pomlčky | dlouhá ani polovičná pomlčka v dokumentech; `"varovat"` místo `"blokovat"` hlášku jen vypíše |
+| aktualizace | dávka commitů, která změnila kód, musí změnit i něco v `docs/` |
+
+Blok se skutečnými čísly do stavu projektu vloží nebo přegeneruje:
+
+```bash
+php stav-projektu.php ../nazev-projektu --zapsat
+```
+
+Nese jen údaje, které se mění zřídka: verzi, běhové prostředí a hlavní větev.
+Otisk posledního commitu v něm schválně není, ten by byl zastaralý už
+v commitu, který ho obsahuje.
+
+Cesty uvnitř dokumentů se **nekontrolují**. V README to smysl dává, tam se
+popisuje současný stav. Rozhodovací deník ale musí umět napsat, že se soubor
+smazal nebo přejmenoval.
 
 ---
 
