@@ -1,0 +1,470 @@
+<?php
+/**
+ * Kontrola README proti společné kostře.
+ *
+ * Pouští se stejně z pre-push hooku i z GitHub Actions:
+ *
+ *     php kontrola-readme.php [cesta-k-repozitari]
+ *
+ * Návratový kód 0 = v pořádku, 1 = nálezy. Nálezy se vypisují česky
+ * i s číslem řádku, aby šlo jít rovnou na místo.
+ *
+ * Nastavení si každý projekt drží v .readme-kontrola.json ve svém kořeni:
+ *
+ *     {
+ *       "profil": "plny",
+ *       "cesty-bez-kontroly": ["config.local.php", "vendor/"]
+ *     }
+ *
+ * Profil rozhoduje o povinných nadpisech. Kontroly pravdivosti (existence
+ * cest a odkazů) běží ve všech profilech stejně — to je to, co README drží
+ * při zemi, když se kód posune a text ne.
+ */
+declare(strict_types=1);
+
+const VERZE = '1.0.0';
+
+/** Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát. */
+const PROFILY = [
+    // Velké projekty: onlinefakturuj, vyridimestavbu, trenwise-app
+    'plny' => [
+        'nadpisy' => [
+            '## ✨ Hlavní funkce',
+            '## 🛠️ Tech Stack',
+            '## 📁 Struktura projektu',
+            '## 🚀 Instalace (lokální vývoj)',
+            '## 📦 Nasazení',
+            '## 📄 Licence',
+        ],
+        'hlavicka' => true,
+    ],
+    // Drobnější aplikace: steelset, LabProtocol, labprotocol-web
+    'slim' => [
+        'nadpisy' => [
+            '## 🛠️ Tech Stack',
+            '## 📁 Struktura projektu',
+            '## 🚀 Instalace (lokální vývoj)',
+            '## 📦 Nasazení',
+            '## 📄 Licence',
+        ],
+        'hlavicka' => true,
+    ],
+    // Igris má vlastní zavedený styl. Nesrovnává se do společné kostry,
+    // ale svoje vlastní nadpisy musí držet stejně pevně.
+    'igris' => [
+        'nadpisy' => [
+            '## Co je hotové',
+            '## Kde co je',
+            '## Dokumentace',
+            '## Kontroly',
+            '## Kontrola na GitHubu',
+            '## Prostředí',
+        ],
+        'hlavicka' => false,
+    ],
+];
+
+/** Cesty, které v repozitáři nikdy nejsou a přesto se o nich píše. */
+const VZDY_BEZ_KONTROLY = [
+    'node_modules/',
+    'vendor/',
+];
+
+final class Nalez
+{
+    public function __construct(
+        public readonly int $radek,
+        public readonly string $text,
+    ) {
+    }
+}
+
+/** @var Nalez[] $nalezy */
+$nalezy = [];
+
+$korenRepozitare = rtrim($argv[1] ?? getcwd(), "/\\");
+
+// ---------------------------------------------------------------------------
+// Načtení nastavení a README
+// ---------------------------------------------------------------------------
+
+$cestaNastaveni = $korenRepozitare . '/.readme-kontrola.json';
+$nastaveni = ['profil' => 'plny', 'cesty-bez-kontroly' => []];
+
+if (is_file($cestaNastaveni)) {
+    $syrove = json_decode((string) file_get_contents($cestaNastaveni), true);
+    if (!is_array($syrove)) {
+        fwrite(STDERR, "  .readme-kontrola.json není platný JSON: " . json_last_error_msg() . "\n");
+        exit(1);
+    }
+    $nastaveni = array_merge($nastaveni, $syrove);
+}
+
+$profil = (string) $nastaveni['profil'];
+if (!isset(PROFILY[$profil])) {
+    fwrite(STDERR, sprintf(
+        "  Neznámý profil \"%s\". Povolené: %s\n",
+        $profil,
+        implode(', ', array_keys(PROFILY))
+    ));
+    exit(1);
+}
+
+$cestaReadme = $korenRepozitare . '/README.md';
+if (!is_file($cestaReadme)) {
+    fwrite(STDERR, "\n  README.md chybí. Vzor je v Terms4Ever/nastroje/sablony/.\n\n");
+    exit(1);
+}
+
+$obsah = (string) file_get_contents($cestaReadme);
+$radky = explode("\n", str_replace("\r\n", "\n", $obsah));
+
+$bezKontroly = array_merge(
+    VZDY_BEZ_KONTROLY,
+    array_map('strval', (array) ($nastaveni['cesty-bez-kontroly'] ?? []))
+);
+
+// ---------------------------------------------------------------------------
+// 1. Hlavička: název s emoji, tučný popis, odstavec, odznak, oddělovač
+// ---------------------------------------------------------------------------
+
+if (PROFILY[$profil]['hlavicka']) {
+    $prvni = trim($radky[0] ?? '');
+
+    if (!str_starts_with($prvni, '# ')) {
+        $nalezy[] = new Nalez(1, 'první řádek musí být název: "# 🧾 Název projektu"');
+    } elseif (!preg_match('/[\x{1F000}-\x{1FAFF}\x{2600}-\x{27BF}\x{2B00}-\x{2BFF}\x{FE0F}]/u', $prvni)) {
+        // Na umístění emoji netrváme, jen na tom, že tam nějaké je.
+        $nalezy[] = new Nalez(1, 'název nemá emoji: "' . $prvni . '"');
+    }
+
+    $hlavicka = implode("\n", array_slice($radky, 0, 20));
+
+    if (!preg_match('/^\*\*[^*]+\*\*$/m', $hlavicka)) {
+        $nalezy[] = new Nalez(2, 'chybí tučný jednořádkový popis pod názvem');
+    }
+
+    if (!str_contains($hlavicka, '![')) {
+        $nalezy[] = new Nalez(3, 'chybí odznaky (badges) s technologiemi a licencí');
+    }
+
+    if (!preg_match('/^---$/m', $hlavicka)) {
+        $nalezy[] = new Nalez(4, 'chybí oddělovač "---" pod hlavičkou');
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 2. Povinné nadpisy: všechny přítomné, ve správném pořadí, právě jednou
+// ---------------------------------------------------------------------------
+
+/** @var array<string,int[]> $poziceNadpisu  nadpis => čísla řádků */
+$poziceNadpisu = [];
+$vsechnyNadpisy = [];
+
+foreach ($radky as $i => $radek) {
+    if (str_starts_with($radek, '## ')) {
+        $n = rtrim($radek);
+        $poziceNadpisu[$n][] = $i + 1;
+        $vsechnyNadpisy[] = ['nadpis' => $n, 'radek' => $i + 1];
+    }
+}
+
+$predchoziRadek = 0;
+$predchoziNadpis = '';
+
+/** Nadpisy, o kterých už padlo "má se jmenovat jinak" – ať se nehlásí dvakrát. */
+$navrzenaPrejmenovani = [];
+
+foreach (PROFILY[$profil]['nadpisy'] as $povinny) {
+    if (!isset($poziceNadpisu[$povinny])) {
+        $podobny = najdiPodobny($povinny, array_keys($poziceNadpisu));
+        if ($podobny !== null) {
+            $navrzenaPrejmenovani[] = $podobny;
+        }
+        $nalezy[] = new Nalez(
+            0,
+            $podobny === null
+                ? sprintf('chybí sekce "%s"', $povinny)
+                : sprintf('sekce "%s" se má jmenovat "%s"', $podobny, $povinny)
+        );
+        continue;
+    }
+
+    if (count($poziceNadpisu[$povinny]) > 1) {
+        $nalezy[] = new Nalez(
+            $poziceNadpisu[$povinny][1],
+            sprintf('sekce "%s" je v souboru dvakrát', $povinny)
+        );
+    }
+
+    $radek = $poziceNadpisu[$povinny][0];
+    if ($radek < $predchoziRadek) {
+        $nalezy[] = new Nalez(
+            $radek,
+            sprintf('sekce "%s" má stát až za "%s"', $povinny, $predchoziNadpis)
+        );
+    }
+    $predchoziRadek = $radek;
+    $predchoziNadpis = $povinny;
+}
+
+// Nepovinné sekce smí být jakékoli, ale v profilech se společnou kostrou
+// musí mít emoji — jinak se seznam sekcí opticky rozpadne.
+if (PROFILY[$profil]['hlavicka']) {
+    foreach ($vsechnyNadpisy as $z) {
+        if (in_array($z['nadpis'], PROFILY[$profil]['nadpisy'], true)) {
+            continue;
+        }
+        if (in_array($z['nadpis'], $navrzenaPrejmenovani, true)) {
+            continue;   // už zaznělo, že se má přejmenovat
+        }
+        if (preg_match('/^## [\p{L}\p{N}]/u', $z['nadpis'])) {
+            $nalezy[] = new Nalez(
+                $z['radek'],
+                sprintf('nepovinná sekce "%s" nemá emoji', trim(substr($z['nadpis'], 3)))
+            );
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// 3. Pravdivost: cesty a odkazy, o kterých README mluví, musí existovat
+// ---------------------------------------------------------------------------
+
+$kotvy = [];
+foreach ($radky as $radek) {
+    if (preg_match('/^#{1,6} +(.*)$/u', $radek, $shodaNadpisu)) {
+        $kotvy[] = naKotvu($shodaNadpisu[1]);
+    }
+}
+
+$vPlotu = false;
+$kontrolovatBlok = false;
+
+foreach ($radky as $i => $radek) {
+    $cislo = $i + 1;
+
+    // Bloky kódu se kontrolují taky, jen přísněji. Právě v nich bydlí
+    // instalační návod, a README, které popisuje neexistující soubor,
+    // je horší než README žádné.
+    if (preg_match('/^\s*```(\w*)/', $radek, $shodaPlotu)) {
+        if ($vPlotu) {
+            $vPlotu = false;
+            $kontrolovatBlok = false;
+        } else {
+            $vPlotu = true;
+            // Kontrolují se jen bloky s příkazy a stromy složek. Ukázka
+            // konfigurace v JSON nebo YAML mluví o hodnotách, ne o tom,
+            // co v repozitáři leží.
+            $jazyk = strtolower($shodaPlotu[1]);
+            $kontrolovatBlok = in_array($jazyk, ['', 'bash', 'sh', 'shell', 'console', 'zsh', 'text'], true);
+        }
+        continue;
+    }
+
+    if ($vPlotu && !$kontrolovatBlok) {
+        continue;   // uvnitř ukázky konfigurace se nekontroluje nic
+    }
+
+    if ($vPlotu) {
+        foreach (preg_split('/\s+/', trim($radek)) ?: [] as $slovo) {
+            $slovo = trim($slovo, "\"'`,;()<>");
+            // Uvnitř kódu vyžadujeme lomítko i příponu, jinak by se chytaly
+            // přepínače, názvy tabulek a kusy příkazů.
+            if (!str_contains($slovo, '/') || !preg_match('/\.[a-z0-9]{1,5}$/i', $slovo)) {
+                continue;
+            }
+            if (!vypadaJakoCesta($slovo)) {
+                continue;
+            }
+            if (!existujeCesta($korenRepozitare, $slovo, $bezKontroly)) {
+                $nalezy[] = new Nalez($cislo, sprintf('příkaz zmiňuje "%s", ten v repozitáři není', $slovo));
+            }
+        }
+        continue;
+    }
+
+    // Odkazy [text](cíl)
+    if (preg_match_all('/\[[^\]]*\]\(([^)\s]+)\)/', $radek, $shodyOdkazu)) {
+        foreach ($shodyOdkazu[1] as $cil) {
+            if (preg_match('#^(https?:|mailto:|tel:)#i', $cil)) {
+                continue;
+            }
+            if (str_starts_with($cil, '#')) {
+                if (!in_array(ltrim($cil, '#'), $kotvy, true)) {
+                    $nalezy[] = new Nalez($cislo, sprintf('odkaz "%s" nevede na žádný nadpis', $cil));
+                }
+                continue;
+            }
+            $cesta = strtok($cil, '#');
+            if (!existujeCesta($korenRepozitare, $cesta, $bezKontroly)) {
+                $nalezy[] = new Nalez($cislo, sprintf('odkaz vede na "%s", ten soubor neexistuje', $cesta));
+            }
+        }
+    }
+
+    // Cesty v jednořádkovém kódu `neco/jineho.php`
+    if (preg_match_all('/`([^`]+)`/u', $radek, $shodyKodu)) {
+        foreach ($shodyKodu[1] as $kus) {
+            if (!vypadaJakoCesta($kus)) {
+                continue;
+            }
+            if (!existujeCesta($korenRepozitare, $kus, $bezKontroly)) {
+                $nalezy[] = new Nalez($cislo, sprintf('README zmiňuje "%s", ten v repozitáři není', $kus));
+            }
+        }
+    }
+}
+
+// ---------------------------------------------------------------------------
+// Výpis
+// ---------------------------------------------------------------------------
+
+$jmenoRepozitare = basename(realpath($korenRepozitare) ?: $korenRepozitare);
+
+if ($nalezy === []) {
+    printf("  README %s je v pořádku (profil %s, kontrola %s).\n", $jmenoRepozitare, $profil, VERZE);
+    exit(0);
+}
+
+printf("\n  README %s neprošel (profil %s):\n\n", $jmenoRepozitare, $profil);
+foreach ($nalezy as $n) {
+    if ($n->radek > 0) {
+        printf("    README.md:%d  %s\n", $n->radek, $n->text);
+    } else {
+        printf("    %s\n", $n->text);
+    }
+}
+printf("\n  Vzory: https://github.com/Terms4Ever/nastroje/tree/main/sablony\n");
+printf("  Vědomá výjimka při pushi: git push --no-verify\n\n");
+
+exit(1);
+
+// ---------------------------------------------------------------------------
+// Pomocné funkce
+// ---------------------------------------------------------------------------
+
+/**
+ * Pozná, jestli kus textu v obráceném apostrofu je cesta v repozitáři.
+ * Schválně opatrná: radši cestu přeskočí, než aby hlásila planý poplach.
+ */
+function vypadaJakoCesta(string $kus): bool
+{
+    $kus = trim($kus);
+
+    if ($kus === '' || str_contains($kus, ' ')) {
+        return false;   // příkazy, věty
+    }
+    if (preg_match('/^[$\-<#]/', $kus)) {
+        return false;   // proměnné, přepínače, kotvy
+    }
+    if (str_starts_with($kus, '/')) {
+        return false;   // adresa na webu (/sprava, /api/invoices), ne soubor
+    }
+    if (preg_match('#^[a-z][a-z0-9+.-]*://#i', $kus)) {
+        return false;   // URL
+    }
+    if (preg_match('/[?=@]/', $kus)) {
+        return false;   // dotazy v adrese a e-maily
+    }
+    if (str_contains($kus, '*') || str_contains($kus, '…')) {
+        return false;   // vzory a výpustky
+    }
+    if (preg_match('/^\d+(\.\d+)+$/', $kus)) {
+        return false;   // IP adresy a čísla verzí
+    }
+    if (str_starts_with($kus, '.git/')) {
+        return false;   // vnitřek gitu, v repozitáři není
+    }
+
+    if (str_contains($kus, '/')) {
+        return true;
+    }
+
+    // Bez lomítka bereme jen známé přípony zdrojáků. Jinak by se chytaly
+    // identifikátory jako cz.setly.app nebo zkratky typu .env.
+    return preg_match('/(?<=.)\.(php|js|mjs|cjs|ts|tsx|jsx|json|sql|md|ya?ml|css|scss|html?|sh|lock|toml|xml|txt|svg|png|ico|webp)$/i', $kus) === 1;
+}
+
+/**
+ * @param string[] $bezKontroly
+ */
+function existujeCesta(string $koren, string $cesta, array $bezKontroly): bool
+{
+    $cesta = trim($cesta);
+
+    // Pozor: ltrim($cesta, './') by ořezalo i tečku u .github/, a ta je
+    // součástí názvu. Odebíráme jen skutečnou předponu "./".
+    while (str_starts_with($cesta, './')) {
+        $cesta = substr($cesta, 2);
+    }
+
+    $cesta = rtrim($cesta, '/');
+
+    if ($cesta === '') {
+        return true;
+    }
+
+    foreach ($bezKontroly as $vyjimka) {
+        $vyjimka = rtrim(trim($vyjimka), '/');
+        if ($vyjimka !== '' && ($cesta === $vyjimka || str_starts_with($cesta . '/', $vyjimka . '/'))) {
+            return true;
+        }
+    }
+
+    return file_exists($koren . '/' . $cesta);
+}
+
+/**
+ * Slug nadpisu pro kotvu, po vzoru GitHubu: malá písmena, mezery na pomlčky,
+ * interpunkce pryč. Diakritika zůstává, GitHub ji v kotvách zachovává.
+ */
+function naKotvu(string $nadpis): string
+{
+    $s = mb_strtolower(trim($nadpis));
+    $s = preg_replace('/[^\p{L}\p{N}\s-]/u', '', $s) ?? $s;
+    $s = preg_replace('/\s+/u', '-', trim($s)) ?? $s;
+
+    return $s;
+}
+
+/**
+ * Najde nadpis, který je nejspíš přejmenovanou verzí hledaného — aby hláška
+ * uměla říct "sekce Stack se má jmenovat Tech Stack" místo holého "chybí".
+ *
+ * @param string[] $kandidati
+ */
+function najdiPodobny(string $hledany, array $kandidati): ?string
+{
+    $cil = klicNadpisu($hledany);
+    if ($cil === '') {
+        return null;
+    }
+
+    $nejlepsi = null;
+    $nejvyssi = 0.0;
+
+    foreach ($kandidati as $k) {
+        $porovnavany = klicNadpisu($k);
+        if ($porovnavany === '') {
+            continue;
+        }
+
+        similar_text($cil, $porovnavany, $shoda);
+        if ($shoda > $nejvyssi) {
+            $nejvyssi = $shoda;
+            $nejlepsi = $k;
+        }
+    }
+
+    return $nejvyssi >= 45.0 ? $nejlepsi : null;
+}
+
+/** Nadpis bez "## ", bez emoji a bez diakritiky, pro hrubé porovnání. */
+function klicNadpisu(string $nadpis): string
+{
+    $s = preg_replace('/^#+\s*/u', '', trim($nadpis)) ?? $nadpis;
+    $s = preg_replace('/[^\p{L}\p{N}\s]/u', '', $s) ?? $s;
+
+    return mb_strtolower(trim($s));
+}

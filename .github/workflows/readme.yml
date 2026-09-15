@@ -1,0 +1,36 @@
+name: Kontrola README
+
+# Volá se z ostatních repozitářů jedním odkazem, takže pravidla žijí
+# na jednom místě:
+#
+#   jobs:
+#     readme:
+#       uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main
+#
+on:
+  workflow_call:
+
+permissions:
+  contents: read
+
+jobs:
+  kontrola:
+    # Verze je připnutá schválně. Obraz ubuntu-24.04 má PHP 8.3 předinstalované,
+    # takže tenhle běh nepotřebuje jediný instalační krok a trvá vteřiny.
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Stáhnout projekt
+        uses: actions/checkout@v7
+
+      - name: Stáhnout kontrolu
+        uses: actions/checkout@v7
+        with:
+          repository: Terms4Ever/nastroje
+          path: .nastroje
+
+      - name: Ověřit, že je čím kontrolovat
+        run: php --version
+
+      - name: Zkontrolovat README
+        run: php .nastroje/kontrola-readme.php "$GITHUB_WORKSPACE"

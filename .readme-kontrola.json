@@ -1,0 +1,4 @@
+{
+  "profil": "slim",
+  "cesty-bez-kontroly": [".git-hooks", "config.local.php"]
+}
