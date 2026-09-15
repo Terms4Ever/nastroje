@@ -65,12 +65,17 @@ Každý projekt si v kořeni drží `.readme-kontrola.json`:
 
 | Profil   | Pro koho                                   | Povinné sekce |
 |----------|--------------------------------------------|---------------|
-| `plny`   | onlinefakturuj, vyridimestavbu, trenwise   | Hlavní funkce, Tech Stack, Struktura, Instalace, Nasazení, Licence |
+| `plny`   | onlinefakturuj, vyridimestavbu, trenwise, Project-Igris | Hlavní funkce, Tech Stack, Struktura, Instalace, Nasazení, Licence |
 | `slim`   | steelset, LabProtocol, labprotocol-web     | totéž bez Hlavních funkcí |
-| `igris`  | Project-Igris                              | vlastní sada: Co je hotové, Kde co je, Dokumentace, Kontroly, Kontrola na GitHubu, Prostředí |
 
-Igris má zavedený vlastní styl bez emoji a nejpřísnější testy ze všech. Do
-společné kostry se nesrovnává, ale svoje vlastní nadpisy držet musí.
+Igris měl do 15. 9. 2026 vlastní profil `igris` se sadou nadpisů bez emoji.
+Zadavatel pak rozhodl, že se má sladit se zbytkem, takže přešel na `plny`
+a profil zmizel; svoje vlastní sekce (Dokumentace, Kontroly, Kontrola na
+GitHubu, Prostředí) si drží jako nepovinné, s emoji.
+
+Nad kostrou má Igris navíc **vlastní testy na obsah** README - pravdivost
+tvrzení, existenci cest, čísla, verze v odznacích. Dělba je záměrná: kostru
+hlídá tahle kontrola, obsah jeho vlastní sada.
 
 Klíč `cesty-bez-kontroly` je pro soubory, o kterých README mluví, ale
 v repozitáři nejsou — typicky `config.local.php` nebo složka s logy.

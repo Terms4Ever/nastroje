@@ -49,19 +49,6 @@ const PROFILY = [
         ],
         'hlavicka' => true,
     ],
-    // Igris má vlastní zavedený styl. Nesrovnává se do společné kostry,
-    // ale svoje vlastní nadpisy musí držet stejně pevně.
-    'igris' => [
-        'nadpisy' => [
-            '## Co je hotové',
-            '## Kde co je',
-            '## Dokumentace',
-            '## Kontroly',
-            '## Kontrola na GitHubu',
-            '## Prostředí',
-        ],
-        'hlavicka' => false,
-    ],
 ];
 
 /** Cesty, které v repozitáři nikdy nejsou a přesto se o nich píše. */
@@ -138,7 +125,13 @@ if (PROFILY[$profil]['hlavicka']) {
         $nalezy[] = new Nalez(1, 'název nemá emoji: "' . $prvni . '"');
     }
 
-    $hlavicka = implode("\n", array_slice($radky, 0, 20));
+    /*
+     * Třicet řádků, ne dvacet. Igris má oddělovač na sedmnáctém řádku, takže
+     * pár odznaků navíc ho posunulo za hranici a kontrola hlásila, že chybí,
+     * ačkoli v souboru byl (nález 15. 9. 2026). Hlavička delší než třicet
+     * řádků už není hlavička.
+     */
+    $hlavicka = implode("\n", array_slice($radky, 0, 30));
 
     if (!preg_match('/^\*\*[^*]+\*\*$/m', $hlavicka)) {
         $nalezy[] = new Nalez(2, 'chybí tučný jednořádkový popis pod názvem');
