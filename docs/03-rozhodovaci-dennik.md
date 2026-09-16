@@ -293,3 +293,15 @@ jednou pro GitHub Actions. Větve ale nemají ochranu ani ruleset (ověřeno
 přes `gh api` u Igrisu), takže workflow běží až po pushi a chybu jen nahlásí.
 Zastavit push umí jen hook. Opraveno v README a zapsáno do stavu, ochranu
 větví s povinnými kontrolami rozhodne zadavatel.
+
+---
+
+## N16 - Ochrana větví se nezapíná (16. 9. 2026)
+
+**Otázka z N15.** Workflow na GitHubu běží až po pushi a chybu jen nahlásí,
+protože větve nemají ochranu. Zapnout ochranu s povinnými kontrolami by znamenalo
+práci přes pull requesty.
+
+**Rozhodnutí zadavatele.** *„Nechci schvalovat pull requesty. Takže tohle
+zrušíme."* Ochrana se nezapíná. Zastavit push umí jen pre-push hook, kontrola na
+GitHubu zůstává druhým okem, které chybu nahlásí.

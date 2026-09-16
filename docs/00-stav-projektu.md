@@ -54,6 +54,6 @@ Nic rozdělaného.
 ## Na co si dát pozor
 
 - **Kontrola na GitHubu push nezastaví.** Větve nemají ochranu, takže běh
-  chybu jen nahlásí po faktu. Zastavit push umí jen pre-push hook. Zapnout
-  ochranu větví s povinnými kontrolami je rozhodnutí zadavatele, znamenalo by
-  práci přes pull requesty.
+  chybu jen nahlásí po faktu. Zastavit push umí jen pre-push hook. Ochranu
+  větví zadavatel 16. 9. 2026 odmítl, pull requesty schvalovat nechce (N16),
+  takže to tak zůstane.
