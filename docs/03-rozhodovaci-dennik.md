@@ -265,3 +265,31 @@ u složky, jinak přesná shoda. `kontrola-readme.php` to měl správně od zač
 **Poučení.** N13 byla oprava tiché chyby a sama vyrobila regresi o kolo dál.
 Pojistka proti chybnému vstupu musí mít zkoušku i na platném vstupu, nejen
 na tom chybném.
+
+---
+
+## N15 - Hlavní větev z repozitáře a GitHub, který push nezastaví (16. 9. 2026)
+
+**Jak se to našlo.** Čtvrté kolo adversariálního běhu nad Igrisem ukázalo, že
+commit-msg nespustí cherry-pick ani rebase, takže globální pre-push nově
+prochází pravidly commitu každý pushovaný commit. Při zkoušce té kontroly na
+vedlejší větvi spadla kontrola dokumentace, přestože commity byly prázdné.
+
+**Hlavní větev byla aktuální větev.** `stav-projektu.php` psal do bloku
+`rev-parse --abbrev-ref HEAD`. Blok vygenerovaný na `main` proto neseděl
+na žádné jiné větvi a push z ní se zastavil hláškou, že je blok zastaralý.
+Na GitHubu totéž u každé vedlejší větve a u pull requestu, který stojí na
+odpojeném HEAD. Nikdo na to nenarazil jen proto, že se zatím pushovalo jen
+do `main`.
+
+**Rozhodnutí.** Hlavní větev se bere z `origin/HEAD`, ale jen když jeho cíl
+existuje: u `steelset` zůstal po přejmenování ukazovat na neexistující
+`origin/master`. Pak `main`, pak `master`, až nakonec aktuální větev. Všechny
+repozitáře mají na GitHubu výchozí větev `main` a bloky píšou `main`, takže
+se žádný blok nemění. Verze kontroly 1.4.1, protože se mění její chování.
+
+**GitHub push nezastaví.** README tu mělo v Tech Stacku dvakrát „Brána",
+jednou pro GitHub Actions. Větve ale nemají ochranu ani ruleset (ověřeno
+přes `gh api` u Igrisu), takže workflow běží až po pushi a chybu jen nahlásí.
+Zastavit push umí jen hook. Opraveno v README a zapsáno do stavu, ochranu
+větví s povinnými kontrolami rozhodne zadavatel.

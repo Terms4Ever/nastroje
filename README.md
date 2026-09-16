@@ -34,8 +34,8 @@ dokumentace, která lže nebo zůstala pozadu, stojí čas.
 | Vrstva  | Technologie                     |
 |---------|---------------------------------|
 | Skript  | PHP 8.3, žádné závislosti       |
-| Brána   | GitHub Actions, `ubuntu-24.04`  |
-| Brána   | pre-push hook přes `core.hooksPath` |
+| Brána před pushem | pre-push hook přes `core.hooksPath` |
+| Kontrola po pushi | GitHub Actions, `ubuntu-24.04`; chybu nahlásí, push nezastaví |
 
 Čisté PHP schválně: běhové prostředí `ubuntu-24.04` má PHP předinstalované,
 takže kontrola na GitHubu nepotřebuje jediný instalační krok.

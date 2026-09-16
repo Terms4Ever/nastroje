@@ -62,7 +62,7 @@ function sestavBlok(string $koren): string
         $radky[] = popisek('běhové prostředí:') . $beh;
     }
 
-    $vetev = git($koren, 'rev-parse --abbrev-ref HEAD');
+    $vetev = zjistiHlavniVetev($koren);
     if ($vetev !== null) {
         $radky[] = popisek('hlavní větev:') . $vetev;
     }
@@ -180,6 +180,39 @@ function proGit(string $cesta): string
 }
 
 /** Spustí git v daném repozitáři a vrátí první řádek výstupu. */
+/**
+ * Hlavní větev repozitáře, ne ta, na které se zrovna stojí.
+ *
+ * Do 16. 9. 2026 se brala aktuální větev (`rev-parse --abbrev-ref HEAD`).
+ * Push z jakékoli jiné větve pak kontrolu dokumentace shodil hláškou
+ * o zastaralém bloku, a to lokálně i na GitHubu, kde pull request stojí na
+ * odpojeném HEAD (N15).
+ *
+ * Pořadí: kam ukazuje origin/HEAD, ale jen když cíl existuje (po přejmenování
+ * větve zůstává viset), pak main, pak master a až nakonec aktuální větev.
+ */
+function zjistiHlavniVetev(string $koren): ?string
+{
+    if (git($koren, 'rev-parse -q --verify refs/remotes/origin/HEAD') !== null) {
+        $cil = git($koren, 'symbolic-ref -q --short refs/remotes/origin/HEAD');
+        if ($cil !== null && str_starts_with($cil, 'origin/')) {
+            return substr($cil, strlen('origin/'));
+        }
+    }
+
+    foreach (['main', 'master'] as $jmeno) {
+        foreach (["refs/remotes/origin/$jmeno", "refs/heads/$jmeno"] as $ref) {
+            if (git($koren, "rev-parse -q --verify $ref") !== null) {
+                return $jmeno;
+            }
+        }
+    }
+
+    $aktualni = git($koren, 'rev-parse --abbrev-ref HEAD');
+
+    return $aktualni === 'HEAD' ? null : $aktualni;
+}
+
 function git(string $koren, string $prikaz): ?string
 {
     $vystup = [];

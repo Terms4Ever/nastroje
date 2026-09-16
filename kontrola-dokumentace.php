@@ -21,7 +21,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.4.0';
+const VERZE_DOKUMENTACE = '1.4.1';
 
 /**
  * Cesty, které skript čte z disku. Musí sedět na pushovaný commit, jinak se

@@ -11,11 +11,12 @@ hlavní větev:     main
 ## Co je hotové
 
 - `kontrola-readme.php` ve verzi 2.0.0, čisté PHP bez závislostí
-- `kontrola-dokumentace.php` ve verzi 1.4.0, zapíná se přihlášením,
+- `kontrola-dokumentace.php` ve verzi 1.4.1, zapíná se přihlášením,
   složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení
   a neplatné UTF-8 hlásí jako chybu, ne jako důvod k přeskočení. Když zná
   pushovaný commit, ověří, že pracovní strom v čtených cestách sedí
-- `stav-projektu.php`, generátor bloku se skutečnými čísly
+- `stav-projektu.php`, generátor bloku se skutečnými čísly. Hlavní větev
+  bere z repozitáře, ne z větve, na které se zrovna stojí
 - Kontrola kostry: povinné sekce, jejich názvy, pořadí, hlavička s odznaky
 - Kontrola pravdivosti: cesty, odkazy a kotvy zmíněné v README musí existovat
 - Zákaz dlouhých pomlček
@@ -47,3 +48,12 @@ Nic rozdělaného.
   stálo by za to posunout to sem, aby to platilo všude.
 - Zvážit kontrolu, že `docs/00-stav-projektu.md` není starší než poslední
   commit, který mění kód. Zastaralý stav je horší než žádný.
+- Pravidla commitů žijí jen v neverzovaném `~/.git-hooks/commit-msg`. Stálo by
+  za to přesunout je sem a pouštět je i na GitHubu, jako README a dokumentaci.
+
+## Na co si dát pozor
+
+- **Kontrola na GitHubu push nezastaví.** Větve nemají ochranu, takže běh
+  chybu jen nahlásí po faktu. Zastavit push umí jen pre-push hook. Zapnout
+  ochranu větví s povinnými kontrolami je rozhodnutí zadavatele, znamenalo by
+  práci přes pull requesty.
