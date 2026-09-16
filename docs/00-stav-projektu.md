@@ -11,9 +11,10 @@ hlavní větev:     main
 ## Co je hotové
 
 - `kontrola-readme.php` ve verzi 2.0.0, čisté PHP bez závislostí
-- `kontrola-dokumentace.php` ve verzi 1.3.0, zapíná se přihlášením,
+- `kontrola-dokumentace.php` ve verzi 1.4.0, zapíná se přihlášením,
   složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení
-  a neplatné UTF-8 hlásí jako chybu, ne jako důvod k přeskočení
+  a neplatné UTF-8 hlásí jako chybu, ne jako důvod k přeskočení. Když zná
+  pushovaný commit, ověří, že pracovní strom v čtených cestách sedí
 - `stav-projektu.php`, generátor bloku se skutečnými čísly
 - Kontrola kostry: povinné sekce, jejich názvy, pořadí, hlavička s odznaky
 - Kontrola pravdivosti: cesty, odkazy a kotvy zmíněné v README musí existovat

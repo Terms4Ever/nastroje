@@ -224,3 +224,44 @@ Nová větev, kde základ jsou samé nuly, se hlásit nemá a nehlásí.
 **Poučení podruhé.** Pojistka proti tiché chybě sama potřebuje zkoušku
 naprázdno. První verze guardu vypadala správně a přitom měla díru hned
 v prvním řádku.
+
+---
+
+## N14 - Kontroluje se pushovaný commit, ne disk (16. 9. 2026)
+
+**Jak se to našlo.** Třetí kolo adversariálního běhu nad Igrisem, poprvé na
+modelu Sonnet. Obsah Igrisu označil za čistý, ale našel tři díry v branách,
+z toho dvě v tomhle repozitáři.
+
+**Kontrolovalo se něco jiného, než co se pushuje.** Obsah dokumentů i generovaný
+blok se čtou z disku, pravidlo o dávce z gitu. Stačila běžná situace, ruční
+oprava bez `git add`, a kontrola pustila commit se zakázaným znakem, protože
+na disku už byl čistý soubor. Opačně zastavila čistý commit kvůli rozdělané
+práci.
+
+**Rozhodnutí.** Když skript dostane pushovaný commit, nejdřív ověří, že se
+pracovní strom od něj v čtených cestách neliší, a to včetně nesledovaných
+souborů. Když se liší, skončí s chybou a řekne proč. Čtené cesty jsou
+`docs`, `.readme-kontrola.json` a čtyři soubory, ze kterých bere verzi
+generátor bloku.
+
+**Proč ne číst obsah rovnou z commitu.** Generátor bloku zjišťuje hlavní větev
+z gitu, a ten ve vyexportovaném stromu není. Ověřit shodu je jednodušší
+a stejně spolehlivé. Na GitHubu je checkout vždy přesně ten commit, takže
+tam kontrola nikdy nevystřelí.
+
+**Prázdný objekt se hlásil jako neplatný JSON.** Moje oprava z N13 odmítala
+`[]` přes `array_is_list`. Jenže `json_decode('{}', true)` a
+`json_decode('[]', true)` jsou v PHP totéž prázdné pole, takže pojistka
+odmítla i platný prázdný objekt `{}`. Nově se dekóduje bez asociativního
+režimu a objekt se pozná jako `stdClass`. Zároveň se odstraní BOM, se kterým
+padal JSON uložený Poznámkovým blokem.
+
+**Za kód se nepočítal `LICENSE.php`.** Seznam souborů, které kódem nejsou,
+se porovnával přes předponu. To dává smysl jen u složky `docs/`, u ostatních
+položek vyřadilo i `LICENSE.php` nebo `README.md-old.js`. Nově předpona jen
+u složky, jinak přesná shoda. `kontrola-readme.php` to měl správně od začátku.
+
+**Poučení.** N13 byla oprava tiché chyby a sama vyrobila regresi o kolo dál.
+Pojistka proti chybnému vstupu musí mít zkoušku i na platném vstupu, nejen
+na tom chybném.

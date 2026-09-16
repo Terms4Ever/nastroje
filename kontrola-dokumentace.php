@@ -21,7 +21,20 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.3.0';
+const VERZE_DOKUMENTACE = '1.4.0';
+
+/**
+ * Cesty, které skript čte z disku. Musí sedět na pushovaný commit, jinak se
+ * kontroluje něco jiného, než co odejde. Poslední čtyři čte generátor bloku.
+ */
+const CTENE_CESTY = [
+    'docs',
+    '.readme-kontrola.json',
+    'package.json',
+    'app.json',
+    'config.php',
+    'composer.json',
+];
 
 /** Soubory, které se při rozhodování "sáhlo se na kód" nepočítají. */
 const NENI_KOD = [
@@ -44,7 +57,21 @@ $nastaveni = [
 ];
 $cestaNastaveni = $koren . '/.readme-kontrola.json';
 if (is_file($cestaNastaveni)) {
-    $syrove = json_decode((string) file_get_contents($cestaNastaveni), true);
+    // BOM na zacatku (bezny vystup Poznamkoveho bloku) by json_decode shodil
+    // s hlaskou "Syntax error" bez napovedy, ze vinikem je neviditelny znak.
+    $text = (string) file_get_contents($cestaNastaveni);
+    if (str_starts_with($text, "\xEF\xBB\xBF")) {
+        $text = substr($text, 3);
+    }
+
+    // Dekoduje se BEZ asociativniho rezimu. json_decode('{}', true) a
+    // json_decode('[]', true) jsou v PHP totez prazdne pole, takze pojistka
+    // proti "[]" odmitala i platny prazdny objekt "{}" (nalez 1e, kolo 3).
+    // Objekt se tak pozna jako stdClass, seznam jako pole.
+    $dekodovany = json_decode($text);
+    $syrove = $dekodovany instanceof stdClass
+        ? json_decode($text, true)
+        : null;
 
     // Vadny JSON se NESMI prejit mlcky. Do 15. 9. 2026 se pri chybe jen
     // nechaly vychozi hodnoty, tedy docs-kontrola => false, a skript ohlasil
@@ -53,7 +80,7 @@ if (is_file($cestaNastaveni)) {
     // is_array() je pravda i pro seznam, takze "[]" prvni verzi pojistky
     // proslo, array_merge nechal docs-kontrola na false a brana byla pryc
     // (nalez N18). Nastaveni musi byt objekt, tedy asociativni pole.
-    if (!is_array($syrove) || array_is_list($syrove)) {
+    if (!is_array($syrove)) {
         fwrite(STDERR, sprintf(
             "\n  %s neni platny JSON: %s\n"
             . "  -> Dokud se to neopravi, kontrola dokumentace nevi, co ma delat.\n\n",
@@ -103,6 +130,35 @@ if (($nastaveni['docs-kontrola'] ?? false) !== true) {
 
 $chyby = [];
 $varovani = [];
+
+// ---------------------------------------------------------------------------
+// 0. Kontroluje se to, co se pushuje, ne to, co leží na disku
+// ---------------------------------------------------------------------------
+//
+// Obsah dokumentů i generovaný blok se čtou z disku. Když se zná pushovaný
+// commit a pracovní strom se od něj v kontrolovaných cestách liší, kontroluje
+// se něco jiného, než co odejde. Stačí běžná situace, rozdělaná práce nebo
+// ruční oprava bez git add, a kontrola pustí commit se zakázaným znakem,
+// nebo naopak zastaví čistý (nález 1b, kolo 3).
+//
+// Na GitHubu je checkout vždy přesně ten commit, takže tam tohle nikdy
+// nevystřelí. Týká se lokálního hooku.
+
+if ($cil !== null) {
+    $rozdil = pracovniStromSeLisi($koren, $cil, CTENE_CESTY);
+    if ($rozdil === null) {
+        $chyby[] = sprintf('commit "%s" v repozitáři není, nejde ověřit, co se kontroluje', $cil);
+    } elseif ($rozdil !== []) {
+        fwrite(STDERR, sprintf(
+            "\n  Pracovní strom se liší od kontrolovaného commitu %s v:\n\n%s\n\n"
+            . "  Kontrola čte soubory z disku, takže by ověřila něco jiného, než co\n"
+            . "  se pushuje. Commitni nebo odlož změny (git stash -u) a zkus znovu.\n\n",
+            substr($cil, 0, 7),
+            implode("\n", array_map(static fn (string $s): string => '    ' . $s, $rozdil))
+        ));
+        exit(1);
+    }
+}
 
 // Rekurzivne, ne jen koren docs/. Nerekurzivni glob znamenal, ze dokument
 // v podslozce prosel bez kontroly (nalez overovaciho agenta 15. 9. 2026).
@@ -258,7 +314,12 @@ function normalizuj(string $text): string
 function jeKod(string $cesta): bool
 {
     foreach (NENI_KOD as $vyjimka) {
-        if ($cesta === $vyjimka || str_starts_with($cesta, $vyjimka)) {
+        // Predpona jen u slozky (konci lomitkem). U souboru presna shoda:
+        // str_starts_with pro vsechno vyradilo i LICENSE.php nebo
+        // README.md-old.js, takze skutecny kod prosel bez zasahu do docs
+        // (nalez 1c, kolo 3). kontrola-readme.php to ma spravne od zacatku.
+        $jeSlozka = str_ends_with($vyjimka, '/');
+        if ($jeSlozka ? str_starts_with($cesta, $vyjimka) : $cesta === $vyjimka) {
             return false;
         }
     }
@@ -372,4 +433,44 @@ function platnyRadek(string $radek): ?string
 function jeNovaVetev(string $zaklad): bool
 {
     return $zaklad === '' || $zaklad === str_repeat('0', 40);
+}
+
+/**
+ * Seznam cest, ve kterých se pracovní strom liší od commitu, včetně souborů,
+ * které git nesleduje. Prázdné pole znamená shodu, null že commit neexistuje.
+ *
+ * @param string[] $cesty
+ * @return string[]|null
+ */
+function pracovniStromSeLisi(string $koren, string $commit, array $cesty): ?array
+{
+    $ticho = PHP_OS_FAMILY === 'Windows' ? '2>NUL' : '2>/dev/null';
+    $repo = escapeshellarg(proGit($koren));
+    $argumenty = implode(' ', array_map('escapeshellarg', $cesty));
+
+    $kod = 0;
+    $vystup = [];
+    exec(sprintf('git -C %s cat-file -e %s %s', $repo, escapeshellarg($commit . '^{commit}'), $ticho), $vystup, $kod);
+    if ($kod !== 0) {
+        return null;
+    }
+
+    $zmenene = [];
+    exec(sprintf('git -C %s diff --name-only %s -- %s %s', $repo, escapeshellarg($commit), $argumenty, $ticho), $zmenene, $kod);
+    if ($kod !== 0) {
+        throw new RuntimeException('git diff proti commitu ' . $commit . ' selhal (kód ' . $kod . ')');
+    }
+
+    $nesledovane = [];
+    exec(sprintf('git -C %s ls-files --others --exclude-standard -- %s %s', $repo, $argumenty, $ticho), $nesledovane, $kod);
+    if ($kod !== 0) {
+        throw new RuntimeException('git ls-files selhal (kód ' . $kod . ')');
+    }
+
+    $vse = array_merge(
+        array_map(static fn (string $s): string => trim($s), $zmenene),
+        array_map(static fn (string $s): string => trim($s) . '  (nesledovaný)', $nesledovane)
+    );
+
+    return array_values(array_filter($vse, static fn (string $s): bool => $s !== ''));
 }
