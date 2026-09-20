@@ -66,6 +66,13 @@ nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
 a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
 vzor agentského souboru je `sablony/agents.md`.
 
+## Složka .claude
+
+Do gitu patří `.claude/launch.json` a `.claude/settings.json`, osobní
+`.claude/settings.local.json` do `.gitignore`. Kontrola dokumentace hlásí, když
+se osobní nastavení dostane do gitu nebo když některý `.claude/*.json` není
+platný JSON.
+
 ## Standard issues
 
 Jeden tvar pro chybu i funkci: sekce `## Problém` (nebo `## Cíl`),

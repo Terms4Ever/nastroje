@@ -571,3 +571,30 @@ v podsložce posílá server sám. Projekt proto smí mít `docs/.htaccess`
 s `Require all denied`, stejný vzor jako u `db/`. Kontrola README bere do
 tabulky dokumentů jen `.md` (2.0.1) a kontrola dokumentace `.htaccess` v `docs/`
 nepovažuje za data.
+
+---
+
+## N23 - Složka .claude patří do gitu, kromě osobního nastavení (20. 9. 2026)
+
+**Podnět.** Zadavatel: *„a co složka .claude?"* Stav byl rozhozený: steelset
+a Igris měly `.claude/launch.json` i `settings.json` v gitu, vyridimestavbu
+celou složku v `.gitignore`, zbylé čtyři repozitáře neměly nic a každá session
+si spouštění náhledu vymýšlela znovu.
+
+**Rozhodnutí zadavatele.** Sjednotit celý balík.
+
+- `.claude/launch.json` a `.claude/settings.json` do gitu. Je to stejný druh
+  informace jako „jak se to spouští" v README, jen strojově čitelná.
+- `.claude/settings.local.json` do `.gitignore` všude. Osobní nastavení je věc
+  stroje, ne projektu.
+- Chybějící `launch.json` doplněn: onlinefakturuj (vestavěný server na 8000),
+  trenwise (`php artisan serve` na 8010), LabProtocol (expo web na 8082).
+  Porty se schválně neperou se steelsetem (8081) ani s Igrisem (5174).
+
+**Vedlejší práce.** onlinefakturuj neměl router pro vestavěný server, takže
+`php -S` vracel u hezkých adres 404. Přibyl `dev-server.php` podle vzoru
+z vyridimestavbu; nasazení ho nenahrává.
+
+**Vynucení.** Kontrola dokumentace nově hlásí `.claude/settings.local.json`
+v gitu a neplatný JSON v `.claude/*.json` (ten by Claude Code přeskočil bez
+hlášky).

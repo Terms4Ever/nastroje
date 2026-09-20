@@ -371,6 +371,18 @@ foreach (POVINNE_DOKUMENTY as $povinny) {
     }
 }
 
+// Složka .claude: sdílené patří do gitu, osobní ne.
+foreach (souboryVGitu($koren) as $cesta) {
+    if ($cesta === '.claude/settings.local.json') {
+        $chyby[] = '.claude/settings.local.json je v gitu; osobní nastavení patří do .gitignore';
+    }
+    if (str_starts_with($cesta, '.claude/') && str_ends_with($cesta, '.json')
+        && is_file($koren . '/' . $cesta)
+        && json_decode((string) file_get_contents($koren . '/' . $cesta)) === null) {
+        $chyby[] = sprintf('%s není platný JSON, Claude Code ho přeskočí bez hlášky', $cesta);
+    }
+}
+
 // Agentský soubor: jeden text, dvě jména. Claude Code čte CLAUDE.md, ostatní
 // nástroje AGENTS.md; ukazatel drží obojí v jednom souboru, takže se nemůžou
 // rozejít.
