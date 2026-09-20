@@ -34,6 +34,16 @@ const CTENE_CESTY_MIGRACI = [
 /** Název migrace: datum, nepovinný čas, popis malými písmeny. */
 const VZOR_NAZVU = '/^\d{4}-\d{2}-\d{2}(-\d{4})?-[a-z0-9]+(-[a-z0-9]+)*\.sql$/';
 
+/**
+ * Soubory spouštěče. Ty mají DDL v sobě (zakládají si tabulku `migrace`),
+ * takže by jinak každá jejich změna vypadala jako změna schématu bez migrace.
+ */
+const SOUBORY_SPOUSTECE = [
+    'migrace.php',
+    'Migrace.php',
+    'migrace-endpoint.php',
+];
+
 /** Příkazy, které mění schéma. Když je dávka má mimo migrace, chybí migrace. */
 const PRIKAZY_SCHEMATU = [
     'CREATE TABLE',
@@ -365,9 +375,14 @@ function zmenySchematu(string $koren, string $rozsah): array
 
     $nalezy = [];
     $soubor = '';
+    $preskocit = false;
     foreach ($vystup as $radek) {
         if (str_starts_with($radek, '+++ b/')) {
             $soubor = substr($radek, 6);
+            $preskocit = in_array(basename($soubor), SOUBORY_SPOUSTECE, true);
+            continue;
+        }
+        if ($preskocit) {
             continue;
         }
         if (!str_starts_with($radek, '+') || str_starts_with($radek, '+++')) {

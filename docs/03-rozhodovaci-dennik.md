@@ -379,3 +379,8 @@ hostingu by platil jen pro jeden web a neplatil by pro nový.
 
 **Dnešní obsah migrací citlivý není** (tabulky a text stránky), riziko je až
 v migraci, která bude zakládat účet nebo měnit heslo.
+
+**Doplněk 20. 9. 2026.** Hledání DDL přeskakuje soubory spouštěče
+(`migrace.php`, `Migrace.php`, `migrace-endpoint.php`). Spouštěč si zakládá
+vlastní tabulku `migrace`, takže jeho úprava vypadala jako změna schématu bez
+migrace a zastavila push ve vyridimestavbu.cz.
