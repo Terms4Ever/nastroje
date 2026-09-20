@@ -1,4 +1,4 @@
-name: Tvar issue
+name: Tvar issue (sdílené)
 
 # Volá se z ostatních repozitářů při události issues, aby se tvar poznal hned
 # při zakládání, ne až u nejbližšího pushe:
