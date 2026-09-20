@@ -56,6 +56,8 @@ nastroje/
 ├── kontrola-dokumentace.php     # kontrola složky docs/
 ├── kontrola-migraci.php         # kontrola migrací databáze
 ├── kontrola-issues.php          # kontrola tvaru issues na GitHubu
+├── kontrola-tvaru-issue.php     # kontrola jednoho těla, než issue vznikne
+├── src/tvar-issue.php           # pravidla tvaru issue na jednom místě
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání

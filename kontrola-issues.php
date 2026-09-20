@@ -29,39 +29,9 @@
  */
 declare(strict_types=1);
 
+require_once __DIR__ . '/src/tvar-issue.php';
+
 const VERZE_ISSUES = '1.1.0';
-
-/** První nadpis: jedno z toho. Issue říká buď co je špatně, nebo čeho chceme dosáhnout. */
-const NADPISY_ZADANI = ['## Problém', '## Cíl'];
-
-/** Sekce s checklistem, bez ní se nepozná, kdy je hotovo. */
-const NADPIS_HOTOVO = '## Hotovo, když';
-
-/**
- * Jediné povolené sekce, v jediném povoleném pořadí. Volný tvar je přesně to,
- * co se tímhle ruší: dřív měly issues přes dvacet různých nadpisů.
- */
-const NADPISY_POVOLENE = [
-    '## Problém',
-    '## Cíl',
-    '## Jak to poznat',
-    '## Hotovo, když',
-    '## Kde to žije',
-    '## Snímky',
-];
-
-/** Pořadí sekcí. Problém a Cíl se vylučují, proto mají stejné místo. */
-const PORADI_SEKCI = [
-    '## Problém' => 0,
-    '## Cíl' => 0,
-    '## Jak to poznat' => 1,
-    '## Hotovo, když' => 2,
-    '## Kde to žije' => 3,
-    '## Snímky' => 4,
-];
-
-/** Delší tělo znamená, že se do issue psal rozbor. Ten patří do docs/. */
-const MAX_RADKU_TELA = 40;
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -112,57 +82,19 @@ foreach ($issues as $issue) {
     };
 
     // 0. Syrový nápad zadavatele: bez jediného nadpisu. Čeká na přepsání.
-    $nadpisy = nadpisy($telo);
-    $syrove = $nadpisy === [];
-    if ($syrove) {
+    if (jeSyroveIssue($telo)) {
         $napady[] = "#$cislo " . trim((string) ($issue['title'] ?? ''));
+        $syrove = true;
+    } else {
+        $syrove = false;
+    }
+
+    // 1. Tvar
+    foreach (problemyTvaru($telo) as $problem) {
+        $pridej("#$cislo $problem");
     }
 
     $checklist = checklist($telo);
-
-    // 1. Tvar
-    if (!$syrove) {
-        $videne = [];
-        $posledni = -1;
-        foreach ($nadpisy as $nadpis) {
-            if (!in_array($nadpis, NADPISY_POVOLENE, true)) {
-                $pridej("#$cislo má sekci navíc: " . sekce($nadpis));
-                continue;
-            }
-            if (isset($videne[$nadpis])) {
-                $pridej("#$cislo má sekci " . sekce($nadpis) . ' dvakrát');
-                continue;
-            }
-            $videne[$nadpis] = true;
-
-            $misto = PORADI_SEKCI[$nadpis];
-            if ($misto < $posledni) {
-                $pridej("#$cislo má sekci " . sekce($nadpis) . ' na špatném místě');
-            }
-            $posledni = max($posledni, $misto);
-        }
-
-        if (isset($videne['## Problém'], $videne['## Cíl'])) {
-            $pridej("#$cislo má Problém i Cíl, patří tam jen jedno");
-        }
-        if (!isset($videne['## Problém']) && !isset($videne['## Cíl'])) {
-            $pridej("#$cislo nemá úvodní sekci " . implode(' ani ', NADPISY_ZADANI));
-        }
-
-        $mimo = bodyMimoHotovo($telo);
-        if (!isset($videne[NADPIS_HOTOVO])) {
-            $pridej("#$cislo nemá sekci " . sekce(NADPIS_HOTOVO));
-        } elseif ($checklist === []) {
-            $pridej("#$cislo má sekci " . sekce(NADPIS_HOTOVO) . ', ale bez odškrtávacího seznamu');
-        } elseif ($mimo > 0) {
-            $pridej("#$cislo má " . bodu($mimo) . ' checklistu mimo sekci ' . sekce(NADPIS_HOTOVO));
-        }
-
-        $radku = radkyKomentare($telo);
-        if ($radku > MAX_RADKU_TELA) {
-            $pridej("#$cislo má tělo o $radku řádcích, limit je " . MAX_RADKU_TELA . '; rozbor patří do docs/');
-        }
-    }
 
     // 2. Zavřené issue má hotový checklist
     if (strtoupper($stav) === 'CLOSED' && $checklist !== []) {
@@ -189,7 +121,7 @@ foreach ($issues as $issue) {
 
     // 5. Délka komentářů
     foreach ($issue['comments'] ?? [] as $poradi => $komentar) {
-        $radky = radkyKomentare((string) ($komentar['body'] ?? ''));
+        $radky = radkyBezPrazdnych((string) ($komentar['body'] ?? ''));
         if ($radky > MAX_RADKU_KOMENTARE) {
             $vznikKomentare = substr((string) ($komentar['createdAt'] ?? ''), 0, 10);
             $text = "#$cislo komentář " . ($poradi + 1) . " má $radky řádků, limit je " . MAX_RADKU_KOMENTARE;
@@ -300,72 +232,6 @@ function nactiIssues(string $slug, bool $jenOtevrene): ?array
     $data = json_decode(implode("\n", $vystup), true);
 
     return is_array($data) ? $data : null;
-}
-
-/** Skloňování: 1 bod, 2 body, 5 bodů. */
-function bodu(int $pocet): string
-{
-    if ($pocet === 1) {
-        return '1 bod';
-    }
-
-    return $pocet < 5 ? "$pocet body" : "$pocet bodů";
-}
-
-/** Nadpisy druhé úrovně v pořadí, jak jsou v těle. */
-function nadpisy(string $telo): array
-{
-    preg_match_all('/^##[ 	]+(\S.*?)[ 	]*$/m', $telo, $shody);
-
-    return array_map(static fn (string $n): string => '## ' . $n, $shody[1] ?? []);
-}
-
-/** Nadpis bez mřížek, do hlášky. */
-function sekce(string $nadpis): string
-{
-    return trim($nadpis, '# ');
-}
-
-/** Povolené sekce v pořadí, jedním řádkem. */
-function povoleneSekce(): string
-{
-    $nazvy = array_map('sekce', NADPISY_POVOLENE);
-
-    return implode(', ', $nazvy);
-}
-
-/** Kolik bodů checklistu leží mimo sekci "Hotovo, když". */
-function bodyMimoHotovo(string $telo): int
-{
-    $sekce = '';
-    $mimo = 0;
-    foreach (preg_split('/\R/', $telo) ?: [] as $radek) {
-        if (preg_match('/^##[ 	]+(\S.*?)[ 	]*$/', $radek, $shoda) === 1) {
-            $sekce = '## ' . $shoda[1];
-            continue;
-        }
-        if (preg_match('/^\s*[-*]\s+\[( |x|X)\]/', $radek) === 1 && $sekce !== NADPIS_HOTOVO) {
-            $mimo++;
-        }
-    }
-
-    return $mimo;
-}
-
-/** Stav jednotlivých bodů checklistu: true = odškrtnuto. */
-function checklist(string $telo): array
-{
-    preg_match_all('/^\s*[-*]\s+\[( |x|X)\]/m', $telo, $shody);
-
-    return array_map(static fn (string $z): bool => strtolower($z) === 'x', $shody[1] ?? []);
-}
-
-/** Počet řádků s textem. Prázdné řádky se nepočítají. */
-function radkyKomentare(string $text): int
-{
-    $radky = preg_split('/\R/', trim($text)) ?: [];
-
-    return count(array_filter($radky, static fn (string $r): bool => trim($r) !== ''));
 }
 
 /** Cesty ke snímkům zmíněné v textu. */

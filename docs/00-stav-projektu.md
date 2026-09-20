@@ -63,7 +63,12 @@ Nic rozdělaného.
 Jeden tvar pro chybu i funkci: sekce `## Problém` (nebo `## Cíl`),
 `## Jak to poznat`, `## Hotovo, když`, `## Kde to žije`, `## Snímky`, v tomhle
 pořadí a žádné jiné. Jeden checklist pod „Hotovo, když", tělo do 40 řádků.
-Syrový nápad zadavatele bez nadpisů kontrolu neshodí, čeká na přepsání. Zavřené issue má checklist odškrtaný, komentáře mají
+Syrový nápad zadavatele bez nadpisů kontrolu neshodí, čeká na přepsání.
+
+Kontrola běží ve třech místech: při zakládání a změně issue (workflow
+`tvar-issue.yml` nad událostí `issues`, označí štítkem a napíše, co chybí),
+při pushi nad všemi issues repozitáře a lokálně před `gh issue create`, kde
+hook Claude Code špatné tělo rovnou zastaví. Zavřené issue má checklist odškrtaný, komentáře mají
 do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží
 v `docs/snimky/<číslo>-<název>/`. Hlídá to `kontrola-issues.php`, která běží
 v kontrolách na GitHubu při pushi a jednou denně.

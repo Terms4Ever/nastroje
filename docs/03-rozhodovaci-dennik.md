@@ -478,3 +478,29 @@ projde a vypíše se jako k přepsání, správné issue projde, sekce navíc, c
 `Problém` i `Cíl` naráz, zavřené s neodškrtnutým bodem, komentář o sedmi řádcích
 a zmínka o nástroji spadnou. Návratový kód 1. Na ostrých issues onlinefakturuj
 kontrola najde 117 odchylek proti 44 před změnou.
+
+---
+
+## N21 - Tvar issue se hlídá při zakládání, ne ráno (20. 9. 2026)
+
+**Podnět.** Zadavatel: *„Seš si jistý, že teď když dám příkaz jinému agentovi
+udělat issue, tak to udělá správně?"* Nebyl jsem. Šablona platí jen ve webovém
+formuláři, agent zakládá issue přes `gh issue create --body`, kontrola běžela
+při pushi a v 6:00 a nic nezastavila. K tomu: *„Kontrola v 6 ráno je blbost,
+já to potřebuji při vytváření."*
+
+**Rozhodnutí.** Tři místa místo slibu v pokynech.
+
+1. Workflow `tvar-issue.yml` nad událostí `issues` (opened, edited, closed).
+   Špatné issue dostane štítek `tvar nesedí` a komentář do pěti řádků s tím,
+   co chybí. Když se tvar spraví, štítek zmizí. U zavírání se navíc hlídá
+   neodškrtnutý checklist.
+2. Hook Claude Code před `gh issue create`, který tělo prohlédne a špatné
+   zastaví, takže se špatné issue nezaloží.
+3. Kontrola všech issues při pushi zůstává jako síť.
+
+**Plán v 6:00 zrušen.** Byl to kompromis z N19 a zadavatel ho odmítl: hlásil
+by odchylky až za den. Událost `issues` je nahrazuje ve vteřinách.
+
+**Sdílená pravidla.** Tvar těla se posunul do `src/tvar-issue.php`, aby ho
+kontrola issues, kontrola jednoho těla i workflow braly ze stejného místa.

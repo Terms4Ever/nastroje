@@ -1,0 +1,74 @@
+name: Tvar issue
+
+# Volá se z ostatních repozitářů při události issues, aby se tvar poznal hned
+# při zakládání, ne až u nejbližšího pushe:
+#
+#   on:
+#     issues:
+#       types: [opened, edited, closed]
+#   jobs:
+#     tvar:
+#       uses: Terms4Ever/nastroje/.github/workflows/issue-tvar.yml@main
+#
+# Práva se neomezují tady, ale ve volajícím workflow. Tenhle běh potřebuje
+# issues: write, protože štítkuje a píše komentář.
+on:
+  workflow_call:
+
+jobs:
+  tvar:
+    runs-on: ubuntu-24.04
+
+    steps:
+      - name: Stáhnout kontrolu
+        uses: actions/checkout@v7
+        with:
+          repository: Terms4Ever/nastroje
+          path: .nastroje
+
+      - name: Zkontrolovat tvar
+        id: tvar
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CISLO: ${{ github.event.issue.number }}
+          AKCE: ${{ github.event.action }}
+        run: |
+          gh issue view "$CISLO" --json body --jq .body > telo.md
+          ZAVRENE=""
+          if [ "$AKCE" = "closed" ]; then ZAVRENE="--zavrene"; fi
+          if php .nastroje/kontrola-tvaru-issue.php telo.md $ZAVRENE 2> nalezy.txt; then
+            echo "sedi=ano" >> "$GITHUB_OUTPUT"
+          else
+            echo "sedi=ne" >> "$GITHUB_OUTPUT"
+            cat nalezy.txt
+          fi
+
+      - name: Označit issue, které tvaru neodpovídá
+        if: steps.tvar.outputs.sedi == 'ne'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CISLO: ${{ github.event.issue.number }}
+          AKCE: ${{ github.event.action }}
+        run: |
+          gh label create "tvar nesedí" --color D93F0B             --description "Tělo issue neodpovídá šabloně" --force
+          gh issue edit "$CISLO" --add-label "tvar nesedí"
+          # Komentář jen při založení a při zavření, ať každá úprava nepřidává
+          # další. Pravidlo o pěti řádcích platí i pro tenhle komentář.
+          if [ "$AKCE" = "opened" ] || [ "$AKCE" = "closed" ]; then
+            {
+              echo "Tvar issue nesedí:"
+              grep '^  - ' nalezy.txt | head -3
+              echo "Vzor: .github/ISSUE_TEMPLATE/ukol.md"
+            } > komentar.md
+            gh issue comment "$CISLO" --body-file komentar.md
+          fi
+
+      - name: Sundat štítek, když už tvar sedí
+        if: steps.tvar.outputs.sedi == 'ano'
+        env:
+          GH_TOKEN: ${{ github.token }}
+          GH_REPO: ${{ github.repository }}
+          CISLO: ${{ github.event.issue.number }}
+        run: gh issue edit "$CISLO" --remove-label "tvar nesedí" || true
