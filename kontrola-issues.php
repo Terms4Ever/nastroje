@@ -8,7 +8,8 @@
  * `gh` nebo proměnnou GH_TOKEN. Repozitář se bere z remote.origin.url.
  *
  * Co hlídá:
- *   1. tvar: povinné sekce a checklist "Hotovo, když"
+ *   1. tvar: pevný seznam sekcí v pevném pořadí, jeden checklist pod
+ *      "Hotovo, když" a tělo do 40 řádků
  *   2. zavřené issue má odškrtnutý celý checklist
  *   3. nikde se nezmiňuje Claude ani že text psal nástroj
  *   4. žádné dlouhé ani poloviční pomlčky
@@ -20,17 +21,47 @@
  * (přepínač --od, výchozí 2026-09-21, tedy den po zavedení standardu).
  * Dřívější porušení jen upozorní: pravidlo nemá trestat zpětně.
  *
+ * Nápad od zadavatele (tělo bez jediného nadpisu "## ") není chyba. Je to
+ * syrové zadání, které se teprve přepíše do tvaru; skript ho vypíše zvlášť
+ * jako "k přepsání", aby se nezapomnělo, a kontrolu tím neshodí.
+ *
  * Vedomá výjimka: tenhle skript nikdy nic nemění, jen hlásí.
  */
 declare(strict_types=1);
 
-const VERZE_ISSUES = '1.0.0';
+const VERZE_ISSUES = '1.1.0';
 
 /** První nadpis: jedno z toho. Issue říká buď co je špatně, nebo čeho chceme dosáhnout. */
 const NADPISY_ZADANI = ['## Problém', '## Cíl'];
 
 /** Sekce s checklistem, bez ní se nepozná, kdy je hotovo. */
 const NADPIS_HOTOVO = '## Hotovo, když';
+
+/**
+ * Jediné povolené sekce, v jediném povoleném pořadí. Volný tvar je přesně to,
+ * co se tímhle ruší: dřív měly issues přes dvacet různých nadpisů.
+ */
+const NADPISY_POVOLENE = [
+    '## Problém',
+    '## Cíl',
+    '## Jak to poznat',
+    '## Hotovo, když',
+    '## Kde to žije',
+    '## Snímky',
+];
+
+/** Pořadí sekcí. Problém a Cíl se vylučují, proto mají stejné místo. */
+const PORADI_SEKCI = [
+    '## Problém' => 0,
+    '## Cíl' => 0,
+    '## Jak to poznat' => 1,
+    '## Hotovo, když' => 2,
+    '## Kde to žije' => 3,
+    '## Snímky' => 4,
+];
+
+/** Delší tělo znamená, že se do issue psal rozbor. Ten patří do docs/. */
+const MAX_RADKU_TELA = 40;
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -63,6 +94,7 @@ if ($issues === null) {
 
 $chyby = [];
 $varovani = [];
+$napady = [];
 
 foreach ($issues as $issue) {
     $cislo = (int) ($issue['number'] ?? 0);
@@ -70,7 +102,6 @@ foreach ($issues as $issue) {
     $stav = (string) ($issue['state'] ?? '');
     $vznik = substr((string) ($issue['createdAt'] ?? ''), 0, 10);
     $prisne = $vznik >= $od;
-    $kam = $prisne ? $chyby : $varovani;
 
     $pridej = static function (string $text) use (&$chyby, &$varovani, $prisne): void {
         if ($prisne) {
@@ -80,22 +111,57 @@ foreach ($issues as $issue) {
         }
     };
 
-    // 1. Tvar
-    $maZadani = false;
-    foreach (NADPISY_ZADANI as $nadpis) {
-        if (str_contains($telo, $nadpis)) {
-            $maZadani = true;
-        }
-    }
-    if (!$maZadani) {
-        $pridej("#$cislo nemá úvodní sekci " . implode(' ani ', NADPISY_ZADANI));
+    // 0. Syrový nápad zadavatele: bez jediného nadpisu. Čeká na přepsání.
+    $nadpisy = nadpisy($telo);
+    $syrove = $nadpisy === [];
+    if ($syrove) {
+        $napady[] = "#$cislo " . trim((string) ($issue['title'] ?? ''));
     }
 
     $checklist = checklist($telo);
-    if ($checklist === []) {
-        $pridej("#$cislo nemá odškrtávací seznam v sekci \"" . trim(NADPIS_HOTOVO, '# ') . '"');
-    } elseif (!str_contains($telo, NADPIS_HOTOVO)) {
-        $pridej("#$cislo má odškrtávací seznam, ale ne pod nadpisem \"" . trim(NADPIS_HOTOVO, '# ') . '"');
+
+    // 1. Tvar
+    if (!$syrove) {
+        $videne = [];
+        $posledni = -1;
+        foreach ($nadpisy as $nadpis) {
+            if (!in_array($nadpis, NADPISY_POVOLENE, true)) {
+                $pridej("#$cislo má sekci navíc: " . sekce($nadpis));
+                continue;
+            }
+            if (isset($videne[$nadpis])) {
+                $pridej("#$cislo má sekci " . sekce($nadpis) . ' dvakrát');
+                continue;
+            }
+            $videne[$nadpis] = true;
+
+            $misto = PORADI_SEKCI[$nadpis];
+            if ($misto < $posledni) {
+                $pridej("#$cislo má sekci " . sekce($nadpis) . ' na špatném místě');
+            }
+            $posledni = max($posledni, $misto);
+        }
+
+        if (isset($videne['## Problém'], $videne['## Cíl'])) {
+            $pridej("#$cislo má Problém i Cíl, patří tam jen jedno");
+        }
+        if (!isset($videne['## Problém']) && !isset($videne['## Cíl'])) {
+            $pridej("#$cislo nemá úvodní sekci " . implode(' ani ', NADPISY_ZADANI));
+        }
+
+        $mimo = bodyMimoHotovo($telo);
+        if (!isset($videne[NADPIS_HOTOVO])) {
+            $pridej("#$cislo nemá sekci " . sekce(NADPIS_HOTOVO));
+        } elseif ($checklist === []) {
+            $pridej("#$cislo má sekci " . sekce(NADPIS_HOTOVO) . ', ale bez odškrtávacího seznamu');
+        } elseif ($mimo > 0) {
+            $pridej("#$cislo má " . bodu($mimo) . ' checklistu mimo sekci ' . sekce(NADPIS_HOTOVO));
+        }
+
+        $radku = radkyKomentare($telo);
+        if ($radku > MAX_RADKU_TELA) {
+            $pridej("#$cislo má tělo o $radku řádcích, limit je " . MAX_RADKU_TELA . '; rozbor patří do docs/');
+        }
     }
 
     // 2. Zavřené issue má hotový checklist
@@ -107,7 +173,7 @@ foreach ($issues as $issue) {
     }
 
     // 3. a 4. Zmínky a pomlčky v těle i komentářích
-    $texty = [['tělo', $telo]];
+    $texty = $syrove ? [] : [['tělo', $telo]];
     foreach ($issue['comments'] ?? [] as $poradi => $komentar) {
         $texty[] = ['komentář ' . ($poradi + 1), (string) ($komentar['body'] ?? '')];
     }
@@ -136,7 +202,7 @@ foreach ($issues as $issue) {
     }
 
     // 6. Snímky
-    foreach (snimkyVTextu($telo) as $cesta) {
+    foreach ($syrove ? [] : snimkyVTextu($telo) as $cesta) {
         if (preg_match(VZOR_SNIMKU, $cesta) !== 1) {
             $pridej("#$cislo odkazuje na snímek $cesta, který nemá tvar docs/snimky/cislo-nazev/pred-neco.png");
             continue;
@@ -163,6 +229,14 @@ foreach (snimkyVRepozitari($koren) as $cesta) {
 // --------------------------------------------------------------------------
 $nazev = basename(realpath($koren) ?: $koren);
 
+if ($napady !== []) {
+    echo "\n  Nápady k přepsání do tvaru (" . count($napady) . "):\n\n";
+    foreach ($napady as $radek) {
+        echo "    $radek\n";
+    }
+    echo "\n";
+}
+
 if ($varovani !== []) {
     echo "\n  Issues $nazev, starší než $od (jen upozornění):\n\n";
     foreach ($varovani as $radek) {
@@ -175,7 +249,8 @@ if ($chyby !== []) {
     foreach ($chyby as $radek) {
         echo "    $radek\n";
     }
-    echo "\n  Tvar issue je v šabloně .github/ISSUE_TEMPLATE/ukol.md\n\n";
+    echo "\n  Sekce, jiné nejsou: " . povoleneSekce() . "\n";
+    echo "  Celý tvar je v šabloně .github/ISSUE_TEMPLATE/ukol.md\n\n";
     exit(1);
 }
 
@@ -235,6 +310,46 @@ function bodu(int $pocet): string
     }
 
     return $pocet < 5 ? "$pocet body" : "$pocet bodů";
+}
+
+/** Nadpisy druhé úrovně v pořadí, jak jsou v těle. */
+function nadpisy(string $telo): array
+{
+    preg_match_all('/^##[ 	]+(\S.*?)[ 	]*$/m', $telo, $shody);
+
+    return array_map(static fn (string $n): string => '## ' . $n, $shody[1] ?? []);
+}
+
+/** Nadpis bez mřížek, do hlášky. */
+function sekce(string $nadpis): string
+{
+    return trim($nadpis, '# ');
+}
+
+/** Povolené sekce v pořadí, jedním řádkem. */
+function povoleneSekce(): string
+{
+    $nazvy = array_map('sekce', NADPISY_POVOLENE);
+
+    return implode(', ', $nazvy);
+}
+
+/** Kolik bodů checklistu leží mimo sekci "Hotovo, když". */
+function bodyMimoHotovo(string $telo): int
+{
+    $sekce = '';
+    $mimo = 0;
+    foreach (preg_split('/\R/', $telo) ?: [] as $radek) {
+        if (preg_match('/^##[ 	]+(\S.*?)[ 	]*$/', $radek, $shoda) === 1) {
+            $sekce = '## ' . $shoda[1];
+            continue;
+        }
+        if (preg_match('/^\s*[-*]\s+\[( |x|X)\]/', $radek) === 1 && $sekce !== NADPIS_HOTOVO) {
+            $mimo++;
+        }
+    }
+
+    return $mimo;
 }
 
 /** Stav jednotlivých bodů checklistu: true = odškrtnuto. */

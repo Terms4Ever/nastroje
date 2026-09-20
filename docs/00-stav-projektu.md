@@ -60,8 +60,10 @@ Nic rozdělaného.
 
 ## Standard issues
 
-Jeden tvar pro chybu i funkci: `## Problém` (nebo `## Cíl`) a `## Hotovo, když`
-s odškrtávacím seznamem. Zavřené issue má checklist odškrtaný, komentáře mají
+Jeden tvar pro chybu i funkci: sekce `## Problém` (nebo `## Cíl`),
+`## Jak to poznat`, `## Hotovo, když`, `## Kde to žije`, `## Snímky`, v tomhle
+pořadí a žádné jiné. Jeden checklist pod „Hotovo, když", tělo do 40 řádků.
+Syrový nápad zadavatele bez nadpisů kontrolu neshodí, čeká na přepsání. Zavřené issue má checklist odškrtaný, komentáře mají
 do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží
 v `docs/snimky/<číslo>-<název>/`. Hlídá to `kontrola-issues.php`, která běží
 v kontrolách na GitHubu při pushi a jednou denně.

@@ -25,8 +25,10 @@ Kontrola hlídá pět věcí:
 - **Aktualizaci** - dávka, která sáhla na kód, musí sáhnout i na dokumentaci.
 - **Migrace databáze** - změna schématu má vlastní soubor ve složce migrací,
   hotová migrace se už nemění a na produkci ji pouští nasazení, ne člověk.
-- **Issues** - jeden tvar pro chybu i funkci, odškrtaný checklist u zavřeného
-  issue, komentáře do pěti řádků a žádná zmínka o nástroji, kterým se psaly.
+- **Issues** - pevný seznam sekcí, jeden checklist pod „Hotovo, když", tělo do
+  40 řádků, odškrtaný checklist u zavřeného issue, komentáře do pěti řádků
+  a žádná zmínka o nástroji, kterým se psaly. Syrový nápad zadavatele (tělo bez
+  nadpisů) chyba není, jen čeká na přepsání.
 
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.

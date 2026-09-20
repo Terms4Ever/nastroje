@@ -442,3 +442,39 @@ je sdílený soubor vynutil, spadl by každý repozitář, který `issues: read`
 neodškrtnuté checklisty u zavřených issues, komentáře o 18 až 26 řádcích,
 zmínky o nástroji ve steelsetu a dlouhé pomlčky. Po nastavení data zavedení
 projde všech sedm repozitářů.
+
+---
+
+## N20 - Tvar issues je pevný, nápad zadavatele ne (20. 9. 2026)
+
+**Podnět.** Zadavatel na issue #21 v onlinefakturuj: *„To mi nepřijde jako styl
+co jsme chtěli na 100 %."* Měl pravdu. Kontrola z N19 hlídala jen to, že
+v těle existují dvě sekce, takže pustila issue s nadpisy `Současný stav`,
+`Co udělat`, `Akceptační kritéria` a `Poznámka`, dvěma checklisty, výpisy SQL
+a padesáti řádky. Napříč repozitáři bylo přes dvacet různých nadpisů.
+
+**Druhá půlka zadání.** *„Issues co dělám já chci právě když mě napadnou udělat
+v špatném jednovětovém formátu, aby jsi je pak předělal."* Zadavatel tedy
+píše syrově a tvar dodávám já. Kontrola to musí rozlišit, jinak by trestala
+právě ten způsob práce, který si přeje.
+
+**Rozhodnutí.**
+
+- Sekce jsou dané a jiné se nepřidávají: `Problém` (nebo `Cíl`, ne obojí),
+  `Jak to poznat`, `Hotovo, když`, `Kde to žije`, `Snímky`, v tomhle pořadí.
+- Jeden checklist, celý pod `Hotovo, když`.
+- Tělo do 40 řádků. Rozbor a výpisy patří do `docs/`.
+- Issue bez jediného nadpisu `## ` je syrový nápad zadavatele. Není to chyba,
+  kontrola ho vypíše jako „k přepsání". Přepsat ho do tvaru je práce agenta,
+  hned jak na issue sáhne; původní věta zůstane jako `Problém`.
+
+**Proč tvar a ne jen doporučení.** Volný tvar je přesně to, co selhalo: N19
+pravidla popsala, ale vynutila jen existenci dvou nadpisů, takže se nic
+nezměnilo a issues dál vypadaly každé jinak.
+
+**Ověřeno.** Atrapou `gh` v laboratorním repozitáři, osm případů: syrový nápad
+projde a vypíše se jako k přepsání, správné issue projde, sekce navíc, chybějící
+`Hotovo, když`, dlouhé tělo, checklist mimo sekci, sekce dvakrát, špatné pořadí,
+`Problém` i `Cíl` naráz, zavřené s neodškrtnutým bodem, komentář o sedmi řádcích
+a zmínka o nástroji spadnou. Návratový kód 1. Na ostrých issues onlinefakturuj
+kontrola najde 117 odchylek proti 44 před změnou.
