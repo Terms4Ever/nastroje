@@ -598,3 +598,30 @@ z vyridimestavbu; nasazení ho nenahrává.
 **Vynucení.** Kontrola dokumentace nově hlásí `.claude/settings.local.json`
 v gitu a neplatný JSON v `.claude/*.json` (ten by Claude Code přeskočil bez
 hlášky).
+
+---
+
+## N24 - Žádné „with Claude" u autora (20. 9. 2026)
+
+**Podnět.** Zadavatel poslal snímek komentářů ve steelsetu, kde GitHub psal
+u autora jmenovku *with Claude*: *„To odeber a nikde to už nechci vidět!"*
+
+**Příčina.** GitHub ukládá u issue a komentáře pole
+`performed_via_github_app`. Nastaví se podle tokenu, kterým záznam vznikl,
+a úprava textu ho nesmaže. Postižených bylo 16 komentářů ze 23 ve steelsetu,
+jinde nic; issues samotné pole nemají.
+
+**Oprava.** Komentář se musel napsat znovu a starý smazat, jiná cesta není.
+Nejdřív se zapsal nový, ověřilo se, že razítko nemá, a teprve pak se mazal
+starý, aby se text nemohl ztratit. Po průchodu je ve všech šesti repozitářích
+razítek nula.
+
+**Vynucení.** Kontrola issues 1.2.0 hlásí každé issue i komentář, které vznikly
+přes aplikaci. Čte `gh api` po stránkách a **schválně bez `--jq`**: na Windows
+`escapeshellarg()` zahodí uvozovky a ze `!=` udělá ` =`, takže se filtr rozpadl
+a kontrola tiše procházela. Selhání volání se teď hlásí jako upozornění, ne
+mlčením.
+
+**Prevence.** `gh` musí běžet s osobním tokenem (`GITHUB_TOKEN`, u zadavatele
+uživatelská proměnná prostředí). Session, která píše přes aplikaci, razítko
+vyrobí znovu a smazat ho jde zase jen přepsáním.

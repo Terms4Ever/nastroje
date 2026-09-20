@@ -16,6 +16,9 @@
  *   5. komentáře do pěti řádků
  *   6. snímky v docs/snimky/ mají tvar cislo-nazev/pred-*.png a v repozitáři
  *      opravdu leží
+ *   7. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
+ *      jmenovkou "with <aplikace>" vedle autora a smazat to jde jen tak, že se
+ *      text napíše znovu
  *
  * Starší issues se berou mírněji: přísné jsou od data, kdy standard vznikl
  * (přepínač --od, výchozí 2026-09-21, tedy den po zavedení standardu).
@@ -31,7 +34,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.1.0';
+const VERZE_ISSUES = '1.2.0';
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -149,6 +152,11 @@ foreach ($issues as $issue) {
     }
 }
 
+// 7. Razítko aplikace u autora
+foreach (razitkaAplikace($slug, $varovani) as $popis) {
+    $chyby[] = $popis;
+}
+
 // Snímky, ke kterým se nehlásí žádné issue
 foreach (snimkyVRepozitari($koren) as $cesta) {
     if (preg_match(VZOR_SNIMKU, $cesta) !== 1) {
@@ -197,6 +205,69 @@ exit(0);
 // ==========================================================================
 // Funkce
 // ==========================================================================
+
+/**
+ * Issues a komentáře, které GitHub označuje jmenovkou aplikace u autora.
+ * Pole `performed_via_github_app` se nastavuje při vzniku a úprava ho nesmaže;
+ * jediná cesta zpět je napsat text znovu a starý smazat.
+ *
+ * Schválně bez `--jq`: escapeshellarg na Windows zahodí uvozovky a ze `!=`
+ * udělá ` =`, takže by se filtr rozpadl a kontrola by mlčky procházela.
+ */
+function razitkaAplikace(string $slug, array &$varovani): array
+{
+    $nalezy = [];
+
+    foreach (['issues?state=all&' => 'issue #', 'issues/comments?' => 'komentář u issue #'] as $cesta => $popisek) {
+        for ($stranka = 1; $stranka <= 10; $stranka++) {
+            $data = ghJson(sprintf('repos/%s/%sper_page=100&page=%d', $slug, $cesta, $stranka));
+            if ($data === null) {
+                $varovani[] = 'nepodařilo se ověřit, jestli issues nevznikly přes aplikaci (gh api selhalo)';
+                break 2;
+            }
+            if ($data === []) {
+                break;
+            }
+
+            foreach ($data as $zaznam) {
+                $aplikace = $zaznam['performed_via_github_app']['name'] ?? null;
+                if ($aplikace === null) {
+                    continue;
+                }
+                $adresa = (string) ($zaznam['issue_url'] ?? $zaznam['html_url'] ?? '');
+                $cislo = (int) preg_replace('/^.*?(\d+)$/', '$1', rtrim($adresa, '/'));
+                $nalezy[] = sprintf(
+                    '%s%d vznikl přes aplikaci %s; GitHub to ukáže u autora a zmizí to jen přepsáním',
+                    $popisek,
+                    $cislo,
+                    $aplikace
+                );
+            }
+
+            if (count($data) < 100) {
+                break;
+            }
+        }
+    }
+
+    return $nalezy;
+}
+
+/** Jedno volání gh api, výsledek jako pole. Null znamená, že příkaz selhal. */
+function ghJson(string $cesta): ?array
+{
+    $vystup = [];
+    $kod = 0;
+    $ticho = PHP_OS_FAMILY === 'Windows' ? '2>NUL' : '2>/dev/null';
+    exec(sprintf('gh api %s %s', escapeshellarg($cesta), $ticho), $vystup, $kod);
+    if ($kod !== 0) {
+        return null;
+    }
+
+    $data = json_decode(implode("", $vystup), true);
+
+    return is_array($data) ? $data : null;
+}
 
 /** owner/repo z remote.origin.url, nebo null když to není Terms4Ever na GitHubu. */
 function slugRepozitare(string $koren): ?string

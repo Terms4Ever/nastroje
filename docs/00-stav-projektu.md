@@ -66,6 +66,12 @@ nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
 a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
 vzor agentského souboru je `sablony/agents.md`.
 
+## Autorství issues
+
+Issue ani komentář nesmí vzniknout přes aplikaci: GitHub pak u autora píše
+jmenovku „with <aplikace>" a nejde to odstranit jinak než napsat text znovu.
+Hlídá to kontrola issues od 1.2.0, `gh` má běžet s osobním tokenem.
+
 ## Složka .claude
 
 Do gitu patří `.claude/launch.json` a `.claude/settings.json`, osobní
