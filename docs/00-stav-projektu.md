@@ -67,8 +67,10 @@ Syrový nápad zadavatele bez nadpisů kontrolu neshodí, čeká na přepsání.
 
 Kontrola běží ve třech místech: při zakládání a změně issue (workflow
 `tvar-issue.yml` nad událostí `issues`, označí štítkem a napíše, co chybí),
-při pushi nad všemi issues repozitáře a lokálně před `gh issue create`, kde
-hook Claude Code špatné tělo rovnou zastaví. Workflow nad událostí běží jen pro issue
+při pushi nad všemi issues repozitáře a lokálně při zakládání issue, kde
+hook Claude Code (`hooky/tvar-issue.ps1`) špatné tělo rovnou zastaví. Hook se
+zapíná jednou: v `~/.claude/settings.json` do `hooks.PreToolUse` s matcherem
+`Bash|PowerShell`. Tělo se proto předává souborem, vložený text hook odmítne. Workflow nad událostí běží jen pro issue
 od vlastníka a spolupracovníků: repozitáře jsou zčásti veřejné a běh se zápisem
 do issues nemá jít spustit zvenčí. Zavřené issue má checklist odškrtaný, komentáře mají
 do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží

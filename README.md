@@ -58,6 +58,7 @@ nastroje/
 ├── kontrola-issues.php          # kontrola tvaru issues na GitHubu
 ├── kontrola-tvaru-issue.php     # kontrola jednoho těla, než issue vznikne
 ├── src/tvar-issue.php           # pravidla tvaru issue na jednom místě
+├── hooky/tvar-issue.ps1         # hook, který špatné issue nepustí vzniknout
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání

@@ -509,3 +509,16 @@ kontrola issues, kontrola jednoho těla i workflow braly ze stejného místa.
 a repozitáře jsou zčásti veřejné, takže ho zvenčí dokázal spustit kdokoliv
 založením issue. Běží proto jen pro autory se vztahem k repozitáři (OWNER,
 MEMBER, COLLABORATOR). Cizí hlášení se neštítkuje ani nekomentuje.
+
+**Hook.** Leží v repozitáři (`hooky/tvar-issue.ps1`), aby se verzoval spolu
+s pravidly; `settings.json` na něj jen ukazuje. Musí zůstat v UTF-8 s BOM,
+jinak Windows PowerShell 5.1 přečte český text rozsypaný. Přesměrovaný výstup
+kontroly se čte jako UTF-16LE, protože tak ho PowerShell zapisuje, a hláška
+se posílá vlastním zapisovačem v UTF-8. Tělo se předává souborem: vložený text
+v příkazu nejde spolehlivě přečíst (uvozovky, heredoc), proto ho hook odmítá.
+
+**Ověřeno.** Osm případů proti hooku: správné tělo a nesouvisející příkaz
+projdou, syrové tělo od agenta, sekce navíc, vložené tělo, dlouhý komentář
+a zakládání přes `gh api` skončí kódem 2. Na GitHubu: špatné issue dostalo do
+30 vteřin štítek `tvar nesedí` a komentář o třech řádcích, po opravě těla
+štítek zmizel.
