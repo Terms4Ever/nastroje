@@ -394,3 +394,45 @@ skončilo chybou "Cannot redeclare db()" ještě před jakýmkoli výpisem. Změ
 simulací požadavku v příkazové řádce, ne odhadem.
 
 Vzor zůstává bez `readonly`, aby stačil i s PHP 8.0, ale příčina to nebyla.
+
+---
+
+## N19 - Standard issues (20. 9. 2026)
+
+**Zadání.** Zadavatel: *„Teď mám další věc co se špatně dělá v celém gitu a to
+jsou issues. Můžeme nějak vyřešit ať se globálně zapisují správně?"* K tomu
+čtyři body: odškrtávat checklisty při splnění, nahrávat snímky před a po bez
+nové větve, psát kratší komentáře bez zmínky o nástroji a držet jeden tvar.
+
+**Stav před tím.** Šablonu neměl žádný repozitář, tvar se lišil projekt od
+projektu (`## Problém` versus `## Cíl`, různé sekce), zavřená issues měla
+neodškrtnuté checklisty, komentáře měly i přes dvacet řádků a v několika se
+psalo, že je psal nástroj.
+
+**Rozhodnutí zadavatele.** Jedna šablona pro všechno, snímky do `docs/snimky/`
+pojmenované podle issue, komentáře do pěti řádků, vynucení šablonou a kontrolou
+z nastroje.
+
+**Standard.**
+
+- Povinné sekce `## Problém` (nebo `## Cíl`) a `## Hotovo, když` s odškrtávacím
+  seznamem; dál `## Jak to poznat`, `## Kde to žije` a `## Snímky`.
+- Zavřené issue nesmí mít neodškrtnutý bod.
+- Komentář nejvýš pět řádků, bez zmínky o nástroji, bez dlouhých pomlček.
+- Snímky v `docs/snimky/<číslo>-<název>/pred-*.png` a `po-*.png`, odkazované
+  z issue. Žádná větev jen pro média a žádné externí úložiště.
+
+**Proč ne přílohy releasu.** Nabízel jsem je jako způsob, jak nezvětšovat
+repozitář, ale zadavatel chce mít snímky v repozitáři a přehledně pojmenované.
+Cena je velikost repozitáře, proto pravidlo o oříznutém snímku.
+
+**Vynucení.** `kontrola-issues.php` (verze 1.0.0) čte issues přes `gh` a hlásí
+odchylky. Běží ve sdíleném workflow při každém pushi a nově i jednou denně,
+protože issues se mění i bez pushe; volající repozitáře proto dostaly
+`issues: read` a plán běhu. Issues starší než 21. 9. 2026 jen upozorní:
+pravidlo nemá trestat zpětně.
+
+**Ověřeno.** Kontrola nad skutečnými issues našla to, co zadavatel vytýkal:
+neodškrtnuté checklisty u zavřených issues, komentáře o 18 až 26 řádcích,
+zmínky o nástroji ve steelsetu a dlouhé pomlčky. Po nastavení data zavedení
+projde všech sedm repozitářů.

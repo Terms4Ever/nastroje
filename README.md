@@ -18,13 +18,15 @@ Sedm projektů mělo sedm různých README. Tytéž sekce se jmenovaly pokaždé
 (`Stack`, `Tech Stack`, `Použité technologie`), dva projekty README neměly
 vůbec a jeden popisoval instalaci, která nefungovala.
 
-Kontrola hlídá čtyři věci:
+Kontrola hlídá pět věcí:
 
 - **Kostru** - povinné sekce, jejich názvy a pořadí.
 - **Pravdivost** - každá cesta a odkaz, o kterých README mluví, musí existovat.
 - **Aktualizaci** - dávka, která sáhla na kód, musí sáhnout i na dokumentaci.
 - **Migrace databáze** - změna schématu má vlastní soubor ve složce migrací,
   hotová migrace se už nemění a na produkci ji pouští nasazení, ne člověk.
+- **Issues** - jeden tvar pro chybu i funkci, odškrtaný checklist u zavřeného
+  issue, komentáře do pěti řádků a žádná zmínka o nástroji, kterým se psaly.
 
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.
@@ -51,10 +53,12 @@ nastroje/
 ├── kontrola-readme.php          # kontrola README
 ├── kontrola-dokumentace.php     # kontrola složky docs/
 ├── kontrola-migraci.php         # kontrola migrací databáze
+├── kontrola-issues.php          # kontrola tvaru issues na GitHubu
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání
 ├── sablony/migrace.php          # vzor spouštěče migrací pro projekt
+├── sablony/issue-ukol.md        # vzor šablony issue pro projekt
 ├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
 ```

@@ -1,4 +1,4 @@
-name: Kontrola README, dokumentace a migrací
+name: Kontrola README, dokumentace, migrací a issues
 
 # Volá se z ostatních repozitářů jedním odkazem, takže pravidla žijí
 # na jednom místě:
@@ -66,3 +66,9 @@ jobs:
           else
             php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE"
           fi
+
+      - name: Zkontrolovat issues
+        env:
+          # gh si token bere odsud. Volající workflow mu musí dát issues: read.
+          GH_TOKEN: ${{ github.token }}
+        run: php .nastroje/kontrola-issues.php "$GITHUB_WORKSPACE"

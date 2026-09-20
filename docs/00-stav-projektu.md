@@ -58,6 +58,14 @@ Nic rozdělaného.
 - Pravidla commitů žijí jen v neverzovaném `~/.git-hooks/commit-msg`. Stálo by
   za to přesunout je sem a pouštět je i na GitHubu, jako README a dokumentaci.
 
+## Standard issues
+
+Jeden tvar pro chybu i funkci: `## Problém` (nebo `## Cíl`) a `## Hotovo, když`
+s odškrtávacím seznamem. Zavřené issue má checklist odškrtaný, komentáře mají
+do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží
+v `docs/snimky/<číslo>-<název>/`. Hlídá to `kontrola-issues.php`, která běží
+v kontrolách na GitHubu při pushi a jednou denně.
+
 ## Standard migrací
 
 Jedna změna schématu je jeden soubor `db/migrace/rrrr-mm-dd-popis.sql`
