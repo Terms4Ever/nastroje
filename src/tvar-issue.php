@@ -104,9 +104,23 @@ function jeSyroveIssue(string $telo): bool
     return nadpisy($telo) === [];
 }
 
+/**
+ * Konce řádků na jeden tvar. Tělo z webového formuláře má CRLF, tělo ze
+ * souboru LF; bez tohohle by `` zůstal v nadpisu a každá sekce by vypadala
+ * jako sekce navíc.
+ */
+function sjednotRadky(string $text): string
+{
+    return str_replace(["
+", ""], "
+", $text);
+}
+
 /** Nadpisy druhé úrovně v pořadí, jak jsou v těle. */
 function nadpisy(string $telo): array
 {
+    $telo = sjednotRadky($telo);
+
     preg_match_all('/^##[ \t]+(\S.*?)[ \t]*$/m', $telo, $shody);
 
     return array_map(static fn (string $n): string => '## ' . $n, $shody[1] ?? []);
@@ -127,6 +141,7 @@ function povoleneSekce(): string
 /** Kolik bodů checklistu leží mimo sekci "Hotovo, když". */
 function bodyMimoHotovo(string $telo): int
 {
+    $telo = sjednotRadky($telo);
     $sekce = '';
     $mimo = 0;
     foreach (preg_split('/\R/', $telo) ?: [] as $radek) {
@@ -145,6 +160,7 @@ function bodyMimoHotovo(string $telo): int
 /** Stav jednotlivých bodů checklistu: true = odškrtnuto. */
 function checklist(string $telo): array
 {
+    $telo = sjednotRadky($telo);
     preg_match_all('/^\s*[-*]\s+\[( |x|X)\]/m', $telo, $shody);
 
     return array_map(static fn (string $z): bool => strtolower($z) === 'x', $shody[1] ?? []);
@@ -153,6 +169,7 @@ function checklist(string $telo): array
 /** Počet řádků s textem. Prázdné řádky se nepočítají. */
 function radkyBezPrazdnych(string $text): int
 {
+    $text = sjednotRadky($text);
     $radky = preg_split('/\R/', trim($text)) ?: [];
 
     return count(array_filter($radky, static fn (string $r): bool => trim($r) !== ''));

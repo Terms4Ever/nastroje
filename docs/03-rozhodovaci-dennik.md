@@ -522,3 +522,10 @@ projdou, syrové tělo od agenta, sekce navíc, vložené tělo, dlouhý koment�
 a zakládání přes `gh api` skončí kódem 2. Na GitHubu: špatné issue dostalo do
 30 vteřin štítek `tvar nesedí` a komentář o třech řádcích, po opravě těla
 štítek zmizel.
+
+**Oprava po prvním ostrém běhu.** Tělo napsané ve webovém formuláři má konce
+řádků CRLF. Kontrola nechávala `` na konci nadpisu, takže `## Problém`
+neodpovídalo povolené sekci a každé takové issue hlásilo „sekci navíc" u všech
+sekcí. Konce řádků se teď srovnají na jeden tvar (`sjednotRadky`). Našlo se to
+při přepisování starých issues: dvě issues zadavatele z webu vypadala jako
+špatná, přitom byla v pořádku.
