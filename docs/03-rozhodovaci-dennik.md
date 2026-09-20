@@ -384,3 +384,8 @@ v migraci, která bude zakládat účet nebo měnit heslo.
 (`migrace.php`, `Migrace.php`, `migrace-endpoint.php`). Spouštěč si zakládá
 vlastní tabulku `migrace`, takže jeho úprava vypadala jako změna schématu bez
 migrace a zastavila push ve vyridimestavbu.cz.
+
+**Spouštěč musí stačit s PHP 8.0.** Na vyridimestavbu.cz vracel koncový bod
+prázdnou odpověď a bez tokenu chybu 500: hosting jede na starším PHP a
+`readonly` vlastnosti, které vzor používal, zná až PHP 8.1. Celý soubor proto
+skončil chybou při načtení. Vzor je nově píše bez `readonly`.

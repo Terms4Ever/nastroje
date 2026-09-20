@@ -32,11 +32,18 @@ declare(strict_types=1);
 
 final class Migrace
 {
-    public function __construct(
-        private readonly PDO $pdo,
-        private readonly string $slozka,
-        private readonly string $tabulka = 'migrace'
-    ) {
+    // Bez readonly schválně: jeden z hostingů jede na PHP 8.0, kde readonly
+    // vlastnosti ještě nejsou a celý soubor by skončil chybou při načtení.
+    private PDO $pdo;
+    private string $slozka;
+    private string $tabulka;
+
+    public function __construct(PDO $pdo, string $slozka, string $tabulka = 'migrace')
+    {
+        $this->pdo = $pdo;
+        $this->slozka = $slozka;
+        $this->tabulka = $tabulka;
+
         if (preg_match('/^[a-z0-9_]+$/', $tabulka) !== 1) {
             throw new InvalidArgumentException('Název tabulky smí mít jen malá písmena, číslice a podtržítko.');
         }
