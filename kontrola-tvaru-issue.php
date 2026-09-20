@@ -12,6 +12,7 @@
  * --prisne navíc zakáže syrové tělo bez jediného nadpisu. Syrový nápad smí
  * napsat zadavatel, agent ne: ten tvar zná a má ho dodat rovnou.
  * --zavrene hlídá, že zavírané issue nemá neodškrtnutý bod.
+ * --komentar kontroluje komentář místo těla: délku, zmínky a pomlčky.
  */
 declare(strict_types=1);
 
@@ -20,6 +21,7 @@ require_once __DIR__ . '/src/tvar-issue.php';
 $soubor = null;
 $prisne = false;
 $zavrene = false;
+$komentar = false;
 $titulek = '';
 for ($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
@@ -29,6 +31,10 @@ for ($i = 1; $i < $argc; $i++) {
     }
     if ($arg === '--zavrene') {
         $zavrene = true;
+        continue;
+    }
+    if ($arg === '--komentar') {
+        $komentar = true;
         continue;
     }
     if ($arg === '--titulek') {
@@ -49,8 +55,12 @@ if ($telo === false) {
     exit(2);
 }
 
-$problemy = problemyTvaru($telo);
+$problemy = $komentar ? problemyKomentare($telo) : problemyTvaru($telo);
 
+if ($komentar) {
+    $zavrene = false;
+    $prisne = false;
+}
 if ($zavrene) {
     $neodskrtnute = count(array_filter(checklist($telo), static fn (bool $h): bool => !$h));
     if ($neodskrtnute > 0) {
@@ -68,14 +78,31 @@ if (preg_match('/claude|generated with|jako AI\b/i', $telo . ' ' . $titulek) ===
 }
 
 if ($problemy === []) {
-    echo "Tvar issue sedí.\n";
+    echo ($komentar ? 'Komentář' : 'Tvar issue') . " sedí.\n";
     exit(0);
 }
 
-fwrite(STDERR, "Tělo issue neodpovídá tvaru:\n\n");
+fwrite(STDERR, ($komentar ? 'Komentář' : 'Tělo issue') . " neodpovídá pravidlům:\n\n");
 foreach ($problemy as $problem) {
     fwrite(STDERR, "  - $problem\n");
 }
-fwrite(STDERR, "\nSekce, jiné nejsou: " . povoleneSekce() . "\n");
-fwrite(STDERR, "Vzor: nastroje/sablony/issue-ukol.md\n");
+if (!$komentar) {
+    fwrite(STDERR, "\nSekce, jiné nejsou: " . povoleneSekce() . "\n");
+    fwrite(STDERR, "Vzor: nastroje/sablony/issue-ukol.md\n");
+}
 exit(1);
+
+/**
+ * Komentář u issue: krátký, bez zmínky o nástroji a bez dlouhých pomlček.
+ * Dlouhý výpis patří do deníku projektu.
+ */
+function problemyKomentare(string $text): array
+{
+    $problemy = [];
+    $radku = radkyBezPrazdnych($text);
+    if ($radku > 5) {
+        $problemy[] = "má $radku řádků, limit je 5; dlouhý výpis patří do deníku projektu";
+    }
+
+    return $problemy;
+}

@@ -70,7 +70,8 @@ Kontrola běží ve třech místech: při zakládání a změně issue (workflow
 při pushi nad všemi issues repozitáře a lokálně při zakládání issue, kde
 hook Claude Code (`hooky/tvar-issue.ps1`) špatné tělo rovnou zastaví. Hook se
 zapíná jednou: v `~/.claude/settings.json` do `hooks.PreToolUse` s matcherem
-`Bash|PowerShell`. Tělo se proto předává souborem, vložený text hook odmítne. Workflow nad událostí běží jen pro issue
+`Bash|PowerShell`. Tělo se proto předává souborem, vložený text hook odmítne. Stejně se kontroluje
+komentář: do pěti řádků, bez zmínky o nástroji a bez dlouhých pomlček. Workflow nad událostí běží jen pro issue
 od vlastníka a spolupracovníků: repozitáře jsou zčásti veřejné a běh se zápisem
 do issues nemá jít spustit zvenčí. Zavřené issue má checklist odškrtaný, komentáře mají
 do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží
