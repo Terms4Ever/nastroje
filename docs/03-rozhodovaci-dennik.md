@@ -385,7 +385,12 @@ v migraci, která bude zakládat účet nebo měnit heslo.
 vlastní tabulku `migrace`, takže jeho úprava vypadala jako změna schématu bez
 migrace a zastavila push ve vyridimestavbu.cz.
 
-**Spouštěč musí stačit s PHP 8.0.** Na vyridimestavbu.cz vracel koncový bod
-prázdnou odpověď a bez tokenu chybu 500: hosting jede na starším PHP a
-`readonly` vlastnosti, které vzor používal, zná až PHP 8.1. Celý soubor proto
-skončil chybou při načtení. Vzor je nově píše bez `readonly`.
+**Koncový bod na vyridimestavbu.cz vracel prázdno, a nebylo to PHP.** Nejdřív
+jsem to hodil na starší PHP a `readonly` vlastnosti ve vzoru, které zná až
+PHP 8.1. Ověřit jsem to ale nešel podle výstupu, jen podle dohadu, a nasazení
+po té změně vracelo pořád totéž. Skutečná příčina byla jinde: `index.php`
+načítal `app/db.php` podruhé (`require` místo `require_once`), takže PHP
+skončilo chybou "Cannot redeclare db()" ještě před jakýmkoli výpisem. Změřeno
+simulací požadavku v příkazové řádce, ne odhadem.
+
+Vzor zůstává bez `readonly`, aby stačil i s PHP 8.0, ale příčina to nebyla.
