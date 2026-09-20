@@ -564,3 +564,10 @@ hledá na konci názvu bez přípony.
 **Vzor.** `sablony/agents.md` drží kostru: stack a struktura, doménová pravidla,
 brány před commitem, nasazení, jak se domlouváme. Co je v globálních pokynech,
 se do projektu nekopíruje.
+
+**Zábrana v `docs/`.** Na hostingu s nginxem před Apachem nezabírá ani
+`RewriteRule`, ani `FilesMatch` v kořenovém `.htaccess`: statický soubor
+v podsložce posílá server sám. Projekt proto smí mít `docs/.htaccess`
+s `Require all denied`, stejný vzor jako u `db/`. Kontrola README bere do
+tabulky dokumentů jen `.md` (2.0.1) a kontrola dokumentace `.htaccess` v `docs/`
+nepovažuje za data.

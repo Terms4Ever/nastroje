@@ -350,7 +350,10 @@ foreach (souboryVGitu($koren) as $cesta) {
         }
     }
 
-    if (str_starts_with($cesta, 'docs/') && !str_ends_with(strtolower($nazev), '.md')) {
+    // .htaccess v docs/ je zábrana serveru, ne data; na hostingu s nginxem je
+    // to jediné, co statický soubor zakáže (F21 v onlinefakturuj).
+    if (str_starts_with($cesta, 'docs/') && !str_ends_with(strtolower($nazev), '.md')
+        && $nazev !== '.htaccess') {
         $zbytek = substr($cesta, strlen('docs/'));
         $podslozka = str_contains($zbytek, '/') ? explode('/', $zbytek)[0] : '';
         if (!in_array($podslozka, PODSLOZKY_DOCS, true)) {

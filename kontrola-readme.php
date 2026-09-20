@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE = '2.0.0';
+const VERZE = '2.0.1';
 
 /**
  * Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát.
@@ -257,7 +257,10 @@ $slozkaDocs = $korenRepozitare . '/docs';
 if (is_dir($slozkaDocs)) {
     $dokumenty = array_values(array_filter(
         scandir($slozkaDocs) ?: [],
-        static fn (string $s): bool => $s !== '.' && $s !== '..' && is_file($slozkaDocs . '/' . $s)
+        // Dokument je .md. Soubor jako docs/.htaccess je zábrana serveru,
+        // ne text ke čtení, a do tabulky dokumentů nepatří.
+        static fn (string $s): bool => is_file($slozkaDocs . '/' . $s)
+            && strtolower(pathinfo($s, PATHINFO_EXTENSION)) === 'md'
     ));
 
     if ($dokumenty !== [] && !isset($poziceNadpisu[NADPIS_DOKUMENTACE])) {
