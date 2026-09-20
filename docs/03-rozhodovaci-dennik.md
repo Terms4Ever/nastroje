@@ -504,3 +504,8 @@ by odchylky až za den. Událost `issues` je nahrazuje ve vteřinách.
 
 **Sdílená pravidla.** Tvar těla se posunul do `src/tvar-issue.php`, aby ho
 kontrola issues, kontrola jednoho těla i workflow braly ze stejného místa.
+
+**Kdo běh spustí.** Workflow nad událostí `issues` má právo zapisovat do issues
+a repozitáře jsou zčásti veřejné, takže ho zvenčí dokázal spustit kdokoliv
+založením issue. Běží proto jen pro autory se vztahem k repozitáři (OWNER,
+MEMBER, COLLABORATOR). Cizí hlášení se neštítkuje ani nekomentuje.
