@@ -42,7 +42,7 @@ if (!$zapsat) {
 }
 
 $cesta = $koren . '/db/prehled.md';
-$obsah = is_file($cesta) ? (string) file_get_contents($cesta) : sablona(basename($koren));
+$obsah = is_file($cesta) ? (string) file_get_contents($cesta) : sablona(basename(realpath($koren) ?: $koren));
 $novy = vlozBlok($obsah, $blok);
 
 if ($novy === $obsah) {

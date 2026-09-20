@@ -9,13 +9,20 @@
  *
  * Použití z kódu:
  *
- *     $migrace = new Migrace($pdo, __DIR__ . '/../db/migrace');
+ *     $slozka = Migrace::najdiSlozku(ROOT . '/db/migrace', dirname(ROOT) . '/migrace');
+ *     $migrace = new Migrace($pdo, $slozka);
  *     $zprava = $migrace->spust();     // pole řádků k vypsání
  *     $migrace->nespustene();          // jen seznam, nic nespouští
  *
  * Použití z příkazové řádky (projekt si doplní připojení):
  *
  *     php db/migrace.php
+ *
+ * Na server se migrace nahrávají jako `nazev.sql.php` s prvním řádkem
+ * `<?php exit; ?>`. Soubor .sql by web poslal jako text a šel by přečíst
+ * z internetu; .php se vykoná a nevypíše nic. V repozitáři zůstává čisté .sql,
+ * spouštěč zná obě podoby a do tabulky zapisuje jméno bez přípony .php, takže
+ * vývoj i produkce mluví o téže migraci.
  *
  * Co vzor neumí: bloky s vlastním oddělovačem (DELIMITER), tedy těla procedur
  * a triggerů. Takovou změnu napiš jako jeden příkaz, nebo ji pusť ručně
@@ -33,6 +40,24 @@ final class Migrace
         if (preg_match('/^[a-z0-9_]+$/', $tabulka) !== 1) {
             throw new InvalidArgumentException('Název tabulky smí mít jen malá písmena, číslice a podtržítko.');
         }
+    }
+
+    /**
+     * Najde složku s migracemi: první z kandidátů, která existuje.
+     *
+     * Ve vývoji leží v repozitáři (db/migrace), na produkci schválně mimo
+     * webovou složku. Soubory .sql totiž web pošle jako text, takže by šly
+     * z internetu přečíst i s tím, co je v nich napsané.
+     */
+    public static function najdiSlozku(string ...$kandidati): string
+    {
+        foreach ($kandidati as $cesta) {
+            if (is_dir($cesta)) {
+                return $cesta;
+            }
+        }
+
+        return $kandidati[0] ?? '';
     }
 
     /** Migrace, které v téhle databázi ještě neběžely. */
@@ -65,7 +90,9 @@ final class Migrace
 
         $ceka = $this->nespustene();
         if ($ceka === []) {
-            return ['Žádná nová migrace, databáze je aktuální.'];
+            return is_dir($this->slozka)
+                ? ['Žádná nová migrace, databáze je aktuální.']
+                : ['Složka ' . $this->slozka . ' tu není, nic se nespouští.'];
         }
 
         // Zámek: dvě nasazení naráz by jinak pustila tutéž migraci dvakrát.
@@ -79,8 +106,7 @@ final class Migrace
             // Seznam se načítá znovu: mezitím mohlo doběhnout jiné nasazení.
             foreach ($this->nespustene() as $soubor) {
                 $zacatek = microtime(true);
-                $cesta = $this->slozka . '/' . $soubor;
-                $sql = (string) file_get_contents($cesta);
+                $sql = $this->obsah($soubor);
 
                 foreach ($this->prikazy($sql) as $poradi => $prikaz) {
                     try {
@@ -111,22 +137,77 @@ final class Migrace
         return $zprava;
     }
 
+    /**
+     * Zapíše migraci jako hotovou, aniž by ji pustil.
+     *
+     * Na jedinou věc: zavedení standardu do projektu, kde ta změna schématu
+     * na produkci dávno běží. Jinak je to podvod na sobě samém.
+     */
+    public function oznac(string $soubor): string
+    {
+        $this->zalozTabulku();
+
+        if (!in_array($soubor, $this->vsechny(), true)) {
+            throw new RuntimeException('Taková migrace ve složce není: ' . $soubor);
+        }
+        if (!in_array($soubor, $this->nespustene(), true)) {
+            return 'Migrace ' . $soubor . ' už je zapsaná, nic se nemění.';
+        }
+
+        $sql = $this->obsah($soubor);
+        $zapis = $this->pdo->prepare(
+            'INSERT INTO ' . $this->tabulka . ' (soubor, otisk, trvani_ms) VALUES (?, ?, 0)'
+        );
+        $zapis->execute([$soubor, hash('sha256', $sql)]);
+
+        return 'Zapsáno jako hotové bez spuštění: ' . $soubor;
+    }
+
+    /** Zámek, kterým začínají migrace nahrané na server. */
+    public const ZAMEK = '<?php exit; ?>';
+
     /** Všechny migrace ve složce, seřazené podle názvu (tedy podle data). */
     private function vsechny(): array
     {
+        // Chybějící složka není chyba: projekt ji nemusí mít, nebo se na
+        // server ještě nedostala. Že se nic nespustilo, je vidět ve výpisu.
         if (!is_dir($this->slozka)) {
-            throw new RuntimeException('Složka s migracemi neexistuje: ' . $this->slozka);
+            return [];
         }
 
         $soubory = [];
         foreach (scandir($this->slozka) ?: [] as $polozka) {
-            if (str_ends_with($polozka, '.sql') && is_file($this->slozka . '/' . $polozka)) {
+            if (!is_file($this->slozka . '/' . $polozka)) {
+                continue;
+            }
+            if (str_ends_with($polozka, '.sql')) {
                 $soubory[] = $polozka;
+            } elseif (str_ends_with($polozka, '.sql.php')) {
+                $soubory[] = substr($polozka, 0, -4);
             }
         }
         sort($soubory);
 
         return $soubory;
+    }
+
+    /**
+     * Obsah migrace. Na serveru má soubor příponu .sql.php a na prvním řádku
+     * zámek, který se před spuštěním odřízne.
+     */
+    private function obsah(string $soubor): string
+    {
+        $cesta = $this->slozka . '/' . $soubor;
+        if (!is_file($cesta)) {
+            $cesta .= '.php';
+        }
+
+        $sql = (string) file_get_contents($cesta);
+        if (str_starts_with(ltrim($sql), self::ZAMEK)) {
+            $sql = substr(ltrim($sql), strlen(self::ZAMEK));
+        }
+
+        return $sql;
     }
 
     /** Tabulka o tom, co už proběhlo. Vzniká sama, aby se na ni nezapomnělo. */

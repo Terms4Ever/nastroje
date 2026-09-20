@@ -64,7 +64,9 @@ Jedna změna schématu je jeden soubor `db/migrace/rrrr-mm-dd-popis.sql`
 s komentářem na začátku. Hotová migrace se už nemění, oprava je nová
 migrace. Přehled v `db/prehled.md` generuje `prehled-migraci.php`, kdy
 která migrace proběhla na produkci, drží tabulka `migrace` v databázi.
-Na produkci je pouští nasazení, ne člověk.
+Na produkci je pouští nasazení, ne člověk, a nahrává je jako `nazev.sql.php`
+se zámkem `<?php exit; ?>` na prvním řádku: soubor `.sql` by web poslal jako
+text, `.php` se vykoná a nevypíše nic.
 
 Projekty s vlastním migračním nástrojem (Laravel) se do standardu
 nezapojují, pravidla si nese framework.

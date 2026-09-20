@@ -350,3 +350,32 @@ neměnnost hotových migrací a pravidlo, že dávka s `CREATE TABLE` nebo
 středník v textu i v komentáři příkaz neukončí, druhý běh nedělá nic, rozbitá
 migrace skončí výjimkou a nezapíše se, po opravě doběhne. Kontrola má vlastní
 zkoušku s jedenácti situacemi, každé pravidlo se v ní schválně poruší.
+
+---
+
+## N18 - Migrace se na produkci nenahrávají do webové složky (20. 9. 2026)
+
+**Jak se to našlo.** Při zavádění standardu (N17) jsem chtěl nahrávat
+`db/migrace/` spolu s kódem. Sousední session, která dělá na vyridimestavbu.cz,
+to přečetla a změřila chování hostingu: `.php` se vykoná, ale statický soubor
+se pošle tak, jak je, a `.htaccess` tam neplatí. Migrace ve webové složce by
+tedy šly přečíst z internetu.
+
+**První pokus nevyšel.** Nahrát migrace mimo webovou složku FTP účet
+nedovolí, nasazení spadlo na `553 Can't open that file: Permission denied`.
+Nad web se zapisovat nedá.
+
+**Rozhodnutí.** Nasazení vyrobí z každé migrace kopii `nazev.sql.php`, která má
+na prvním řádku `<?php exit; ?>`, a nahraje ji do `db-migrace` ve webu. Kdo si
+adresu otevře, dostane prázdnou odpověď: `.php` se vykoná, nevypisuje se nic.
+V repozitáři zůstává čisté `.sql`, které jde zkopírovat do phpMyAdmin.
+Spouštěč zná obě podoby, zámek před spuštěním odřízne a do tabulky zapisuje
+jméno bez `.php`, takže vývoj i produkce mluví o téže migraci. Složku si najde
+sám přes `Migrace::najdiSlozku()`.
+
+**Proč ne jinak.** Nechat migrace veřejné a jen psát do pravidel, že v nich
+nesmí být nic citlivého, je pravidlo, které jednou někdo poruší. Zákaz u
+hostingu by platil jen pro jeden web a neplatil by pro nový.
+
+**Dnešní obsah migrací citlivý není** (tabulky a text stránky), riziko je až
+v migraci, která bude zakládat účet nebo měnit heslo.
