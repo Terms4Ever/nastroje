@@ -17,6 +17,13 @@ hlavní větev:     main
   pushovaný commit, ověří, že pracovní strom v čtených cestách sedí
 - `stav-projektu.php`, generátor bloku se skutečnými čísly. Hlavní větev
   bere z repozitáře, ne z větve, na které se zrovna stojí
+- `kontrola-migraci.php` ve verzi 1.0.0, zapíná se přihlášením přes
+  `"migrace-kontrola": true`. Hlídá tvar migrací, přehled, neměnnost hotové
+  migrace a to, že dávka měnící schéma migraci přidá
+- `prehled-migraci.php`, generátor přehledu migrací do `db/prehled.md`
+- `sablony/migrace.php`, spouštěč migrací k okopírování do projektu:
+  pustí nespuštěné migrace, zapíše je do tabulky `migrace` a při chybě
+  spadne, aby nasazení nepokračovalo s rozladěnou databází
 - Kontrola kostry: povinné sekce, jejich názvy, pořadí, hlavička s odznaky
 - Kontrola pravdivosti: cesty, odkazy a kotvy zmíněné v README musí existovat
 - Zákaz dlouhých pomlček
@@ -50,6 +57,17 @@ Nic rozdělaného.
   commit, který mění kód. Zastaralý stav je horší než žádný.
 - Pravidla commitů žijí jen v neverzovaném `~/.git-hooks/commit-msg`. Stálo by
   za to přesunout je sem a pouštět je i na GitHubu, jako README a dokumentaci.
+
+## Standard migrací
+
+Jedna změna schématu je jeden soubor `db/migrace/rrrr-mm-dd-popis.sql`
+s komentářem na začátku. Hotová migrace se už nemění, oprava je nová
+migrace. Přehled v `db/prehled.md` generuje `prehled-migraci.php`, kdy
+která migrace proběhla na produkci, drží tabulka `migrace` v databázi.
+Na produkci je pouští nasazení, ne člověk.
+
+Projekty s vlastním migračním nástrojem (Laravel) se do standardu
+nezapojují, pravidla si nese framework.
 
 ## Na co si dát pozor
 

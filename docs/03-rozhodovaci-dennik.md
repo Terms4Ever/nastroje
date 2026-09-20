@@ -305,3 +305,48 @@ práci přes pull requesty.
 **Rozhodnutí zadavatele.** *„Nechci schvalovat pull requesty. Takže tohle
 zrušíme."* Ochrana se nezapíná. Zastavit push umí jen pre-push hook, kontrola na
 GitHubu zůstává druhým okem, které chybu nahlásí.
+
+---
+
+## N17 - Standard migrací databáze (20. 9. 2026)
+
+**Zadání.** Zadavatel: *„Pro všechny projekty bych chtěl nějak sjednotit, že
+když šahají do DB, ať udělají migrace v složce db i na gitu a je tam migrační
+soubor co vložili např do mysql a máme přehled co a kdy se měnilo."*
+
+**Proč zrovna teď.** Ráno 20. 9. vyjelo vydání s novými sloupci u výdajů dřív,
+než někdo pustil migraci na produkci. Aplikace na produkci spadla na chybějících
+sloupcích a muselo se vracet. Sekvence nasazení stála na tom, že si člověk
+vzpomene.
+
+**Stav před tím.** Tři různé světy: `onlinefakturuj` měl `db/migrate_*.php`
+bez datumů, `vyridimestavbu.cz` datované `.sql` v `db/migrace/`, `trenwise.cz`
+nativní migrace Laravelu. Kdy co proběhlo na produkci, nevěděl nikdo.
+
+**Rozhodnutí zadavatele.** Čisté SQL soubory, spouštění automaticky při
+nasazení, staré migrace se nepřevádějí a zůstávají, jak jsou.
+
+**Standard.**
+
+- Jedna změna schématu je jeden soubor `db/migrace/rrrr-mm-dd-popis.sql`,
+  volitelně s časem (`rrrr-mm-dd-hhmm-popis.sql`). V souboru je přesně to, co
+  se pustí do MySQL, takže jde v nouzi zkopírovat do phpMyAdmin.
+- První řádek je komentář, který říká, co migrace mění. Z něj se skládá přehled.
+- Hotová migrace se nemění ani nemaže. Oprava je nová migrace, protože ta
+  původní už někde běží.
+- `db/prehled.md` generuje `prehled-migraci.php`, kontrola porovnává blok se
+  složkou, stejně jako u stavu projektu.
+- Na produkci pouští migrace nasazení přes chráněný odkaz. Tabulka `migrace`
+  v databázi drží, co a kdy proběhlo, a spouštěč zamkne běh, aby dvě nasazení
+  nepustila tutéž migraci dvakrát.
+- Projekty s vlastním migračním nástrojem se nezapojují.
+
+**Co to vynucuje.** `kontrola-migraci.php` (verze 1.0.0) běží v pre-push hooku
+i ve workflow: tvar názvů, komentář, zákaz dlouhých pomlček, soulad přehledu,
+neměnnost hotových migrací a pravidlo, že dávka s `CREATE TABLE` nebo
+`ALTER TABLE` mimo migrace musí migraci přidat.
+
+**Ověření.** Vzor spouštěče proběhl proti vývojové databázi: pořadí podle data,
+středník v textu i v komentáři příkaz neukončí, druhý běh nedělá nic, rozbitá
+migrace skončí výjimkou a nezapíše se, po opravě doběhne. Kontrola má vlastní
+zkoušku s jedenácti situacemi, každé pravidlo se v ní schválně poruší.

@@ -1,4 +1,4 @@
-name: Kontrola README a dokumentace
+name: Kontrola README, dokumentace a migrací
 
 # Volá se z ostatních repozitářů jedním odkazem, takže pravidla žijí
 # na jednom místě:
@@ -51,4 +51,18 @@ jobs:
             php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$CIL"
           else
             php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE"
+          fi
+
+      - name: Zkontrolovat migrace databáze
+        env:
+          ZAKLAD: ${{ github.event.before }}
+          CIL: ${{ github.sha }}
+        run: |
+          # Stejné pravidlo jako u dokumentace: bez použitelného základu se
+          # ověří jen tvar migrací a přehled.
+          if [ -n "$ZAKLAD" ] && [ "$ZAKLAD" != "0000000000000000000000000000000000000000" ] \
+             && git cat-file -e "$ZAKLAD^{commit}" 2>/dev/null; then
+            php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$CIL"
+          else
+            php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE"
           fi
