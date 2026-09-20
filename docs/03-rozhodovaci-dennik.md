@@ -529,3 +529,38 @@ neodpovídalo povolené sekci a každé takové issue hlásilo „sekci navíc" 
 sekcí. Konce řádků se teď srovnají na jeden tvar (`sjednotRadky`). Našlo se to
 při přepisování starých issues: dvě issues zadavatele z webu vypadala jako
 špatná, přitom byla v pořádku.
+
+---
+
+## N22 - Jeden tvar souborů v repozitáři (20. 9. 2026)
+
+**Podnět.** Zadavatel při úklidu: *„Projekty mají hroznou nekonzistenci v tom
+.md souborech atd."* Steelset měl v kořeni `AGENTS.md` i `CLAUDE.md`, trenwise
+`PROJECT.md` a `DEPLOY.md`, LabProtocol dvě verze téhož listingu (jednu
+s příponou FINAL) a onlinefakturuj pro agenty neměl nic.
+
+**Rozhodnutí zadavatele.** Jeden agentský soubor `AGENTS.md` a `CLAUDE.md` jako
+jednořádkový ukazatel, data pryč z `docs/`, vynucení kontrolou při pushi,
+rozsah všechny repozitáře kromě Igrisu.
+
+**Pravidla.**
+
+- V kořeni smí být jen `README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE.md`
+  a `CHANGELOG.md`. Ostatní dokumenty patří do `docs/`.
+- `CLAUDE.md` má jediný řádek `@AGENTS.md`. Claude Code čte CLAUDE.md, ostatní
+  nástroje AGENTS.md, ale text je jen jeden, takže se nemůže rozejít.
+- `docs/` nese dokumenty; data patří jinam, výjimkou jsou `docs/snimky/`
+  a `docs/prilohy/`.
+- Povinné jsou `docs/00-stav-projektu.md` a `docs/03-rozhodovaci-dennik.md`.
+- Názvy se značkou dočasnosti na konci (`-FINAL`, `-new`, `-old`, `kopie`,
+  `.bak`, `soubor (1).png`) neprojdou: nikdo nepozná, co platí.
+
+**Vynucení.** Kontrola dokumentace 1.5.0. Značka dočasnosti se hlídá jen
+u dokumentů a obsahu `docs/`: ve zdrojovém kódu je `exercise-new.tsx` poctivý
+název obrazovky. Zkouška na šesti repozitářích to odhalila hned, stejně jako
+`demo-03-new-invoice-modal.png`, kde je „new" uprostřed věty; proto se značka
+hledá na konci názvu bez přípony.
+
+**Vzor.** `sablony/agents.md` drží kostru: stack a struktura, doménová pravidla,
+brány před commitem, nasazení, jak se domlouváme. Co je v globálních pokynech,
+se do projektu nekopíruje.

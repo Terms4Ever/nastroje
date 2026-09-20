@@ -14,14 +14,40 @@
  *
  *     {
  *       "docs-pomlcky": "blokovat",   nebo "varovat"
- *       "docs-vymahat-aktualizaci": true
+ *       "docs-vymahat-aktualizaci": true,
+ *       "struktura-vyjimky": ["soubor, ktery smi zustat, kde je"]
  *     }
  *
  * Vedomá výjimka: git push --no-verify
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.4.1';
+const VERZE_DOKUMENTACE = '1.5.0';
+
+/** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
+const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
+
+/** Podsložky docs/, kam smí i jiné soubory než dokumenty. */
+const PODSLOZKY_DOCS = ['snimky', 'prilohy'];
+
+/**
+ * Názvy, po kterých nikdo nepozná, která verze platí. Slovní značky se hlídají
+ * jen u dokumentů a u obsahu docs/: ve zdrojovém kódu je "exercise-new.tsx"
+ * poctivý název obrazovky, ne zapomenutá kopie.
+ */
+const ZAKAZANE_NAZVY_DOKUMENTU = [
+    '/-(final|new|old|stary|zaloha|kopie)$/i',
+];
+
+/** Značky kopie, které nedávají smysl nikde. */
+const ZAKAZANE_NAZVY_VZDY = [
+    '/\.bak$/i',
+    '/ \(\d+\)\./',
+    '/^kopie /i',
+];
+
+/** Dokumenty, které musí mít každý projekt. */
+const POVINNE_DOKUMENTY = ['docs/00-stav-projektu.md', 'docs/03-rozhodovaci-dennik.md'];
 
 /**
  * Cesty, které skript čte z disku. Musí sedět na pushovaný commit, jinak se
@@ -279,6 +305,84 @@ if ($nastaveni['docs-vymahat-aktualizaci'] && $zaklad !== null && $cil !== null)
 
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// 4. Uspořádání: kořen, agentský soubor, názvy
+// ---------------------------------------------------------------------------
+//
+// Repozitáře se v tomhle rozcházely: jeden měl v kořeni PROJECT.md a DEPLOY.md,
+// jiný dvě verze téhož textu (jednu s příponou FINAL), další neměl pro agenty
+// nic. Pravidla a důvody jsou v deníku nastroje pod N22.
+
+$vyjimky = (array) ($nastaveni['struktura-vyjimky'] ?? []);
+
+foreach (souboryVGitu($koren) as $cesta) {
+    if (in_array($cesta, $vyjimky, true)) {
+        continue;
+    }
+    $nazev = basename($cesta);
+    $vKoreni = !str_contains($cesta, '/');
+
+    if ($vKoreni && str_ends_with(strtolower($nazev), '.md')
+        && !in_array($nazev, SOUBORY_V_KORENI, true)) {
+        $chyby[] = sprintf(
+            '%s patří do docs/; v kořeni smí být jen %s',
+            $cesta,
+            implode(', ', SOUBORY_V_KORENI)
+        );
+    }
+
+    // Značka se hledá na konci názvu bez přípony: "listing-FINAL.md" ano,
+    // "demo-03-new-invoice-modal.png" ne, tam je "new" uprostřed věty.
+    $zaklad = pathinfo($nazev, PATHINFO_FILENAME);
+    $jeDokument = str_ends_with(strtolower($nazev), '.md') || str_starts_with($cesta, 'docs/');
+    $vzory = $jeDokument
+        ? array_merge(ZAKAZANE_NAZVY_DOKUMENTU, ZAKAZANE_NAZVY_VZDY)
+        : ZAKAZANE_NAZVY_VZDY;
+
+    foreach ($vzory as $vzor) {
+        $proti = str_starts_with($vzor, '/-') ? $zaklad : $nazev;
+        if (preg_match($vzor, $proti) === 1) {
+            $chyby[] = sprintf(
+                '%s má v názvu značku dočasnosti; ať je jasné, co platí, zůstane jeden soubor',
+                $cesta
+            );
+            break;
+        }
+    }
+
+    if (str_starts_with($cesta, 'docs/') && !str_ends_with(strtolower($nazev), '.md')) {
+        $zbytek = substr($cesta, strlen('docs/'));
+        $podslozka = str_contains($zbytek, '/') ? explode('/', $zbytek)[0] : '';
+        if (!in_array($podslozka, PODSLOZKY_DOCS, true)) {
+            $chyby[] = sprintf(
+                '%s není dokument; data patří mimo docs/, nebo do docs/prilohy/',
+                $cesta
+            );
+        }
+    }
+}
+
+foreach (POVINNE_DOKUMENTY as $povinny) {
+    if (!is_file($koren . '/' . $povinny)) {
+        $chyby[] = sprintf('chybí %s, ten má mít každý projekt', $povinny);
+    }
+}
+
+// Agentský soubor: jeden text, dvě jména. Claude Code čte CLAUDE.md, ostatní
+// nástroje AGENTS.md; ukazatel drží obojí v jednom souboru, takže se nemůžou
+// rozejít.
+if (!is_file($koren . '/AGENTS.md')) {
+    $chyby[] = 'chybí AGENTS.md v kořeni; pravidla pro agenty patří do něj (vzor: sablony/agents.md v nastroje)';
+}
+$cestaClaude = $koren . '/CLAUDE.md';
+if (is_file($cestaClaude) && trim((string) file_get_contents($cestaClaude)) !== '@AGENTS.md') {
+    $chyby[] = 'CLAUDE.md má mít jediný řádek @AGENTS.md, jinak se text rozejde s AGENTS.md';
+}
+
+// ---------------------------------------------------------------------------
+// Výsledek
+// ---------------------------------------------------------------------------
+
 foreach ($varovani as $v) {
     echo "  pozn.: $v\n";
 }
@@ -302,6 +406,21 @@ echo "\n  Vědomá výjimka při pushi: git push --no-verify\n\n";
 exit(1);
 
 // ---------------------------------------------------------------------------
+
+/** Soubory sledované gitem, cesty relativní ke kořeni repozitáře. */
+function souboryVGitu(string $koren): array
+{
+    $vystup = [];
+    $kod = 0;
+    $ticho = PHP_OS_FAMILY === 'Windows' ? '2>NUL' : '2>/dev/null';
+    exec(sprintf('git -C %s ls-files %s', escapeshellarg(proGit($koren)), $ticho), $vystup, $kod);
+
+    if ($kod !== 0) {
+        return [];
+    }
+
+    return array_values(array_filter(array_map('trim', $vystup)));
+}
 
 /** Srovná blok na porovnatelný tvar: bez bílých znaků na koncích řádků. */
 function normalizuj(string $text): string

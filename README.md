@@ -64,6 +64,7 @@ nastroje/
 ├── sablony/readme-plny.md       # vzor k opsání
 ├── sablony/migrace.php          # vzor spouštěče migrací pro projekt
 ├── sablony/issue-ukol.md        # vzor šablony issue pro projekt
+├── sablony/agents.md            # vzor agentského souboru pro projekt
 ├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
 ```

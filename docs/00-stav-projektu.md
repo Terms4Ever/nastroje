@@ -58,6 +58,14 @@ Nic rozdělaného.
 - Pravidla commitů žijí jen v neverzovaném `~/.git-hooks/commit-msg`. Stálo by
   za to přesunout je sem a pouštět je i na GitHubu, jako README a dokumentaci.
 
+## Uspořádání souborů
+
+V kořeni jen `README.md`, `AGENTS.md`, `CLAUDE.md` (jediný řádek `@AGENTS.md`),
+`LICENSE.md` a `CHANGELOG.md`; ostatní dokumenty do `docs/`, data mimo `docs/`
+nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
+a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
+vzor agentského souboru je `sablony/agents.md`.
+
 ## Standard issues
 
 Jeden tvar pro chybu i funkci: sekce `## Problém` (nebo `## Cíl`),
