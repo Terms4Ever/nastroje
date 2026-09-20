@@ -432,6 +432,12 @@ protože issues se mění i bez pushe; volající repozitáře proto dostaly
 `issues: read` a plán běhu. Issues starší než 21. 9. 2026 jen upozorní:
 pravidlo nemá trestat zpětně.
 
+**Práva v CI.** Sdílené workflow mělo `permissions: contents: read`, čímž
+volanému tokenu sebralo `issues: read`, které mu volající dal. Krok pak jen
+oznámil, že issues nenačetl, a kontrola skončila zeleně, aniž by cokoli
+zkontrolovala. Omezení je proto pryč: práva určuje volající workflow. Kdyby si
+je sdílený soubor vynutil, spadl by každý repozitář, který `issues: read` nedává.
+
 **Ověřeno.** Kontrola nad skutečnými issues našla to, co zadavatel vytýkal:
 neodškrtnuté checklisty u zavřených issues, komentáře o 18 až 26 řádcích,
 zmínky o nástroji ve steelsetu a dlouhé pomlčky. Po nastavení data zavedení

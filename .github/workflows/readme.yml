@@ -10,8 +10,9 @@ name: Kontrola README, dokumentace, migrací a issues
 on:
   workflow_call:
 
-permissions:
-  contents: read
+# Prava se neomezuji tady, ale ve volajicim workflow: kontrola issues
+# potrebuje issues: read, kontrola README jen contents: read. Kdyby si tenhle
+# soubor vynutil issues: read, spadl by kazdy volajici, ktery ho nedava.
 
 jobs:
   kontrola:
