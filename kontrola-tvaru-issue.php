@@ -73,7 +73,7 @@ if ($prisne && jeSyroveIssue($telo)) {
 if (str_contains($telo, "\u{2013}") || str_contains($telo, "\u{2014}")) {
     $problemy[] = 'obsahuje dlouhou nebo poloviční pomlčku, píše se jen krátká';
 }
-if (preg_match('/claude|generated with|jako AI\b/i', $telo . ' ' . $titulek) === 1) {
+if (zminujeNastroj($telo . ' ' . $titulek)) {
     $problemy[] = 'zmiňuje nástroj, kterým se text psal';
 }
 

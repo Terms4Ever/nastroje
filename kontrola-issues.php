@@ -17,7 +17,8 @@
  *   6. snímky v docs/snimky/ mají tvar cislo-nazev/pred-*.png a v repozitáři
  *      opravdu leží
  *   7. zavřené issue, které má snímek "před", má i snímek "po"
- *   8. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
+ *   8. snímek je vložený jako obrázek, ne jen jako odkaz
+ *   9. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
  *      jmenovkou "with <aplikace>" vedle autora a smazat to jde jen tak, že se
  *      text napíše znovu
  *
@@ -35,7 +36,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.3.0';
+const VERZE_ISSUES = '1.5.0';
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -100,8 +101,20 @@ foreach ($issues as $issue) {
 
     $checklist = checklist($telo);
 
-    // 2. Zavřené issue má hotový checklist
-    if (strtoupper($stav) === 'CLOSED' && $checklist !== []) {
+    // 2. Zavřené issue má hotový checklist.
+    //    Výjimka: bod, u kterého komentář říká, že zůstává nezaškrtnutý
+    //    schválně. Jinak by pravidlo nutilo buď lhát, nebo mazat bod, který
+    //    do zadání patřil (steelset #8: rolování se dá ověřit až na zařízení).
+    $vedomaVyjimka = false;
+    foreach ($issue['comments'] ?? [] as $komentar) {
+        $textKomentare = (string) ($komentar['body'] ?? '');
+        // Obě pořadí slov: „schválně nezaškrtnutý" i „nezaškrtnutý schválně".
+        if (preg_match('/schváln[ěe][^.]{0,80}(nezaškrt|neodškrt)|(nezaškrt|neodškrt)[^.]{0,80}schváln[ěe]/iu', $textKomentare) === 1) {
+            $vedomaVyjimka = true;
+        }
+    }
+
+    if (strtoupper($stav) === 'CLOSED' && $checklist !== [] && !$vedomaVyjimka) {
         $neodskrtnute = count(array_filter($checklist, static fn (bool $h): bool => !$h));
         if ($neodskrtnute > 0) {
             $pridej("#$cislo je zavřené, ale " . bodu($neodskrtnute) . ' v checklistu zůstalo neodškrtnutých');
@@ -115,7 +128,7 @@ foreach ($issues as $issue) {
     }
 
     foreach ($texty as [$kde, $text]) {
-        if (preg_match('/claude|generated with|jako AI\b/i', $text) === 1) {
+        if (zminujeNastroj($text)) {
             $pridej("#$cislo $kde zmiňuje nástroj, kterým se text psal");
         }
         if (str_contains($text, "\u{2013}") || str_contains($text, "\u{2014}")) {
@@ -125,7 +138,7 @@ foreach ($issues as $issue) {
 
     // 5. Délka komentářů
     foreach ($issue['comments'] ?? [] as $poradi => $komentar) {
-        $radky = radkyBezPrazdnych((string) ($komentar['body'] ?? ''));
+        $radky = radkyKomentare((string) ($komentar['body'] ?? ''));
         if ($radky > MAX_RADKU_KOMENTARE) {
             $vznikKomentare = substr((string) ($komentar['createdAt'] ?? ''), 0, 10);
             $text = "#$cislo komentář " . ($poradi + 1) . " má $radky řádků, limit je " . MAX_RADKU_KOMENTARE;
@@ -149,6 +162,14 @@ foreach ($issues as $issue) {
         }
         if (!str_starts_with($cesta, "docs/snimky/$cislo-")) {
             $pridej("#$cislo odkazuje na snímek $cesta, ten patří k jinému issue");
+        }
+    }
+
+    // 8. Snímek musí být vidět, ne schovaný za odkazem. GitHub odkaz vykreslí
+    //    jako text, takže v issue není vidět nic.
+    foreach ($texty as [$kde, $text]) {
+        foreach (snimkyJenOdkazem($text) as $adresa) {
+            $pridej("#$cislo $kde odkazuje na snímek jen textem; vlož ho jako obrázek přes ![popis](" . $adresa . ')');
         }
     }
 

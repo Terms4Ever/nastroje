@@ -166,6 +166,59 @@ function checklist(string $telo): array
     return array_map(static fn (string $z): bool => strtolower($z) === 'x', $shody[1] ?? []);
 }
 
+/**
+ * Délka komentáře v řádcích. Řádek, který je jen vložený obrázek, se nepočítá:
+ * snímky před a po jsou důkaz, ne ukecanost, a limit je nemá trestat.
+ */
+function radkyKomentare(string $text): int
+{
+    $pocet = 0;
+    foreach (preg_split('/\R/', trim(sjednotRadky($text))) ?: [] as $radek) {
+        $radek = trim($radek);
+        if ($radek === '' || jeVlozenyObrazek($radek)) {
+            continue;
+        }
+        $pocet++;
+    }
+
+    return $pocet;
+}
+
+/**
+ * Zmiňuje text nástroj, kterým se psal? Cesty a názvy souborů se nepočítají:
+ * `.claude/launch.json` je součást projektu, ne podpis pod prací (nález
+ * u steelsetu #10).
+ */
+function zminujeNastroj(string $text): bool
+{
+    $text = sjednotRadky($text);
+    $text = preg_replace('/```.*?```/s', ' ', $text) ?? $text;      // bloky kódu
+    $text = preg_replace('/`[^`]*`/', ' ', $text) ?? $text;          // kód v řádku
+    $text = preg_replace('#[\w./-]*[.]claude[\w./-]*#i', ' ', $text) ?? $text;
+    $text = preg_replace('/claude-mem/i', ' ', $text) ?? $text;
+
+    return preg_match('/claude|generated with|jako AI/i', $text) === 1;
+}
+
+/** Řádek je jen vložený obrázek: ![popis](adresa) */
+function jeVlozenyObrazek(string $radek): bool
+{
+    return preg_match('/^!\[[^\]]*\]\([^)]+\)$/', trim($radek)) === 1;
+}
+
+/**
+ * Snímky zmíněné jen odkazem, ne vloženým obrázkem. GitHub odkaz vykreslí jako
+ * text, takže v issue není vidět nic; 21. 9. 2026 tak skončily čtyři dvojice
+ * snímků u vyridimestavbu #4.
+ */
+function snimkyJenOdkazem(string $text): array
+{
+    // Oddělovač #, protože ve vzoru je lomítko z cesty docs/snimky.
+    preg_match_all('#(?<!!)\[[^\]]*\]\(([^)]*docs/snimky/[^)]*)\)#', sjednotRadky($text), $shody);
+
+    return array_values(array_unique($shody[1] ?? []));
+}
+
 /** Počet řádků s textem. Prázdné řádky se nepočítají. */
 function radkyBezPrazdnych(string $text): int
 {

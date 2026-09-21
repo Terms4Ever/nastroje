@@ -649,3 +649,32 @@ backendové issues bez vizuální změny pravidlo netrápí.
 **Co z toho plyne pro práci.** Kde agent snímek pořídit umí (web, náhled
 v prohlížeči), pořídí ho sám. Kde neumí (iOS, TestFlight), si o něj řekne
 zadavateli dřív, než issue zavře.
+
+---
+
+## N26 - Snímek musí být vidět, ne schovaný za odkazem (21. 9. 2026)
+
+**Podnět.** Zadavatel u vyridimestavbu #4: *„Ale ani tady třeba nejsou ty
+obrázky v komentářích."* Přitom tam byly: čtyři dvojice snímků, všechny jako
+`[před](adresa)`. GitHub odkaz vykreslí jako text, takže v issue nebylo vidět
+nic. Pravidlo z N19 říkalo „vkládají se odkazem", což se dalo přečíst obojím
+způsobem.
+
+**Rozhodnutí.** Snímek se vkládá jako obrázek `![popis](adresa)`. Pouhý odkaz
+kontrola hlásí. Zároveň se **řádek, který je jen vložený obrázek, nepočítá do
+limitu pěti řádků komentáře**: snímky jsou důkaz, ne ukecanost, a limit je
+nesmí trestat.
+
+**Vedomá výjimka u checklistu.** Pravidlo „zavřené issue nemá neodškrtnutý
+bod" nutilo buď lhát, nebo smazat bod, který do zadání patřil. Steelset #8 to
+řešil poctivě: bod nechal nezaškrtnutý a do komentáře napsal proč (rolování jde
+ověřit až na zařízení). Kontrola proto takový bod uzná, když to komentář
+výslovně říká.
+
+**Planý poplach.** Pravidlo „nikde se nepíše, čím se to psalo" hlásilo issue,
+které zmiňovalo cestu `.claude/launch.json`. Kontrola teď před hledáním vyřadí
+bloky kódu, kód v řádku, cesty s `.claude` a název `claude-mem`.
+
+**Ověřeno.** Po opravě prochází onlinefakturuj (18 issues), vyridimestavbu (4),
+trenwise (2). Ve steelsetu zbývá jediný nález: #14 nemá snímek „po", ten musí
+přijít ze zařízení.
