@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE = '2.0.1';
+const VERZE = '2.1.0';
 
 /**
  * Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát.
@@ -140,6 +140,18 @@ if (PROFILY[$profil]['hlavicka']) {
 
     if (!preg_match('/^---$/m', $hlavicka)) {
         $nalezy[] = new Nalez(4, 'chybí oddělovač "---" pod hlavičkou');
+    }
+
+    // Kde projekt běží, se píše v hlavičce, ne že si to každý najde jinde.
+    // Adresa se bere z .readme-kontrola.json ("provoz"), aby se nehádalo,
+    // jestli repozitář vůbec někde běží: mobilní appka nebo sada skriptů ne.
+    $provoz = $nastaveni['provoz'] ?? null;
+    if (is_string($provoz) && $provoz !== '' && !str_contains($hlavicka, $provoz)) {
+        $nalezy[] = new Nalez(4, sprintf(
+            'hlavička neuvádí, kde projekt běží; doplň řádek 🌐 **Provoz:** [%s](%s)',
+            preg_replace('#^https?://#', '', $provoz),
+            $provoz
+        ));
     }
 }
 

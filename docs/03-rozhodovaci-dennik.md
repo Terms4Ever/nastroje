@@ -704,3 +704,24 @@ které vypadají jako od člověka, ale vznikly přes aplikaci. Autoři končíc
 **Pravidlo pro mě.** Push, po kterém kontrola spadne, se nenechává. Buď se
 opraví data, nebo pravidlo, a teprve pak se pushuje; po každém pushi se běh
 ověřuje.
+
+---
+
+## N28 - Kde projekt běží, stojí v hlavičce README (21. 9. 2026)
+
+**Podnět.** Zadavatel porovnal dvě README vedle sebe: vyridimestavbu má
+v hlavičce řádek „Provoz: vyridimestavbu.cz", onlinefakturuj nic. *„Tady vidím
+další nesrovnalost."*
+
+**Rozhodnutí.** Adresa provozu patří do hlavičky, hned nad oddělovač, ve tvaru
+`🌐 **Provoz:** [adresa](adresa)`. Hlídá to kontrola README 2.1.0, ale jen
+tehdy, když je adresa v `.readme-kontrola.json` pod klíčem `provoz`. Bez klíče
+se nevyžaduje nic: sada skriptů ani mobilní aplikace veřejnou adresu nemá
+a vymýšlet ji by bylo horší než mlčet.
+
+**Zapnuto u dvou projektů:** onlinefakturuj.cz a vyridimestavbu.cz, oba
+ověřené odpovědí 200.
+
+**Nález vedle.** trenwise.cz neodpovídá vůbec (curl vrací 000), takže se u něj
+provoz netvrdí. Steelset a LabProtocol jdou přes App Store; jestli tam má být
+odkaz na obchod, rozhodne zadavatel.
