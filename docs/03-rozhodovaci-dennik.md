@@ -625,3 +625,27 @@ mlčením.
 **Prevence.** `gh` musí běžet s osobním tokenem (`GITHUB_TOKEN`, u zadavatele
 uživatelská proměnná prostředí). Session, která píše přes aplikaci, razítko
 vyrobí znovu a smazat ho jde zase jen přepsáním.
+
+---
+
+## N25 - Snímek „před" bez „po" zavřené issue neprojde (21. 9. 2026)
+
+**Podnět.** Zadavatel čekal u hotových issues snímky před a po, a nenašel je:
+*„Proč tam nejsou?"*
+
+**Proč nebyly.** Standard z N19 popisoval, kam snímky patří a jak se odkazují,
+ale nic je nevyžadovalo. Kontrola ověřovala jen tvar cesty a to, že odkazovaný
+soubor v repozitáři leží. Ve steelsetu tak skončilo čtrnáct zavřených issues,
+z toho tři se snímkem „před" od zadavatele a žádné se snímkem „po".
+
+**Druhá příčina je praktická.** Snímek „po" u mobilní aplikace nemá kdo pořídit:
+agent na Windows se k iPhonu nedostane a TestFlight je test u zadavatele.
+U webových projektů to agent zvládne sám z náhledu v prohlížeči.
+
+**Rozhodnutí.** Kontrola 1.3.0: **zavřené issue, které má v repozitáři snímek
+`pred-`, musí mít i `po-`.** Když snímek „před" není, nic se nevyžaduje, takže
+backendové issues bez vizuální změny pravidlo netrápí.
+
+**Co z toho plyne pro práci.** Kde agent snímek pořídit umí (web, náhled
+v prohlížeči), pořídí ho sám. Kde neumí (iOS, TestFlight), si o něj řekne
+zadavateli dřív, než issue zavře.

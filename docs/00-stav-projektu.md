@@ -66,6 +66,12 @@ nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
 a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
 vzor agentského souboru je `sablony/agents.md`.
 
+## Snímky u issues
+
+Zavřené issue, které má snímek `pred-`, musí mít i `po-`; jinak kontrola issues
+(1.3.0) neprojde. Bez snímku „před" se nic nevyžaduje, aby backendové issues
+nebyly obtěžované.
+
 ## Autorství issues
 
 Issue ani komentář nesmí vzniknout přes aplikaci: GitHub pak u autora píše

@@ -16,7 +16,8 @@
  *   5. komentáře do pěti řádků
  *   6. snímky v docs/snimky/ mají tvar cislo-nazev/pred-*.png a v repozitáři
  *      opravdu leží
- *   7. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
+ *   7. zavřené issue, které má snímek "před", má i snímek "po"
+ *   8. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
  *      jmenovkou "with <aplikace>" vedle autora a smazat to jde jen tak, že se
  *      text napíše znovu
  *
@@ -34,7 +35,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.2.0';
+const VERZE_ISSUES = '1.3.0';
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -148,6 +149,21 @@ foreach ($issues as $issue) {
         }
         if (!str_starts_with($cesta, "docs/snimky/$cislo-")) {
             $pridej("#$cislo odkazuje na snímek $cesta, ten patří k jinému issue");
+        }
+    }
+
+    // 7. Když je vidět stav "před", musí být vidět i "po". Jinak zůstane
+    //    v issue jen fotka rozbitého stavu a nikdo nepozná, co se změnilo.
+    if (strtoupper($stav) === 'CLOSED') {
+        $vlastni = array_filter(
+            snimkyVRepozitari($koren),
+            static fn (string $c): bool => str_starts_with($c, "docs/snimky/$cislo-")
+        );
+        $pred = array_filter($vlastni, static fn (string $c): bool => str_contains(basename($c), 'pred-'));
+        $po = array_filter($vlastni, static fn (string $c): bool => str_contains(basename($c), 'po-'));
+
+        if ($pred !== [] && $po === []) {
+            $pridej("#$cislo je zavřené a má snímek před, ale žádný po; bez něj není vidět, co se změnilo");
         }
     }
 }
