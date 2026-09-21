@@ -36,7 +36,14 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.5.0';
+const VERZE_ISSUES = '1.7.0';
+
+/**
+ * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
+ * kdy snímek nemá kdo pořídit: stav jde zachytit jen na zařízení, které agent
+ * nemá. Štítek je vidět na první pohled, na rozdíl od věty schované v komentáři.
+ */
+const STITEK_BEZ_SNIMKU = 'bez snímku po';
 
 /** Snímky: docs/snimky/12-kratky-nazev/pred-neco.png */
 const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]+(-[a-z0-9]+)*\.(png|jpg|webp)$#';
@@ -175,7 +182,12 @@ foreach ($issues as $issue) {
 
     // 7. Když je vidět stav "před", musí být vidět i "po". Jinak zůstane
     //    v issue jen fotka rozbitého stavu a nikdo nepozná, co se změnilo.
-    if (strtoupper($stav) === 'CLOSED') {
+    $stitky = array_map(
+        static fn (array $s): string => (string) ($s['name'] ?? ''),
+        (array) ($issue['labels'] ?? [])
+    );
+
+    if (strtoupper($stav) === 'CLOSED' && !in_array(STITEK_BEZ_SNIMKU, $stitky, true)) {
         $vlastni = array_filter(
             snimkyVRepozitari($koren),
             static fn (string $c): bool => str_starts_with($c, "docs/snimky/$cislo-")
@@ -184,7 +196,10 @@ foreach ($issues as $issue) {
         $po = array_filter($vlastni, static fn (string $c): bool => str_contains(basename($c), 'po-'));
 
         if ($pred !== [] && $po === []) {
-            $pridej("#$cislo je zavřené a má snímek před, ale žádný po; bez něj není vidět, co se změnilo");
+            $pridej(
+                "#$cislo je zavřené a má snímek před, ale žádný po; bez něj není vidět, co se změnilo"
+                . ' (když ho nemá kdo pořídit, dej issue štítek "' . STITEK_BEZ_SNIMKU . '")'
+            );
         }
     }
 }
@@ -271,6 +286,14 @@ function razitkaAplikace(string $slug, array &$varovani): array
                 if ($aplikace === null) {
                     continue;
                 }
+
+                // Bot píše pod svým jménem a je to na první pohled jasné.
+                // Pravidlo míří na záznamy, které vypadají jako od člověka,
+                // ale vznikly přes aplikaci.
+                $autor = (string) ($zaznam['user']['login'] ?? '');
+                if (str_ends_with($autor, '[bot]')) {
+                    continue;
+                }
                 $adresa = (string) ($zaznam['issue_url'] ?? $zaznam['html_url'] ?? '');
                 $cislo = (int) preg_replace('/^.*?(\d+)$/', '$1', rtrim($adresa, '/'));
                 $nalezy[] = sprintf(
@@ -325,7 +348,7 @@ function nactiIssues(string $slug, bool $jenOtevrene): ?array
 {
     $stav = $jenOtevrene ? 'open' : 'all';
     $prikaz = sprintf(
-        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,comments',
+        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,comments,labels',
         escapeshellarg($slug),
         $stav
     );

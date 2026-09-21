@@ -678,3 +678,29 @@ bloky kódu, kód v řádku, cesty s `.claude` a název `claude-mem`.
 **Ověřeno.** Po opravě prochází onlinefakturuj (18 issues), vyridimestavbu (4),
 trenwise (2). Ve steelsetu zbývá jediný nález: #14 nemá snímek „po", ten musí
 přijít ze zařízení.
+
+---
+
+## N27 - Když snímek nemá kdo pořídit, rozhodne štítek (21. 9. 2026)
+
+**Podnět.** Zadavatel po pohledu na GitHub: *„nemůže se stávat, že dáš push
+a neprojde to kontrolou a je ti to jedno!"* Měl pravdu. Pravidlo z N25
+o snímku „po" jsem pushnul s vědomím, že steelset #14 shodí, protože ten
+snímek jde pořídit jen na zařízení. Červená kontrola pak visela hodinu.
+
+**Rozhodnutí.** Issue, u kterého snímek „po" nemá kdo pořídit, dostane štítek
+`bez snímku po` a kontrola ho přeskočí. Štítek je vidět na první pohled,
+na rozdíl od věty schované v komentáři, a je to vědomé rozhodnutí člověka,
+ne tichá výjimka.
+
+**Druhá oprava.** Pravidlo o razítku aplikace hlásilo komentáře vlastního
+workflow. Bot píše pod svým jménem a je to zjevné; pravidlo míří na záznamy,
+které vypadají jako od člověka, ale vznikly přes aplikaci. Autoři končící
+`[bot]` se proto přeskakují.
+
+**Úklid.** Pět komentářů „Tvar issue nesedí" ve steelsetu už neplatilo
+(checklisty jsou odškrtané), tak jsou pryč.
+
+**Pravidlo pro mě.** Push, po kterém kontrola spadne, se nenechává. Buď se
+opraví data, nebo pravidlo, a teprve pak se pushuje; po každém pushi se běh
+ověřuje.
