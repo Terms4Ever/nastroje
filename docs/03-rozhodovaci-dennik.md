@@ -858,3 +858,24 @@ Nově se po čtyřiceti vteřinách vzdá a řekne to; výstup se čte na pozad�
 
 **Ověřeno.** Uložení cíle druhu jiné, úprava poznámky i hesla (nové heslo má
 patnáct znaků, staré mělo devatenáct), výpis a smazání.
+
+**Okno spadlo při kliknutí na Upravit a já to poslal jako hotové.** Otestoval
+jsem příkazy pod tím, ale ne samotné kliknutí; okno jsem jen spustil
+a vyfotil. Zadavatel na to narazil první.
+
+**Příčina.** V obsluze tlačítka `$cil = $Seznam.SelectedItem.Cil` přepsalo
+ovládací prvek `$Cil`, protože PowerShell nerozlišuje velikost písmen. Stejná
+past jako u `$SLOZKA` při stavbě trezoru. Prvek se jmenuje `$PoleCil`, takže
+to už nejde splést, a stejná chyba by shodila i ukládání a mazání.
+
+**Aby se to nestalo znovu.**
+
+- Obsluhy tlačítek běží v `Bezpecne`: chyba skončí ve stavovém řádku i v logu
+  (`%TEMP%	rezor-chyby.log`), okno běží dál.
+- Přibyl `hooky/test-trezor.ps1`: přes UI Automation vybere cíl, zmáčkne
+  Upravit, přečte vyplněná pole a uloží změny. Tím se testuje to, co dělá
+  člověk myší, ne jen příkazy pod tím.
+
+**Ověřeno tímhle testem**: formulář se vyplní vybraným cílem, tlačítko se
+přepne na Uložit změny a po uložení stav hlásí `Upraveno: tomas-saroun-me-ftp
+(Server, Uzivatel, Protokol, Slozka, Druh)`. Log chyb prázdný.

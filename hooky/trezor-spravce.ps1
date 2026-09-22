@@ -320,7 +320,7 @@ $prvek = {
 $Seznam = & $prvek 'Seznam'
 $DruhBox = & $prvek 'DruhBox'
 $Sezeni = & $prvek 'Sezeni'
-$Cil = & $prvek 'Cil'
+$PoleCil = & $prvek 'Cil'
 $Server = & $prvek 'Server'
 $Uzivatel = & $prvek 'Uzivatel'
 $Heslo = & $prvek 'Heslo'
@@ -343,6 +343,19 @@ $Smazat = & $prvek 'Smazat'
 $Zkusit = & $prvek 'Zkusit'
 $Zavrit = & $prvek 'Zavrit'
 $Stav = & $prvek 'Stav'
+
+# Chyba v obsluze tlačítka nesmí shodit celé okno. Tohle ji ukáže ve stavovém
+# řádku i s číslem řádku, aby se dala opravit, a aplikace běží dál.
+function Bezpecne([scriptblock]$akce) {
+    try {
+        & $akce
+    } catch {
+        $radek = $_.InvocationInfo.ScriptLineNumber
+        $Stav.Text = "Chyba na řádku $radek : $($_.Exception.Message)"
+        $zaznam = Join-Path $env:TEMP 'trezor-chyby.log'
+        "$([DateTime]::Now.ToString('s')) radek $radek : $($_.Exception.Message)" | Add-Content -Path $zaznam -Encoding UTF8
+    }
+}
 
 # Když se něco upravuje, drží se tu název cíle; jinak je prázdný.
 $script:UpravovanyCil = ''
@@ -485,8 +498,8 @@ $Sezeni.Add_SelectionChanged({
     $s = Get-ItemProperty $klic
     $Server.Text = [string]$s.HostName
     $Uzivatel.Text = [string]$s.UserName
-    if (-not $Cil.Text) {
-        $Cil.Text = (($s.UserName -replace '[^a-zA-Z0-9]', '-') + '-ftp').ToLower()
+    if (-not $PoleCil.Text) {
+        $PoleCil.Text = (($s.UserName -replace '[^a-zA-Z0-9]', '-') + '-ftp').ToLower()
     }
     $protokoly = @{ 0 = 'sftp'; 1 = 'scp'; 5 = 'ftpes' }
     if ($protokoly.ContainsKey([int]$s.FSProtocol)) { $Protokol.Text = $protokoly[[int]$s.FSProtocol] }
@@ -494,8 +507,8 @@ $Sezeni.Add_SelectionChanged({
     $Stav.Text = 'Heslo se převezme ze sezení, psát ho nemusíš.'
 })
 
-$Ulozit.Add_Click({
-    $cil = $Cil.Text.Trim()
+$Ulozit.Add_Click({ Bezpecne {
+    $cil = $PoleCil.Text.Trim()
     if ($cil -notmatch '^[a-zA-Z0-9._-]+$') {
         $Stav.Text = 'Název cíle smí mít jen písmena, číslice, tečku, pomlčku a podtržítko.'
         return
@@ -524,10 +537,13 @@ $Ulozit.Add_Click({
             $Stav.Text = SpustNastroj $argumenty $null
         }
 
+        $vysledek = $Stav.Text
         $script:UpravovanyCil = ''
         $Ulozit.Content = 'Uložit do trezoru'
-        $Heslo.Clear(); $Cil.Text = ''; $Poznamka.Text = ''
+        $Heslo.Clear(); $PoleCil.Text = ''; $Poznamka.Text = ''
         Obnov
+        # Obnov přepíše stav počtem cílů, ale výsledek úpravy je zajímavější.
+        $Stav.Text = $vysledek
         return
     }
 
@@ -555,13 +571,13 @@ $Ulozit.Add_Click({
     }
 
     $Heslo.Clear()
-    $Cil.Text = ''
+    $PoleCil.Text = ''
     $Poznamka.Text = ''
     $Sezeni.SelectedIndex = 0
     Obnov
-})
+} })
 
-$Upravit.Add_Click({
+$Upravit.Add_Click({ Bezpecne {
     if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
     $cil = $Seznam.SelectedItem.Cil
     $z = NactiZaznamCile $cil
@@ -571,7 +587,7 @@ $Upravit.Add_Click({
     if ($nazevDruhu) { $DruhBox.SelectedItem = $nazevDruhu }
     PodleDruhu
 
-    $Cil.Text = $z.Cil
+    $PoleCil.Text = $z.Cil
     $Server.Text = [string]$z.Server
     $Uzivatel.Text = [string]$z.Uzivatel
     $Protokol.Text = [string]$z.Protokol
@@ -584,9 +600,9 @@ $Upravit.Add_Click({
     $script:UpravovanyCil = $cil
     $Ulozit.Content = 'Uložit změny'
     $Stav.Text = "Upravuješ $cil. Heslo nech prázdné, pokud ho měnit nechceš."
-})
+} })
 
-$Ukazat.Add_Click({
+$Ukazat.Add_Click({ Bezpecne {
     if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
     $cil = $Seznam.SelectedItem.Cil
     $z = NactiZaznamCile $cil
@@ -700,7 +716,7 @@ $Ukazat.Add_Click({
     $detail.Content = $rolovani
     $detail.ShowDialog() | Out-Null
     $Stav.Text = "Detail $cil zavřen."
-})
+} })
 
 $Seznam.Add_SelectionChanged({
     if ($script:UpravovanyCil -and $Seznam.SelectedItem -and $Seznam.SelectedItem.Cil -ne $script:UpravovanyCil) {
@@ -709,16 +725,16 @@ $Seznam.Add_SelectionChanged({
     }
 })
 
-$Smazat.Add_Click({
+$Smazat.Add_Click({ Bezpecne {
     if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
     $cil = $Seznam.SelectedItem.Cil
     $cesta = Join-Path $TREZOR ($cil + '.xml')
     if (Test-Path $cesta) { Remove-Item $cesta -Force }
     $Stav.Text = "Smazáno: $cil"
     Obnov
-})
+} })
 
-$Zkusit.Add_Click({
+$Zkusit.Add_Click({ Bezpecne {
     if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
     $polozka = $Seznam.SelectedItem
     if ($polozka.Druh -ne 'ftp') {
@@ -734,7 +750,7 @@ $Zkusit.Add_Click({
         $radek = ($vystup -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
         $Stav.Text = "$($polozka.Cil) : spojení selhalo. $radek"
     }
-})
+} })
 
 $Zavrit.Add_Click({ $okno.Close() })
 

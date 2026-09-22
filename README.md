@@ -61,6 +61,7 @@ nastroje/
 ├── hooky/tvar-issue.ps1         # hook, který špatné issue nepustí vzniknout
 ├── hooky/tajemstvi.ps1          # trezor přihlašovacích údajů pro agenty
 ├── hooky/trezor-spravce.ps1     # okno trezoru, spouští se zástupcem z plochy
+├── hooky/test-trezor.ps1        # proklikání okna přes UI Automation
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání
