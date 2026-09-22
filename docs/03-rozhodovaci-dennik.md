@@ -942,3 +942,8 @@ druhy naráz, `duplicate`, doménový štítek navíc, syrový nápad, volání 
 přepínačů) a šest případů hooku sedí. Všech 50 issues v sedmi repozitářích
 prochází kontrolou 1.8.0.
 
+**Ověřeno i v běhu**, ne jen lokálně: nastroje #2 bez štítku druhu workflow
+označilo štítkem `tvar nesedí` a napsalo přesný nález, po doplnění štítku
+označení samo zmizelo, běh nad zavřením prošel. Workflow čte stav issue přes
+API, ne z těla události, takže vidí i štítek přidaný o vteřinu později.
+
