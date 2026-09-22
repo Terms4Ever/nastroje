@@ -1,6 +1,7 @@
 ﻿# Trezor přihlašovacích údajů pro práci s agenty.
 #
 #   tajemstvi.ps1 ulozit <cíl>        uloží údaje (ptá se v terminálu)
+#                                     -Druh ftp|databaze|token|jine
 #                                     volitelně -Otisk <otisk certifikátu>
 #   tajemstvi.ps1 okno <cíl>          otevře okno a údaje se vyplní myší
 #   tajemstvi.ps1 zwinscp <sezení> <cíl>  převezme uložené sezení z WinSCP
@@ -29,6 +30,12 @@ param(
     # Otisk certifikátu serveru. S ním se spojení ověřuje; bez něj WinSCP
     # u neznámého certifikátu skončí a řekne, jaký otisk má server.
     [string]$Otisk,
+    # Druh rozhoduje, co se ukládá a jaké proměnné dostane spuštěný příkaz.
+    [ValidateSet('ftp', 'databaze', 'token', 'jine', '')]
+    [string]$Druh = '',
+    [string]$Port,
+    [string]$Databaze,
+    [string]$Poznamka,
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$Zbytek
 )
 
@@ -103,25 +110,28 @@ switch ($Prikaz) {
         $c = Cesta $Cil
         New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
 
-        $server = if ($Server) { $Server } else { Read-Host 'Server (např. ftp.projekt.cz)' }
-        $uzivatel = if ($Uzivatel) { $Uzivatel } else { Read-Host 'Uživatel' }
+        $druh = if ($Druh) { $Druh } else { 'ftp' }
+        $server = if ($Server) { $Server } elseif ($druh -eq 'token') { '' } else { Read-Host 'Server' }
+        $uzivatel = if ($Uzivatel) { $Uzivatel } elseif ($druh -eq 'token') { '' } else { Read-Host 'Uživatel' }
         if ([Console]::IsInputRedirected) {
             $heslo = ConvertTo-SecureString ([Console]::In.ReadLine()) -AsPlainText -Force
         } else {
-            $heslo = Read-Host 'Heslo' -AsSecureString
+            $vyzva = if ($druh -eq 'token') { 'Token nebo klíč' } else { 'Heslo' }
+            $heslo = Read-Host $vyzva -AsSecureString
         }
-        $protokol = if ($Protokol) { $Protokol } else { 'ftpes' }
-        $slozka = if ($Slozka) { $Slozka } else { '/' }
-        $otisk = if ($Otisk) { $Otisk } else { '' }
 
         @{
             Cil = $Cil
+            Druh = $druh
             Server = $server
             Uzivatel = $uzivatel
             Heslo = $heslo
-            Protokol = $protokol
-            Slozka = $slozka
-            Otisk = $otisk
+            Protokol = if ($Protokol) { $Protokol } else { 'ftpes' }
+            Slozka = if ($Slozka) { $Slozka } else { '/' }
+            Port = $Port
+            Databaze = $Databaze
+            Poznamka = $Poznamka
+            Otisk = if ($Otisk) { $Otisk } else { '' }
             UlozenoAt = (Get-Date).ToString('s')
         } | Export-Clixml -Path $c
 
@@ -129,14 +139,20 @@ switch ($Prikaz) {
         icacls $c /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
 
         $delka = (HesloJakoText (Import-Clixml $c)).Length
-        "Uloženo: $Cil ($uzivatel@$server, protokol $protokol, heslo o $delka znacích)"
+        "Uloženo: $Cil (druh $druh, hodnota o $delka znacích)"
     }
 
     'seznam' {
         if (-not (Test-Path $TREZOR)) { 'Trezor je prázdný.'; break }
         Get-ChildItem $TREZOR -Filter *.xml | ForEach-Object {
             $z = Import-Clixml $_.FullName
-            '{0,-28} {1}@{2} ({3}, {4})' -f $z.Cil, $z.Uzivatel, $z.Server, $z.Protokol, $z.Slozka
+            $druh = if ($z.Druh) { $z.Druh } else { 'ftp' }
+            switch ($druh) {
+                'databaze' { '{0,-28} [databáze] {1}@{2} ({3})' -f $z.Cil, $z.Uzivatel, $z.Server, $z.Databaze }
+                'token'    { '{0,-28} [token] {1}' -f $z.Cil, $z.Poznamka }
+                'jine'     { '{0,-28} [jiné] {1} {2}' -f $z.Cil, $z.Uzivatel, $z.Poznamka }
+                default    { '{0,-28} [ftp] {1}@{2} ({3}, {4})' -f $z.Cil, $z.Uzivatel, $z.Server, $z.Protokol, $z.Slozka }
+            }
         }
     }
 
@@ -150,20 +166,44 @@ switch ($Prikaz) {
         $prikazy = PrikazyPoOddelovaci $Zbytek
         if (-not $prikazy) { throw 'Chybí příkaz za oddělovačem ::' }
 
+        $druh = if ($z.Druh) { $z.Druh } else { 'ftp' }
+        $tajne = HesloJakoText $z
+
+        # Společné pro všechny druhy, ať se s tím dá pracovat jednotně.
+        $env:TAJ_DRUH = $druh
         $env:TAJ_SERVER = $z.Server
         $env:TAJ_UZIVATEL = $z.Uzivatel
-        $env:TAJ_HESLO = HesloJakoText $z
-        $env:TAJ_SLOZKA = $z.Slozka
+        $env:TAJ_HESLO = $tajne
+        $env:TAJ_HODNOTA = $tajne
+
+        switch ($druh) {
+            'databaze' {
+                $env:TAJ_DB_SERVER = $z.Server
+                $env:TAJ_DB_PORT = if ($z.Port) { $z.Port } else { '3306' }
+                $env:TAJ_DB_NAZEV = $z.Databaze
+                $env:TAJ_DB_UZIVATEL = $z.Uzivatel
+                $env:TAJ_DB_HESLO = $tajne
+                # Klient mysql si heslo vezme odsud, takže nemusí do příkazu.
+                $env:MYSQL_PWD = $tajne
+            }
+            'token' { $env:TAJ_TOKEN = $tajne }
+            default { $env:TAJ_SLOZKA = $z.Slozka }
+        }
+
         try {
             & $prikazy[0] @($prikazy[1..($prikazy.Count - 1)])
             exit $LASTEXITCODE
         } finally {
-            Remove-Item Env:TAJ_HESLO -ErrorAction SilentlyContinue
+            foreach ($p in 'TAJ_HESLO', 'TAJ_HODNOTA', 'TAJ_TOKEN', 'TAJ_DB_HESLO', 'MYSQL_PWD') {
+                Remove-Item "Env:$p" -ErrorAction SilentlyContinue
+            }
         }
     }
 
     'ftp' {
         $z = NactiZaznam $Cil
+        $druhCile = if ($z.Druh) { $z.Druh } else { 'ftp' }
+        if ($druhCile -ne 'ftp') { throw "Cíl '$Cil' je druhu $druhCile, ne ftp. Použij: spustit $Cil :: <příkaz>" }
         $winscp = 'C:\Program Files (x86)\WinSCP\WinSCP.com'
         if (-not (Test-Path $winscp)) { throw "WinSCP není v $winscp" }
 
@@ -277,6 +317,7 @@ switch ($Prikaz) {
         $c = Cesta $novyCil
         @{
             Cil = $novyCil
+            Druh = 'ftp'
             Server = $s.HostName
             Uzivatel = $s.UserName
             Heslo = (ConvertTo-SecureString $heslo -AsPlainText -Force)

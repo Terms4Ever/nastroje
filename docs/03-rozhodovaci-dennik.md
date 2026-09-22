@@ -823,3 +823,21 @@ u rozhraní nestačí, že skript nespadne.
 **Záhlaví okna.** Kreslí ho Windows, ne WPF, takže zůstávalo bílé i v tmavém
 okně. Přepíná se `DwmSetWindowAttribute` s atributem 20 (na starších buildech
 19); když ho systém nezná, okno jen zůstane se světlým záhlavím a nic nespadne.
+
+**Trezor není jen na FTP.** Zadavatel: *„já tam chci dávat vše, např. údaje
+k DB"*. Záznam má proto druh a podle něj se mění pole i proměnné, které dostane
+spuštěný příkaz:
+
+| druh | co se uloží | co dostane příkaz |
+|---|---|---|
+| ftp | server, uživatel, heslo, protokol, složka | `TAJ_SERVER`, `TAJ_UZIVATEL`, `TAJ_HESLO`, `TAJ_SLOZKA` |
+| databaze | server, port, databáze, uživatel, heslo | `TAJ_DB_*` a `MYSQL_PWD`, aby heslo nešlo do příkazu |
+| token | hodnota a poznámka, k čemu je | `TAJ_TOKEN` |
+| jine | uživatel, heslo, poznámka | `TAJ_HESLO` |
+
+Společné jsou `TAJ_DRUH` a `TAJ_HODNOTA`, takže se dá psát i obecně. Staré
+záznamy bez druhu se berou jako `ftp`. Okno mění pole podle druhu a ukládá přes
+`tajemstvi.ps1`, kterému tajemství podává rourou; příkazová řádka ho tím pádem
+nevidí. Ověřeno uložením databáze i tokenu, vložením do prostředí (příkaz viděl
+`MYSQL_PWD` nastavené a délku hesla, hodnotu ne) a odmítnutím `ftp` nad cílem
+druhu databáze.

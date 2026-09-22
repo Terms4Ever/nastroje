@@ -68,6 +68,7 @@ vzor agentského souboru je `sablony/agents.md`.
 
 ## Přihlašovací údaje pro agenty
 
+Trezor drží čtyři druhy: FTP, databáze, token nebo klíč a jiné heslo.
 Hesla a tokeny leží v trezoru: `hooky/tajemstvi.ps1` je uloží přes DPAPI do
 `%USERPROFILE%\.tajemstvi\<cíl>.xml`, čitelné jen pod tím účtem na tom
 počítači. Agent zná jen název cíle, hodnotu nikdy nevidí: `spustit` ji vloží
