@@ -819,3 +819,7 @@ umí i převzetí sezení z WinSCP, takže se heslo nepíše vůbec: výběr ze 
 předvyplní server i uživatele a heslo si skript vezme sám. Tlačítko Vyzkoušet
 spojení ověří cíl proti serveru. Ověřeno snímkem okna po každé úpravě, protože
 u rozhraní nestačí, že skript nespadne.
+
+**Záhlaví okna.** Kreslí ho Windows, ne WPF, takže zůstávalo bílé i v tmavém
+okně. Přepíná se `DwmSetWindowAttribute` s atributem 20 (na starších buildech
+19); když ho systém nezná, okno jen zůstane se světlým záhlavím a nic nespadne.

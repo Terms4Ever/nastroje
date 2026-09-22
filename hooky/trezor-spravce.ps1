@@ -251,6 +251,26 @@ $xaml = @'
 
 $okno = [Windows.Markup.XamlReader]::Parse($xaml)
 
+# Záhlaví okna kreslí Windows, ne WPF, takže by zůstalo bílé. Tohle mu řekne,
+# ať ho vykreslí tmavě: atribut 20 na Windows 11 a novějších desítkách,
+# atribut 19 na starších buildech.
+Add-Type -Namespace Nativni -Name Dwm -MemberDefinition @'
+[DllImport("dwmapi.dll")]
+public static extern int DwmSetWindowAttribute(IntPtr hwnd, int attr, ref int value, int size);
+'@
+
+$okno.Add_SourceInitialized({
+    try {
+        $hwnd = (New-Object System.Windows.Interop.WindowInteropHelper($okno)).Handle
+        $zapnuto = 1
+        if ([Nativni.Dwm]::DwmSetWindowAttribute($hwnd, 20, [ref]$zapnuto, 4) -ne 0) {
+            [Nativni.Dwm]::DwmSetWindowAttribute($hwnd, 19, [ref]$zapnuto, 4) | Out-Null
+        }
+    } catch {
+        # Na starším systému se nic nestane, okno jen zůstane se světlým záhlavím.
+    }
+})
+
 $prvek = {
     param($jmeno)
     $okno.FindName($jmeno)
