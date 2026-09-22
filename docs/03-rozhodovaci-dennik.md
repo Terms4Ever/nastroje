@@ -812,3 +812,10 @@ cmd"*. Přibyl `hooky/trezor-spravce.ps1` a zástupce **Trezor hesel** na ploše
 seznam uložených cílů a tři tlačítka (přidat ručně, převzít z WinSCP, smazat).
 Příkazy v `tajemstvi.ps1` zůstávají, ale jsou pro agenty, ne pro člověka.
 Ověřeno spuštěním: okno naběhne a drží, zástupce vede na správný skript.
+
+**Vzhled.** První okno bylo ve WinForms a vypadalo podle toho. Přepsáno do WPF:
+tmavé pozadí, Segoe UI, karty s cíli, zelený akcent jako ve steelsetu. Formulář
+umí i převzetí sezení z WinSCP, takže se heslo nepíše vůbec: výběr ze seznamu
+předvyplní server i uživatele a heslo si skript vezme sám. Tlačítko Vyzkoušet
+spojení ověří cíl proti serveru. Ověřeno snímkem okna po každé úpravě, protože
+u rozhraní nestačí, že skript nespadne.

@@ -3,16 +3,272 @@
 # Pouští se zástupcem z plochy, žádná příkazová řádka. Hodnoty se ukládají
 # stejně jako v tajemstvi.ps1, tedy přes DPAPI do %USERPROFILE%\.tajemstvi.
 #
+# Rozhraní je WPF, ne WinForms: kvůli vzhledu (tmavé pozadí, Segoe UI,
+# odsazení) a kvůli tomu, že se dá stylovat bez kreslení po pixelech.
+#
 # Soubor musí zůstat v UTF-8 s BOM, jinak Windows PowerShell 5.1 přečte
 # češtinu rozsypaně.
 
 $ErrorActionPreference = 'Stop'
-Add-Type -AssemblyName System.Windows.Forms
-Add-Type -AssemblyName System.Drawing
+Add-Type -AssemblyName PresentationFramework
+Add-Type -AssemblyName PresentationCore
+Add-Type -AssemblyName WindowsBase
 
 $TREZOR = Join-Path $env:USERPROFILE '.tajemstvi'
 $SEZENI_WINSCP = 'HKCU:\Software\Martin Prikryl\WinSCP 2\Sessions'
 $NASTROJ = Join-Path $PSScriptRoot 'tajemstvi.ps1'
+
+$xaml = @'
+<Window xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Trezor hesel" Height="800" Width="920"
+        WindowStartupLocation="CenterScreen" Background="#0F1115"
+        FontFamily="Segoe UI" TextOptions.TextFormattingMode="Ideal">
+  <Window.Resources>
+    <SolidColorBrush x:Key="Plocha" Color="#171A20"/>
+    <SolidColorBrush x:Key="Text" Color="#E8EAED"/>
+    <SolidColorBrush x:Key="TextSlaby" Color="#8A93A0"/>
+    <SolidColorBrush x:Key="Akcent" Color="#00E07A"/>
+    <SolidColorBrush x:Key="Obrys" Color="#242833"/>
+
+    <Style TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+    </Style>
+
+    <Style x:Key="Nadpis" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="FontSize" Value="22"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+    </Style>
+
+    <Style x:Key="Podnadpis" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextSlaby}"/>
+      <Setter Property="FontSize" Value="12.5"/>
+      <Setter Property="Margin" Value="0,4,0,0"/>
+    </Style>
+
+    <Style x:Key="Popisek" TargetType="TextBlock">
+      <Setter Property="Foreground" Value="{StaticResource TextSlaby}"/>
+      <Setter Property="FontSize" Value="11.5"/>
+      <Setter Property="Margin" Value="2,0,0,3"/>
+    </Style>
+
+    <Style TargetType="TextBox">
+      <Setter Property="Background" Value="#11141A"/>
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="CaretBrush" Value="{StaticResource Akcent}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Obrys}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="9,7"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="TextBox">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style TargetType="PasswordBox">
+      <Setter Property="Background" Value="#11141A"/>
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="CaretBrush" Value="{StaticResource Akcent}"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Obrys}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="9,7"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="PasswordBox">
+            <Border Background="{TemplateBinding Background}" BorderBrush="{TemplateBinding BorderBrush}"
+                    BorderThickness="{TemplateBinding BorderThickness}" CornerRadius="8">
+              <ScrollViewer x:Name="PART_ContentHost" Margin="{TemplateBinding Padding}"/>
+            </Border>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TlacitkoZaklad" TargetType="Button">
+      <Setter Property="Foreground" Value="{StaticResource Text}"/>
+      <Setter Property="Background" Value="#1C2029"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Obrys}"/>
+      <Setter Property="BorderThickness" Value="1"/>
+      <Setter Property="Padding" Value="16,9"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Cursor" Value="Hand"/>
+      <Setter Property="Margin" Value="0,0,10,0"/>
+      <Setter Property="Template">
+        <Setter.Value>
+          <ControlTemplate TargetType="Button">
+            <Border x:Name="ramecek" Background="{TemplateBinding Background}"
+                    BorderBrush="{TemplateBinding BorderBrush}" BorderThickness="{TemplateBinding BorderThickness}"
+                    CornerRadius="8" Padding="{TemplateBinding Padding}">
+              <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center"/>
+            </Border>
+            <ControlTemplate.Triggers>
+              <Trigger Property="IsMouseOver" Value="True">
+                <Setter TargetName="ramecek" Property="Background" Value="#242A36"/>
+              </Trigger>
+            </ControlTemplate.Triggers>
+          </ControlTemplate>
+        </Setter.Value>
+      </Setter>
+    </Style>
+
+    <Style x:Key="TlacitkoHlavni" TargetType="Button" BasedOn="{StaticResource TlacitkoZaklad}">
+      <Setter Property="Background" Value="{StaticResource Akcent}"/>
+      <Setter Property="Foreground" Value="#06231A"/>
+      <Setter Property="FontWeight" Value="SemiBold"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Akcent}"/>
+    </Style>
+
+    <Style TargetType="ComboBox">
+      <Setter Property="Background" Value="#11141A"/>
+      <Setter Property="Foreground" Value="#1A1D24"/>
+      <Setter Property="BorderBrush" Value="{StaticResource Obrys}"/>
+      <Setter Property="Padding" Value="8,6"/>
+      <Setter Property="FontSize" Value="13"/>
+      <Setter Property="Margin" Value="0,0,0,8"/>
+      <Setter Property="HorizontalContentAlignment" Value="Left"/>
+    </Style>
+  </Window.Resources>
+
+  <Grid Margin="26">
+    <Grid.RowDefinitions>
+      <RowDefinition Height="Auto"/>
+      <RowDefinition Height="*"/>
+      <RowDefinition Height="Auto"/>
+    </Grid.RowDefinitions>
+    <Grid.ColumnDefinitions>
+      <ColumnDefinition Width="*"/>
+      <ColumnDefinition Width="330"/>
+    </Grid.ColumnDefinitions>
+
+    <StackPanel Grid.Row="0" Grid.ColumnSpan="2" Margin="0,0,0,18">
+      <TextBlock Text="Trezor hesel" Style="{StaticResource Nadpis}"/>
+      <TextBlock Style="{StaticResource Podnadpis}"
+                 Text="Údaje jsou zašifrované na tenhle účet a počítač. Agent zná jen název cíle, heslo nikdy nevidí."/>
+    </StackPanel>
+
+    <Border Grid.Row="1" Grid.Column="0" Background="{StaticResource Plocha}" CornerRadius="12"
+            BorderBrush="{StaticResource Obrys}" BorderThickness="1" Padding="6" Margin="0,0,18,0">
+      <ListBox x:Name="Seznam" Background="Transparent" BorderThickness="0" Foreground="#E8EAED">
+        <ListBox.ItemContainerStyle>
+          <Style TargetType="ListBoxItem">
+            <Setter Property="Padding" Value="14,12"/>
+            <Setter Property="Margin" Value="4,4,4,0"/>
+            <Setter Property="Template">
+              <Setter.Value>
+                <ControlTemplate TargetType="ListBoxItem">
+                  <Border x:Name="radek" Background="#11141A" CornerRadius="10" Padding="{TemplateBinding Padding}"
+                          BorderBrush="{StaticResource Obrys}" BorderThickness="1">
+                    <ContentPresenter/>
+                  </Border>
+                  <ControlTemplate.Triggers>
+                    <Trigger Property="IsSelected" Value="True">
+                      <Setter TargetName="radek" Property="BorderBrush" Value="{StaticResource Akcent}"/>
+                      <Setter TargetName="radek" Property="Background" Value="#101A16"/>
+                    </Trigger>
+                    <Trigger Property="IsMouseOver" Value="True">
+                      <Setter TargetName="radek" Property="Background" Value="#151922"/>
+                    </Trigger>
+                  </ControlTemplate.Triggers>
+                </ControlTemplate>
+              </Setter.Value>
+            </Setter>
+          </Style>
+        </ListBox.ItemContainerStyle>
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <StackPanel>
+              <TextBlock Text="{Binding Cil}" FontSize="14.5" FontWeight="SemiBold" Foreground="#E8EAED"/>
+              <TextBlock Text="{Binding Radek}" FontSize="12" Foreground="#8A93A0" Margin="0,3,0,0"/>
+            </StackPanel>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+    </Border>
+
+    <Border Grid.Row="1" Grid.Column="1" Background="{StaticResource Plocha}" CornerRadius="12"
+            BorderBrush="{StaticResource Obrys}" BorderThickness="1" Padding="16">
+      <ScrollViewer VerticalScrollBarVisibility="Auto">
+        <StackPanel>
+          <TextBlock Text="Nový cíl" FontSize="15" FontWeight="SemiBold" Margin="0,0,0,10"/>
+
+          <TextBlock Text="Převzít ze sezení WinSCP" Style="{StaticResource Popisek}"/>
+          <ComboBox x:Name="Sezeni"/>
+
+          <TextBlock Text="Název cíle" Style="{StaticResource Popisek}"/>
+          <TextBox x:Name="Cil"/>
+
+          <TextBlock Text="Server" Style="{StaticResource Popisek}"/>
+          <TextBox x:Name="Server"/>
+
+          <TextBlock Text="Uživatel" Style="{StaticResource Popisek}"/>
+          <TextBox x:Name="Uzivatel"/>
+
+          <TextBlock Text="Heslo" Style="{StaticResource Popisek}"/>
+          <PasswordBox x:Name="Heslo"/>
+
+          <Grid>
+            <Grid.ColumnDefinitions>
+              <ColumnDefinition Width="*"/>
+              <ColumnDefinition Width="12"/>
+              <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+            <StackPanel Grid.Column="0">
+              <TextBlock Text="Protokol" Style="{StaticResource Popisek}"/>
+              <TextBox x:Name="Protokol" Text="ftpes"/>
+            </StackPanel>
+            <StackPanel Grid.Column="2">
+              <TextBlock Text="Složka" Style="{StaticResource Popisek}"/>
+              <TextBox x:Name="Slozka" Text="/"/>
+            </StackPanel>
+          </Grid>
+
+          <Button x:Name="Ulozit" Content="Uložit do trezoru" Style="{StaticResource TlacitkoHlavni}"
+                  HorizontalAlignment="Stretch" Margin="0,4,0,0"/>
+        </StackPanel>
+      </ScrollViewer>
+    </Border>
+
+    <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,18,0,0">
+      <Button x:Name="Smazat" Content="Smazat vybraný" Style="{StaticResource TlacitkoZaklad}"/>
+      <Button x:Name="Zkusit" Content="Vyzkoušet spojení" Style="{StaticResource TlacitkoZaklad}"/>
+      <Button x:Name="Zavrit" Content="Zavřít" Style="{StaticResource TlacitkoZaklad}"/>
+      <TextBlock x:Name="Stav" VerticalAlignment="Center" Margin="10,0,0,0" Foreground="#8A93A0" FontSize="12.5"/>
+    </StackPanel>
+  </Grid>
+</Window>
+'@
+
+$okno = [Windows.Markup.XamlReader]::Parse($xaml)
+
+$prvek = {
+    param($jmeno)
+    $okno.FindName($jmeno)
+}
+
+$Seznam = & $prvek 'Seznam'
+$Sezeni = & $prvek 'Sezeni'
+$Cil = & $prvek 'Cil'
+$Server = & $prvek 'Server'
+$Uzivatel = & $prvek 'Uzivatel'
+$Heslo = & $prvek 'Heslo'
+$Protokol = & $prvek 'Protokol'
+$Slozka = & $prvek 'Slozka'
+$Ulozit = & $prvek 'Ulozit'
+$Smazat = & $prvek 'Smazat'
+$Zkusit = & $prvek 'Zkusit'
+$Zavrit = & $prvek 'Zavrit'
+$Stav = & $prvek 'Stav'
 
 function NactiCile {
     if (-not (Test-Path $TREZOR)) { return @() }
@@ -20,229 +276,117 @@ function NactiCile {
         $z = Import-Clixml $_.FullName
         [pscustomobject]@{
             Cil = $z.Cil
-            Popis = '{0,-26} {1}@{2}  ({3}, {4})' -f $z.Cil, $z.Uzivatel, $z.Server, $z.Protokol, $z.Slozka
+            Radek = '{0}@{1}   ·   {2}   ·   {3}' -f $z.Uzivatel, $z.Server, $z.Protokol, $z.Slozka
         }
     }
 }
 
-function Hlaska($text, $nadpis) {
-    [System.Windows.Forms.MessageBox]::Show($text, $nadpis) | Out-Null
+function Obnov {
+    $Seznam.ItemsSource = @(NactiCile)
+    $pocet = @(NactiCile).Count
+    $slovo = switch ($pocet) { 1 { 'cíl' } { $_ -ge 2 -and $_ -le 4 } { 'cíle' } default { 'cílů' } }
+    $Stav.Text = if ($pocet) { "V trezoru $(if ($pocet -eq 1) { 'je' } else { 'jsou' }) $pocet $slovo." } else { 'Trezor je zatím prázdný.' }
 }
 
-function OknoPridat {
-    $f = New-Object System.Windows.Forms.Form
-    $f.Text = 'Trezor: nový cíl'
-    $f.Size = New-Object System.Drawing.Size(500, 400)
-    $f.StartPosition = 'CenterParent'
-
-    $popisky = @('Název cíle (bez mezer)', 'Server', 'Uživatel', 'Heslo', 'Protokol', 'Složka na serveru')
-    $klice = @('Cil', 'Server', 'Uzivatel', 'Heslo', 'Protokol', 'Slozka')
-    $pole = @{}
-
-    for ($i = 0; $i -lt $popisky.Count; $i++) {
-        $l = New-Object System.Windows.Forms.Label
-        $l.Text = $popisky[$i]
-        $l.Location = New-Object System.Drawing.Point(18, (22 + $i * 45))
-        $l.Size = New-Object System.Drawing.Size(190, 20)
-        $f.Controls.Add($l)
-
-        $t = New-Object System.Windows.Forms.TextBox
-        $t.Location = New-Object System.Drawing.Point(215, (20 + $i * 45))
-        $t.Size = New-Object System.Drawing.Size(240, 24)
-        if ($klice[$i] -eq 'Heslo') { $t.UseSystemPasswordChar = $true }
-        if ($klice[$i] -eq 'Protokol') { $t.Text = 'ftpes' }
-        if ($klice[$i] -eq 'Slozka') { $t.Text = '/' }
-        $f.Controls.Add($t)
-        $pole[$klice[$i]] = $t
-    }
-
-    $ok = New-Object System.Windows.Forms.Button
-    $ok.Text = 'Uložit'
-    $ok.Location = New-Object System.Drawing.Point(215, 300)
-    $ok.Size = New-Object System.Drawing.Size(110, 30)
-    $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $f.Controls.Add($ok)
-    $f.AcceptButton = $ok
-
-    $zrus = New-Object System.Windows.Forms.Button
-    $zrus.Text = 'Zpět'
-    $zrus.Location = New-Object System.Drawing.Point(345, 300)
-    $zrus.Size = New-Object System.Drawing.Size(110, 30)
-    $zrus.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $f.Controls.Add($zrus)
-    $f.CancelButton = $zrus
-
-    if ($f.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
-
-    $cil = $pole['Cil'].Text.Trim()
-    if ($cil -notmatch '^[a-zA-Z0-9._-]+$') {
-        Hlaska 'Název cíle smí mít jen písmena, číslice, tečku, pomlčku a podtržítko.' 'Trezor'
-        return
-    }
-    if (-not $pole['Heslo'].Text) {
-        Hlaska 'Heslo je prázdné, nic se neuložilo.' 'Trezor'
-        return
-    }
-
-    New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
-    $cesta = Join-Path $TREZOR ($cil + '.xml')
-    @{
-        Cil = $cil
-        Server = $pole['Server'].Text.Trim()
-        Uzivatel = $pole['Uzivatel'].Text.Trim()
-        Heslo = (ConvertTo-SecureString $pole['Heslo'].Text -AsPlainText -Force)
-        Protokol = $(if ($pole['Protokol'].Text) { $pole['Protokol'].Text.Trim() } else { 'ftpes' })
-        Slozka = $(if ($pole['Slozka'].Text) { $pole['Slozka'].Text.Trim() } else { '/' })
-        Otisk = ''
-        UlozenoAt = (Get-Date).ToString('s')
-    } | Export-Clixml -Path $cesta
-    icacls $cesta /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
-
-    Hlaska "Uloženo: $cil (heslo o $($pole['Heslo'].Text.Length) znacích)" 'Trezor'
-}
-
-function OknoZWinscp {
-    $sezeni = @()
+function NactiSezeni {
+    $Sezeni.Items.Clear()
+    $Sezeni.Items.Add('(nepřebírat, vyplním ručně)') | Out-Null
     if (Test-Path $SEZENI_WINSCP) {
-        $sezeni = Get-ChildItem $SEZENI_WINSCP |
+        Get-ChildItem $SEZENI_WINSCP |
             Select-Object -ExpandProperty PSChildName |
             ForEach-Object { $_ -replace '%2F', '/' } |
-            Where-Object { $_ -ne 'Default%20Settings' -and $_ -ne 'Default Settings' } |
-            Sort-Object
+            Where-Object { $_ -notmatch '^Default' } |
+            Sort-Object |
+            ForEach-Object { $Sezeni.Items.Add($_) | Out-Null }
     }
-    if (-not $sezeni) {
-        Hlaska 'WinSCP tu nemá uložené žádné sezení.' 'Trezor'
-        return
+    $Sezeni.SelectedIndex = 0
+}
+
+Obnov
+NactiSezeni
+
+$Sezeni.Add_SelectionChanged({
+    if ($Sezeni.SelectedIndex -le 0) { return }
+    $nazev = [string]$Sezeni.SelectedItem
+    $klic = Join-Path $SEZENI_WINSCP ($nazev -replace '/', '%2F')
+    if (-not (Test-Path $klic)) { return }
+    $s = Get-ItemProperty $klic
+    $Server.Text = [string]$s.HostName
+    $Uzivatel.Text = [string]$s.UserName
+    if (-not $Cil.Text) {
+        $Cil.Text = (($s.UserName -replace '[^a-zA-Z0-9]', '-') + '-ftp').ToLower()
     }
+    $protokoly = @{ 0 = 'sftp'; 1 = 'scp'; 5 = 'ftpes' }
+    if ($protokoly.ContainsKey([int]$s.FSProtocol)) { $Protokol.Text = $protokoly[[int]$s.FSProtocol] }
+    if ($s.RemoteDirectory) { $Slozka.Text = [string]$s.RemoteDirectory }
+    $Stav.Text = 'Heslo se převezme ze sezení, psát ho nemusíš.'
+})
 
-    $f = New-Object System.Windows.Forms.Form
-    $f.Text = 'Trezor: převzít sezení z WinSCP'
-    $f.Size = New-Object System.Drawing.Size(620, 300)
-    $f.StartPosition = 'CenterParent'
-
-    $l1 = New-Object System.Windows.Forms.Label
-    $l1.Text = 'Sezení ve WinSCP'
-    $l1.Location = New-Object System.Drawing.Point(18, 20)
-    $l1.Size = New-Object System.Drawing.Size(160, 20)
-    $f.Controls.Add($l1)
-
-    $vyber = New-Object System.Windows.Forms.ComboBox
-    $vyber.Location = New-Object System.Drawing.Point(185, 18)
-    $vyber.Size = New-Object System.Drawing.Size(390, 24)
-    $vyber.DropDownStyle = 'DropDownList'
-    $sezeni | ForEach-Object { $vyber.Items.Add($_) | Out-Null }
-    $vyber.SelectedIndex = 0
-    $f.Controls.Add($vyber)
-
-    $l2 = New-Object System.Windows.Forms.Label
-    $l2.Text = 'Název cíle v trezoru'
-    $l2.Location = New-Object System.Drawing.Point(18, 70)
-    $l2.Size = New-Object System.Drawing.Size(160, 20)
-    $f.Controls.Add($l2)
-
-    $cilBox = New-Object System.Windows.Forms.TextBox
-    $cilBox.Location = New-Object System.Drawing.Point(185, 68)
-    $cilBox.Size = New-Object System.Drawing.Size(390, 24)
-    $f.Controls.Add($cilBox)
-
-    $l3 = New-Object System.Windows.Forms.Label
-    $l3.Text = 'Složka na serveru (nepovinné)'
-    $l3.Location = New-Object System.Drawing.Point(18, 120)
-    $l3.Size = New-Object System.Drawing.Size(180, 20)
-    $f.Controls.Add($l3)
-
-    $slozkaBox = New-Object System.Windows.Forms.TextBox
-    $slozkaBox.Location = New-Object System.Drawing.Point(185, 118)
-    $slozkaBox.Size = New-Object System.Drawing.Size(390, 24)
-    $f.Controls.Add($slozkaBox)
-
-    $ok = New-Object System.Windows.Forms.Button
-    $ok.Text = 'Převzít'
-    $ok.Location = New-Object System.Drawing.Point(345, 190)
-    $ok.Size = New-Object System.Drawing.Size(110, 30)
-    $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
-    $f.Controls.Add($ok)
-    $f.AcceptButton = $ok
-
-    $zrus = New-Object System.Windows.Forms.Button
-    $zrus.Text = 'Zpět'
-    $zrus.Location = New-Object System.Drawing.Point(465, 190)
-    $zrus.Size = New-Object System.Drawing.Size(110, 30)
-    $zrus.DialogResult = [System.Windows.Forms.DialogResult]::Cancel
-    $f.Controls.Add($zrus)
-    $f.CancelButton = $zrus
-
-    if ($f.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) { return }
-
-    $cil = $cilBox.Text.Trim()
+$Ulozit.Add_Click({
+    $cil = $Cil.Text.Trim()
     if ($cil -notmatch '^[a-zA-Z0-9._-]+$') {
-        Hlaska 'Název cíle smí mít jen písmena, číslice, tečku, pomlčku a podtržítko.' 'Trezor'
+        $Stav.Text = 'Název cíle smí mít jen písmena, číslice, tečku, pomlčku a podtržítko.'
         return
     }
 
-    $argumenty = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $NASTROJ, 'zwinscp', $vyber.SelectedItem, $cil)
-    if ($slozkaBox.Text.Trim()) { $argumenty += @('-Slozka', $slozkaBox.Text.Trim()) }
+    $prebrat = $Sezeni.SelectedIndex -gt 0 -and -not $Heslo.Password
+    $argumenty = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', $NASTROJ)
 
-    $vystup = & powershell @argumenty 2>&1 | Out-String
-    Hlaska $vystup.Trim() 'Trezor'
-}
-
-function OknoHlavni {
-    $f = New-Object System.Windows.Forms.Form
-    $f.Text = 'Trezor přihlašovacích údajů'
-    $f.Size = New-Object System.Drawing.Size(700, 420)
-    $f.StartPosition = 'CenterScreen'
-
-    $seznam = New-Object System.Windows.Forms.ListBox
-    $seznam.Location = New-Object System.Drawing.Point(18, 18)
-    $seznam.Size = New-Object System.Drawing.Size(650, 260)
-    $seznam.Font = New-Object System.Drawing.Font('Consolas', 10)
-    $f.Controls.Add($seznam)
-
-    $obnov = {
-        $seznam.Items.Clear()
-        $cile = NactiCile
-        if (-not $cile) {
-            $seznam.Items.Add('Trezor je zatím prázdný. Přidej cíl tlačítkem níž.') | Out-Null
-        } else {
-            $cile | ForEach-Object { $seznam.Items.Add($_.Popis) | Out-Null }
+    if ($prebrat) {
+        $argumenty += @('zwinscp', [string]$Sezeni.SelectedItem, $cil)
+        if ($Slozka.Text.Trim()) { $argumenty += @('-Slozka', $Slozka.Text.Trim()) }
+        $vystup = & powershell @argumenty 2>&1 | Out-String
+        $Stav.Text = $vystup.Trim()
+    } else {
+        if (-not $Heslo.Password) {
+            $Stav.Text = 'Vyplň heslo, nebo vyber sezení WinSCP, ze kterého se převezme.'
+            return
         }
-    }
-    & $obnov
-
-    $tlacitka = @(
-        @{ Text = 'Přidat ručně'; X = 18; Akce = { OknoPridat; & $obnov } },
-        @{ Text = 'Převzít z WinSCP'; X = 180; Akce = { OknoZWinscp; & $obnov } },
-        @{ Text = 'Smazat vybraný'; X = 342; Akce = {
-                if ($seznam.SelectedItem) {
-                    $cil = ($seznam.SelectedItem -split '\s+')[0]
-                    $cesta = Join-Path $TREZOR ($cil + '.xml')
-                    if (Test-Path $cesta) {
-                        Remove-Item $cesta -Force
-                        Hlaska "Smazáno: $cil" 'Trezor'
-                    }
-                }
-                & $obnov
-            } },
-        @{ Text = 'Zavřít'; X = 504; Akce = { $f.Close() } }
-    )
-
-    foreach ($t in $tlacitka) {
-        $b = New-Object System.Windows.Forms.Button
-        $b.Text = $t.Text
-        $b.Location = New-Object System.Drawing.Point($t.X, 300)
-        $b.Size = New-Object System.Drawing.Size(150, 34)
-        $b.Add_Click($t.Akce)
-        $f.Controls.Add($b)
+        New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
+        $cesta = Join-Path $TREZOR ($cil + '.xml')
+        @{
+            Cil = $cil
+            Server = $Server.Text.Trim()
+            Uzivatel = $Uzivatel.Text.Trim()
+            Heslo = (ConvertTo-SecureString $Heslo.Password -AsPlainText -Force)
+            Protokol = $(if ($Protokol.Text.Trim()) { $Protokol.Text.Trim() } else { 'ftpes' })
+            Slozka = $(if ($Slozka.Text.Trim()) { $Slozka.Text.Trim() } else { '/' })
+            Otisk = ''
+            UlozenoAt = (Get-Date).ToString('s')
+        } | Export-Clixml -Path $cesta
+        icacls $cesta /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
+        $Stav.Text = "Uloženo: $cil (heslo o $($Heslo.Password.Length) znacích)"
     }
 
-    $pozn = New-Object System.Windows.Forms.Label
-    $pozn.Text = 'Hesla leží zašifrovaná v profilu uživatele. Agent zná jen název cíle, hodnotu nevidí.'
-    $pozn.Location = New-Object System.Drawing.Point(18, 345)
-    $pozn.Size = New-Object System.Drawing.Size(650, 20)
-    $f.Controls.Add($pozn)
+    $Heslo.Clear()
+    $Cil.Text = ''
+    $Sezeni.SelectedIndex = 0
+    Obnov
+})
 
-    $f.ShowDialog() | Out-Null
-}
+$Smazat.Add_Click({
+    if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
+    $cil = $Seznam.SelectedItem.Cil
+    $cesta = Join-Path $TREZOR ($cil + '.xml')
+    if (Test-Path $cesta) { Remove-Item $cesta -Force }
+    $Stav.Text = "Smazáno: $cil"
+    Obnov
+})
 
-OknoHlavni
+$Zkusit.Add_Click({
+    if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
+    $cil = $Seznam.SelectedItem.Cil
+    $Stav.Text = "Zkouším spojení s $cil ..."
+    $okno.Dispatcher.Invoke([action] {}, 'Background')
+    $vystup = & powershell -NoProfile -ExecutionPolicy Bypass -File $NASTROJ ftp $cil '::' 'ls' 2>&1 | Out-String
+    if ($vystup -match 'Připojeno|Connected') {
+        $Stav.Text = "$cil : spojení funguje."
+    } else {
+        $radek = ($vystup -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
+        $Stav.Text = "$cil : spojení selhalo. $radek"
+    }
+})
+
+$Zavrit.Add_Click({ $okno.Close() })
+
+$okno.ShowDialog() | Out-Null
