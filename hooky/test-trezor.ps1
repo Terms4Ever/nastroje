@@ -1,6 +1,7 @@
 ﻿# Proklikání trezoru přes UI Automation.
 #
-# Spouští okno, vybere cíl, zmáčkne Upravit, ověří vyplněný formulář a uloží.
+# Spouští okno, vybere cíl, zmáčkne Upravit, ověří vyplněný formulář, uloží
+# a nakonec vyzkouší spojení u prvního FTP cíle.
 # Existuje proto, že 22. 9. 2026 spadlo okno hned při kliknutí na Upravit:
 # místní proměnná $cil přepsala ovládací prvek $Cil (PowerShell nerozlišuje
 # velikost písmen). Skript s tím nespadl, spadlo až okno u zadavatele.
@@ -43,7 +44,7 @@ function StavovyRadek {
     $posledni = ''
     for ($i = 0; $i -lt $texty.Count; $i++) {
         $n = $texty.Item($i).Current.Name
-        if ($n -match 'Upravuješ|Upraveno|Uloženo|Chyba|V trezoru') { $posledni = $n }
+        if ($n -match 'Upravuješ|Upraveno|Uloženo|Chyba|V trezoru|spojení') { $posledni = $n }
     }
     $posledni
 }
@@ -69,6 +70,28 @@ if ($null -ne $tlacitkoUlozit) {
     Klikni 'Uložit změny'
     Start-Sleep -Seconds 1
     '  stav po ulozeni = ' + (StavovyRadek)
+}
+
+# 4. zkouška spojení u prvního FTP cíle: hlásit se musí podle návratového kódu,
+# ne podle textu ve výpisu. Dřív to u funkčního spojení psalo „spojení selhalo".
+# Seznam se po uložení překreslí, staré prvky už neplatí - najít znovu.
+$polozky = $okno.FindAll($TS, (New-Object System.Windows.Automation.PropertyCondition(
+    $AE::ControlTypeProperty, [System.Windows.Automation.ControlType]::ListItem)))
+$ftp = $null
+for ($i = 0; $i -lt $polozky.Count; $i++) {
+    if ($polozky.Item($i).Current.Name -match 'Druh=ftp') { $ftp = $polozky.Item($i); break }
+}
+if ($null -ne $ftp) {
+    $ftp.GetCurrentPattern([System.Windows.Automation.SelectionItemPattern]::Pattern).Select()
+    Start-Sleep -Milliseconds 400
+    Klikni 'Vyzkoušet spojení'
+    Start-Sleep -Seconds 12
+    $stavSpojeni = StavovyRadek
+    'po zkousce spojeni:'
+    '  stav = ' + $stavSpojeni
+    if ($stavSpojeni -notmatch 'spojení funguje') { '  CHYBA: zkouska spojeni nehlasi uspech' }
+} else {
+    'v trezoru neni zadny FTP cil, zkouska spojeni preskocena'
 }
 
 $proces.Refresh()

@@ -879,3 +879,20 @@ to už nejde splést, a stejná chyba by shodila i ukládání a mazání.
 **Ověřeno tímhle testem**: formulář se vyplní vybraným cílem, tlačítko se
 přepne na Uložit změny a po uložení stav hlásí `Upraveno: tomas-saroun-me-ftp
 (Server, Uzivatel, Protokol, Slozka, Druh)`. Log chyb prázdný.
+
+**Zkouška spojení soudí podle návratového kódu.** Tlačítko *Vyzkoušet spojení*
+hlásilo `spojení selhalo. Drwxrwx` u cíle, který ve WinSCP i z příkazové řádky
+fungoval. Příčina nebyla v spojení, ale ve vyhodnocení: okno hledalo ve výpisu
+slovo „Připojeno", jenže podřízený PowerShell píše v kódování konzole (na
+českých Windows cp852), takže diakritika dorazila rozsypaná a porovnání nikdy
+nesedělo. Do stavu se pak dostal poslední řádek výpisu, tedy řádek adresáře.
+
+Opraveno dvakrát: `SpustNastroj` nastavuje `StandardOutputEncoding`
+i `StandardErrorEncoding` na kódování konzole a vrací objekt `Vystup` + `Kod`,
+a o výsledku zkoušky rozhoduje návratový kód WinSCP (`option batch abort` vrací
+1 při chybě), ne text. Hlášení nově říká i počet vypsaných položek.
+
+**Ověřeno proklikáním** (`hooky/test-trezor.ps1`, nový krok 4):
+`onlinefakturuj-ftp : spojení funguje, vypsáno 8 položek.` a u nahlášeného cíle
+`tomas-saroun-me-ftp : spojení funguje, vypsáno 6 položek.` Test si seznam po
+uložení načítá znovu, protože překreslení zneplatní staré prvky stromu.

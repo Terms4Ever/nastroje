@@ -428,6 +428,11 @@ function SpustNastroj([string[]]$argumenty, $tajne, [int]$limitVterin = 0) {
     $psi.RedirectStandardError = $true
     $psi.UseShellExecute = $false
     $psi.CreateNoWindow = $true
+    # Podřízený PowerShell píše v kódování konzole, ne v UTF-8. Bez tohohle
+    # dorazí česká hláška rozsypaná a nedá se podle ní nic poznat.
+    $kodovani = [System.Text.Encoding]::GetEncoding([System.Globalization.CultureInfo]::CurrentCulture.TextInfo.OEMCodePage)
+    $psi.StandardOutputEncoding = $kodovani
+    $psi.StandardErrorEncoding = $kodovani
 
     $proces = [System.Diagnostics.Process]::Start($psi)
     if ($null -ne $tajne) { $proces.StandardInput.Write($tajne) }
@@ -439,11 +444,14 @@ function SpustNastroj([string[]]$argumenty, $tajne, [int]$limitVterin = 0) {
 
     if ($limitVterin -gt 0 -and -not $proces.WaitForExit($limitVterin * 1000)) {
         try { $proces.Kill() } catch { }
-        return "Nestihlo se to do $limitVterin vteřin, zkouška zrušena."
+        return [pscustomobject]@{ Vystup = "Nestihlo se to do $limitVterin vteřin, zkouška zrušena."; Kod = -1 }
     }
     if ($limitVterin -le 0) { $proces.WaitForExit() }
 
-    return ($cteniVen.Result + $cteniChyb.Result).Trim()
+    return [pscustomobject]@{
+        Vystup = ($cteniVen.Result + $cteniChyb.Result).Trim()
+        Kod = $proces.ExitCode
+    }
 }
 
 function NactiCile {
@@ -532,9 +540,9 @@ $Ulozit.Add_Click({ Bezpecne {
 
         if ($Heslo.Password) {
             $argumenty += '-ZeVstupu'
-            $Stav.Text = SpustNastroj $argumenty ($Heslo.Password + "`n")
+            $Stav.Text = (SpustNastroj $argumenty ($Heslo.Password + "`n")).Vystup
         } else {
-            $Stav.Text = SpustNastroj $argumenty $null
+            $Stav.Text = (SpustNastroj $argumenty $null).Vystup
         }
 
         $vysledek = $Stav.Text
@@ -550,7 +558,7 @@ $Ulozit.Add_Click({ Bezpecne {
     if ($druh -eq 'ftp' -and $Sezeni.SelectedIndex -gt 0 -and -not $Heslo.Password) {
         $argumenty = @('zwinscp', [string]$Sezeni.SelectedItem, $cil)
         if ($Slozka.Text.Trim()) { $argumenty += @('-Slozka', $Slozka.Text.Trim()) }
-        $Stav.Text = SpustNastroj $argumenty $null
+        $Stav.Text = (SpustNastroj $argumenty $null).Vystup
     } else {
         if (-not $Heslo.Password) { $Stav.Text = 'Vyplň heslo nebo token.'; return }
 
@@ -567,7 +575,7 @@ $Ulozit.Add_Click({ Bezpecne {
         }
         if ($Poznamka.Text.Trim()) { $argumenty += @('-Poznamka', $Poznamka.Text.Trim()) }
 
-        $Stav.Text = SpustNastroj $argumenty $Heslo.Password
+        $Stav.Text = (SpustNastroj $argumenty $Heslo.Password).Vystup
     }
 
     $Heslo.Clear()
@@ -743,12 +751,16 @@ $Zkusit.Add_Click({ Bezpecne {
     }
     $Stav.Text = "Zkouším spojení s $($polozka.Cil) ..."
     $okno.Dispatcher.Invoke([action] {}, 'Background')
-    $vystup = SpustNastroj @('ftp', $polozka.Cil, '::', 'ls') $null 40
-    if ($vystup -match 'Připojeno|Connected') {
-        $Stav.Text = "$($polozka.Cil) : spojení funguje."
+    # O výsledku rozhoduje návratový kód nástroje, ne hledání slova ve výpisu:
+    # text chodí v kódování konzole a hledání „Připojeno" selhávalo i u spojení,
+    # které ve skutečnosti fungovalo.
+    $vysledek = SpustNastroj @('ftp', $polozka.Cil, '::', 'ls') $null 40
+    if ($vysledek.Kod -eq 0) {
+        $polozek = @($vysledek.Vystup -split "`n" | Where-Object { $_ -match '^[-dD]' }).Count
+        $Stav.Text = "$($polozka.Cil) : spojení funguje, vypsáno $polozek položek."
     } else {
-        $radek = ($vystup -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
-        $Stav.Text = "$($polozka.Cil) : spojení selhalo. $radek"
+        $radek = ($vysledek.Vystup -split "`n" | Where-Object { $_.Trim() } | Select-Object -Last 1)
+        $Stav.Text = "$($polozka.Cil) : spojení selhalo (kód $($vysledek.Kod)). $radek"
     }
 } })
 
