@@ -1,7 +1,9 @@
 ﻿# Trezor přihlašovacích údajů pro práci s agenty.
 #
-#   tajemstvi.ps1 ulozit <cíl>        uloží údaje (ptá se, nic nevypisuje)
+#   tajemstvi.ps1 ulozit <cíl>        uloží údaje (ptá se v terminálu)
 #                                     volitelně -Otisk <otisk certifikátu>
+#   tajemstvi.ps1 okno <cíl>          otevře okno a údaje se vyplní myší
+#   tajemstvi.ps1 zwinscp <sezení> <cíl>  převezme uložené sezení z WinSCP
 #   tajemstvi.ps1 seznam              vypíše cíle, uživatele a servery
 #   tajemstvi.ps1 smazat <cíl>        zahodí uložené údaje
 #   tajemstvi.ps1 spustit <cíl> :: <příkaz>   spustí příkaz s údaji v prostředí
@@ -50,6 +52,43 @@ function HesloJakoText($zaznam) {
     [Runtime.InteropServices.Marshal]::PtrToStringAuto(
         [Runtime.InteropServices.Marshal]::SecureStringToBSTR($zaznam.Heslo)
     )
+}
+
+function RozsifrujWinScp([string]$ulozene, [string]$uzivatel, [string]$server) {
+    # WinSCP heslo neukládá šifrovaně, jen zaobalené. Tohle je jeho vlastní
+    # postup pozpátku: dvojice hexů, negace, XOR magickou konstantou.
+    $MAGIC = 0xA3
+    $PRIZNAK = 0xFF
+    $znaky = [System.Collections.ArrayList]@($ulozene.ToCharArray())
+
+    $dalsi = {
+        if ($znaky.Count -lt 2) { throw 'Uložené heslo má nečekaný tvar.' }
+        $a = [Convert]::ToInt32([string]$znaky[0], 16)
+        $b = [Convert]::ToInt32([string]$znaky[1], 16)
+        $znaky.RemoveRange(0, 2)
+        (((-bnot (($a -shl 4) + $b)) -bxor $MAGIC) -band 0xFF)
+    }
+
+    $priznak = & $dalsi
+    if ($priznak -eq $PRIZNAK) {
+        & $dalsi | Out-Null
+        $delka = & $dalsi
+    } else {
+        $delka = $priznak
+    }
+    $preskoc = & $dalsi
+    if ($preskoc -gt 0) { $znaky.RemoveRange(0, $preskoc * 2) }
+
+    $text = ''
+    for ($i = 0; $i -lt $delka; $i++) { $text += [char](& $dalsi) }
+
+    if ($priznak -eq $PRIZNAK) {
+        $kotva = $uzivatel + $server
+        if (-not $text.StartsWith($kotva)) { throw 'Heslo se nepodařilo přečíst, sezení má jiný tvar.' }
+        $text = $text.Substring($kotva.Length)
+    }
+
+    return $text
 }
 
 function PrikazyPoOddelovaci($pole) {
@@ -154,7 +193,111 @@ switch ($Prikaz) {
         exit $kod
     }
 
+    'okno' {
+        # Okno se hodí tam, kde není terminál: agent ho otevře, hodnotu vyplní
+        # člověk a agent ji nikdy nevidí.
+        if (-not $Cil) { throw 'Chybí název cíle: tajemstvi.ps1 okno onlinefakturuj-ftp' }
+        Add-Type -AssemblyName System.Windows.Forms
+        Add-Type -AssemblyName System.Drawing
+
+        $f = New-Object System.Windows.Forms.Form
+        $f.Text = "Trezor: $Cil"
+        $f.Size = New-Object System.Drawing.Size(460, 320)
+        $f.StartPosition = 'CenterScreen'
+        $f.TopMost = $true
+
+        $pole = @{}
+        $popisky = @('Server', 'Uživatel', 'Heslo', 'Protokol (ftpes/ftp/sftp)', 'Složka na serveru')
+        $klice = @('Server', 'Uzivatel', 'Heslo', 'Protokol', 'Slozka')
+        for ($i = 0; $i -lt $popisky.Count; $i++) {
+            $l = New-Object System.Windows.Forms.Label
+            $l.Text = $popisky[$i]
+            $l.Location = New-Object System.Drawing.Point(15, (20 + $i * 45))
+            $l.Size = New-Object System.Drawing.Size(180, 20)
+            $f.Controls.Add($l)
+
+            $t = New-Object System.Windows.Forms.TextBox
+            $t.Location = New-Object System.Drawing.Point(200, (18 + $i * 45))
+            $t.Size = New-Object System.Drawing.Size(220, 24)
+            if ($klice[$i] -eq 'Heslo') { $t.UseSystemPasswordChar = $true }
+            if ($klice[$i] -eq 'Protokol') { $t.Text = 'ftpes' }
+            if ($klice[$i] -eq 'Slozka') { $t.Text = '/' }
+            $f.Controls.Add($t)
+            $pole[$klice[$i]] = $t
+        }
+
+        $ok = New-Object System.Windows.Forms.Button
+        $ok.Text = 'Uložit'
+        $ok.Location = New-Object System.Drawing.Point(200, 245)
+        $ok.DialogResult = [System.Windows.Forms.DialogResult]::OK
+        $f.Controls.Add($ok)
+        $f.AcceptButton = $ok
+
+        if ($f.ShowDialog() -ne [System.Windows.Forms.DialogResult]::OK) {
+            'Zrušeno, nic se neuložilo.'
+            break
+        }
+
+        New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
+        $c = Cesta $Cil
+        @{
+            Cil = $Cil
+            Server = $pole['Server'].Text
+            Uzivatel = $pole['Uzivatel'].Text
+            Heslo = (ConvertTo-SecureString $pole['Heslo'].Text -AsPlainText -Force)
+            Protokol = $pole['Protokol'].Text
+            Slozka = $pole['Slozka'].Text
+            Otisk = ''
+            UlozenoAt = (Get-Date).ToString('s')
+        } | Export-Clixml -Path $c
+        icacls $c /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
+        "Uloženo: $Cil ($($pole['Uzivatel'].Text)@$($pole['Server'].Text), heslo o $($pole['Heslo'].Text.Length) znacích)"
+    }
+
+    'zwinscp' {
+        # Převzetí sezení, které už v počítači je. Heslo se dešifruje v paměti
+        # a rovnou uloží do trezoru; nikam se nevypisuje.
+        $sezeni = $Cil
+        $novyCil = if ($Zbytek -and $Zbytek.Count -ge 1) { $Zbytek[0] } else { $null }
+        if (-not $sezeni -or -not $novyCil) {
+            throw 'Použití: tajemstvi.ps1 zwinscp "<sezení WinSCP>" <cíl v trezoru>'
+        }
+
+        $koren = 'HKCU:\Software\Martin Prikryl\WinSCP 2\Sessions'
+        $klic = Join-Path $koren ($sezeni -replace '/', '%2F')
+        if (-not (Test-Path $klic)) { throw "Sezení '$sezeni' ve WinSCP není. Názvy vypíše: tajemstvi.ps1 sezeni" }
+        $s = Get-ItemProperty $klic
+        if (-not $s.Password) { throw "Sezení '$sezeni' nemá uložené heslo." }
+
+        $heslo = RozsifrujWinScp $s.Password $s.UserName $s.HostName
+        $protokoly = @{ 0 = 'sftp'; 1 = 'scp'; 5 = 'ftpes' }
+        $protokol = if ($protokoly.ContainsKey([int]$s.FSProtocol)) { $protokoly[[int]$s.FSProtocol] } else { 'ftpes' }
+
+        New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
+        $c = Cesta $novyCil
+        @{
+            Cil = $novyCil
+            Server = $s.HostName
+            Uzivatel = $s.UserName
+            Heslo = (ConvertTo-SecureString $heslo -AsPlainText -Force)
+            Protokol = $protokol
+            # -Slozka přebije to, co si pamatuje WinSCP: sezení míří jinam,
+            # než kam nasazuje projekt (onlinefakturuj: /public_html, ne /web).
+            Slozka = if ($Slozka) { $Slozka } elseif ($s.RemoteDirectory) { $s.RemoteDirectory } else { '/' }
+            Otisk = ''
+            UlozenoAt = (Get-Date).ToString('s')
+        } | Export-Clixml -Path $c
+        icacls $c /inheritance:r /grant:r "${env:USERNAME}:(R,W)" | Out-Null
+        "Převzato z WinSCP: $novyCil ($($s.UserName)@$($s.HostName), protokol $protokol, heslo o $($heslo.Length) znacích)"
+    }
+
+    'sezeni' {
+        Get-ChildItem 'HKCU:\Software\Martin Prikryl\WinSCP 2\Sessions' -ErrorAction SilentlyContinue |
+            Select-Object -ExpandProperty PSChildName |
+            ForEach-Object { $_ -replace '%2F', '/' }
+    }
+
     default {
-        throw "Neznámý příkaz '$Prikaz'. Umím: ulozit, seznam, smazat, spustit, ftp."
+        throw "Neznámý příkaz '$Prikaz'. Umím: ulozit, okno, zwinscp, sezeni, seznam, smazat, spustit, ftp."
     }
 }

@@ -791,3 +791,18 @@ a řekne, jaký otisk server má.
 **Ověřeno.** Uložení, výpis, vložení do prostředí (příkaz viděl uživatele,
 server a délku hesla, samotné heslo ne) i spuštění WinSCP, které se zastavilo
 přesně na ověření certifikátu. Po běhu nezůstal jediný dočasný soubor.
+
+**Jak se do trezoru vkládá.** Tři cesty, protože `Read-Host` v nástroji agenta
+nefunguje, tam terminál není:
+
+1. `okno <cíl>` otevře okno, do kterého údaje vyplní člověk. Agent ho může
+   otevřít a hodnotu stejně nevidí.
+2. `ulozit <cíl>` se ptá v terminálu, když si ho zadavatel otevře sám.
+3. `zwinscp "<sezení>" <cíl>` převezme sezení, které už v počítači je. WinSCP
+   heslo neukládá šifrovaně, jen zaobalené, takže ho skript přečte a uloží do
+   trezoru zašifrovaně. Volitelné `-Slozka` přebije složku ze sezení.
+
+**Převzato a ověřeno.** `vyridimestavbu-ftp` a `onlinefakturuj-ftp`: obojí se
+připojí a vypíše obsah webové složky, takže hesla sedí. U onlinefakturuj si
+sezení pamatovalo `/web`, ale aplikace leží v `/public_html`; proto to
+přepsání složky. Zadavatel už nemusel napsat jediný znak.
