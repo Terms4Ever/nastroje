@@ -896,3 +896,49 @@ a o výsledku zkoušky rozhoduje návratový kód WinSCP (`option batch abort` v
 `onlinefakturuj-ftp : spojení funguje, vypsáno 8 položek.` a u nahlášeného cíle
 `tomas-saroun-me-ftp : spojení funguje, vypsáno 6 položek.` Test si seznam po
 uložení načítá znovu, protože překreslení zneplatní staré prvky stromu.
+
+## N31 - Issue má štítek druhu a odpovědného (22. 9. 2026)
+
+**Podnět.** Zadavatel nad seznamem issues ve vyridimestavbu: *„musím nahlásit
+špatné fungování kontroly. Issues nemají Assignees a ani labels!"*
+
+**Nález.** Nešlo o chybu kontroly, ale o pravidlo, které nikdy neexistovalo:
+standard z N19 popisoval jen tělo. Čtyři issue založené 22. 9. (vyridimestavbu
+#4 až #7) proto neměly štítek ani odpovědného a nic to nechytlo. Zároveň se
+ukázal opačný nesoulad: onlinefakturuj #11 a #17 a steelset #6 mají sekci
+`## Problém`, ale štítek `enhancement`, takže seznam tvrdil něco jiného než
+tělo.
+
+**Rozhodnutí.** Zařazení je součást tvaru issue:
+
+- **Štítek druhu je právě jeden** z `bug`, `enhancement`, `documentation`.
+  Doménové štítky (`export`, `bez snímku po`) se přidávají navíc.
+- **Druh se váže na sekci zadání**: `## Problém` je `bug`, `## Cíl` je
+  `enhancement`. `documentation` projde u obojího.
+- **Odpovědný je povinný**, u těchhle repozitářů `Terms4Ever`.
+- **Výjimky dvě**: issue zavřené bez práce (`duplicate`, `wontfix`, `invalid`)
+  a syrový nápad zadavatele, který se zařadí až při přepsání do tvaru.
+
+**Kde se to vynucuje.** Pravidlo žije v `src/tvar-issue.php`
+(`problemyZarazeni()`), takže všechna tři místa soudí stejně: hook Claude Code
+zastaví zakládání bez `--label` a `--assignee`, workflow `issue-tvar.yml`
+předá kontrole štítky a odpovědné z události a `kontrola-issues.php` (1.8.0)
+projde při pushi všechny issues repozitáře.
+
+**Opraveno v datech.** vyridimestavbu #4 až #7 dostalo `bug` a odpovědného,
+onlinefakturuj #11 a #17 a steelset #6 přeštítkováno na `bug` podle vlastního
+těla, steelset #8 a #10 zbaveno zbytkového štítku `tvar nesedí`, který tam
+zůstal po opravě těla.
+
+**Dvě pasti při psaní.** Python bez `r''` udělal z `` v regexu hooku
+doslovný znak backspace, takže se podmínka nikdy netrefila a hook mlčel;
+poznalo se to jen tím, že test vracel kód 0 tam, kde měl vracet 2. A hook
+hledal volání kdekoli v příkazu, takže zastavil i zápis téhle dokumentace,
+která ten příkaz jen zmiňuje. Nově musí volání stát na začátku příkazu, za
+rourou, středníkem nebo uvozovkou.
+
+**Ověřeno.** Osm případů kontroly (bez štítku, správný, druh proti sekci, dva
+druhy naráz, `duplicate`, doménový štítek navíc, syrový nápad, volání bez
+přepínačů) a šest případů hooku sedí. Všech 50 issues v sedmi repozitářích
+prochází kontrolou 1.8.0.
+

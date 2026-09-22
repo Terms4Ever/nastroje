@@ -13,6 +13,9 @@
  * napsat zadavatel, agent ne: ten tvar zná a má ho dodat rovnou.
  * --zavrene hlídá, že zavírané issue nemá neodškrtnutý bod.
  * --komentar kontroluje komentář místo těla: délku, zmínky a pomlčky.
+ * --stitky a --odpovedni (čárkou oddělené seznamy) navíc ověří zařazení:
+ * štítek druhu a odpovědného. Ty nejsou v těle, proto se předávají zvlášť;
+ * prázdná hodnota znamená, že issue žádné nemá.
  */
 declare(strict_types=1);
 
@@ -23,6 +26,9 @@ $prisne = false;
 $zavrene = false;
 $komentar = false;
 $titulek = '';
+$zarazeni = false;
+$stitky = [];
+$odpovedni = [];
 for ($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
     if ($arg === '--prisne') {
@@ -39,6 +45,16 @@ for ($i = 1; $i < $argc; $i++) {
     }
     if ($arg === '--titulek') {
         $titulek = $argv[++$i] ?? '';
+        continue;
+    }
+    if ($arg === '--stitky' || $arg === '--odpovedni') {
+        $seznam = array_values(array_filter(array_map('trim', explode(',', $argv[++$i] ?? ''))));
+        if ($arg === '--stitky') {
+            $stitky = $seznam;
+        } else {
+            $odpovedni = $seznam;
+        }
+        $zarazeni = true;
         continue;
     }
     $soubor ??= $arg;
@@ -75,6 +91,9 @@ if (str_contains($telo, "\u{2013}") || str_contains($telo, "\u{2014}")) {
 }
 if (zminujeNastroj($telo . ' ' . $titulek)) {
     $problemy[] = 'zmiňuje nástroj, kterým se text psal';
+}
+if ($zarazeni && !$komentar) {
+    $problemy = array_merge($problemy, problemyZarazeni($stitky, $odpovedni, $telo));
 }
 
 if ($problemy === []) {

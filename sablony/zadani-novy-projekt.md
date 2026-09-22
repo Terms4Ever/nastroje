@@ -112,6 +112,9 @@ Po pushi:
   v jiném klonu ti kontrolu shodí, i když u tebe prochází.
 - **Issue zakládej přes `--body-file`**, ne vloženým `--body`; hook to jinak
   zastaví. Snímky se vkládají jako obrázek `![popis](adresa)`.
+- **K issue patří štítek druhu i odpovědný** rovnou při zakládání:
+  `--label bug` (nebo `enhancement`) a `--assignee Terms4Ever`. Bez nich hook
+  příkaz zastaví a kontrola issues spadne.
 
 ## Hotovo, když
 

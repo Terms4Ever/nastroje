@@ -10,8 +10,9 @@ name: Tvar issue (sdílené)
 #     tvar:
 #       uses: Terms4Ever/nastroje/.github/workflows/issue-tvar.yml@main
 #
-# Práva se neomezují tady, ale ve volajícím workflow. Tenhle běh potřebuje
-# issues: write, protože štítkuje a píše komentář.
+# Kontroluje tělo i zařazení (štítek druhu, odpovědný). Práva se neomezují
+# tady, ale ve volajícím workflow: běh potřebuje issues: write, protože
+# štítkuje a píše komentář.
 on:
   workflow_call:
 
@@ -34,10 +35,15 @@ jobs:
           CISLO: ${{ github.event.issue.number }}
           AKCE: ${{ github.event.action }}
         run: |
+          # Filtr je vestavěný v gh (--jq), ať běh nestojí na externím jq.
           gh issue view "$CISLO" --json body --jq .body > telo.md
-          ZAVRENE=""
-          if [ "$AKCE" = "closed" ]; then ZAVRENE="--zavrene"; fi
-          if php .nastroje/kontrola-tvaru-issue.php telo.md $ZAVRENE 2> nalezy.txt; then
+          STITKY=$(gh issue view "$CISLO" --json labels --jq '[.labels[].name] | join(",")')
+          ODPOVEDNI=$(gh issue view "$CISLO" --json assignees --jq '[.assignees[].login] | join(",")')
+          # Pole, ne řetězec: prázdný seznam štítků by se bez uvozovek ztratil
+          # a PHP by za hodnotu vzalo další přepínač.
+          ARGY=(--stitky "$STITKY" --odpovedni "$ODPOVEDNI")
+          if [ "$AKCE" = "closed" ]; then ARGY+=(--zavrene); fi
+          if php .nastroje/kontrola-tvaru-issue.php telo.md "${ARGY[@]}" 2> nalezy.txt; then
             echo "sedi=ano" >> "$GITHUB_OUTPUT"
           else
             echo "sedi=ne" >> "$GITHUB_OUTPUT"
@@ -52,13 +58,13 @@ jobs:
           CISLO: ${{ github.event.issue.number }}
           AKCE: ${{ github.event.action }}
         run: |
-          gh label create "tvar nesedí" --color D93F0B             --description "Tělo issue neodpovídá šabloně" --force
+          gh label create "tvar nesedí" --color D93F0B --description "Issue neodpovídá standardu" --force
           gh issue edit "$CISLO" --add-label "tvar nesedí"
           # Komentář jen při založení a při zavření, ať každá úprava nepřidává
           # další. Pravidlo o pěti řádcích platí i pro tenhle komentář.
           if [ "$AKCE" = "opened" ] || [ "$AKCE" = "closed" ]; then
             {
-              echo "Tvar issue nesedí:"
+              echo "Issue neodpovídá standardu:"
               grep '^  - ' nalezy.txt | head -3
               echo "Vzor: .github/ISSUE_TEMPLATE/ukol.md"
             } > komentar.md

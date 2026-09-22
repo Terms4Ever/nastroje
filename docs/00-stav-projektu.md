@@ -112,6 +112,10 @@ Jeden tvar pro chybu i funkci: sekce `## Problém` (nebo `## Cíl`),
 `## Jak to poznat`, `## Hotovo, když`, `## Kde to žije`, `## Snímky`, v tomhle
 pořadí a žádné jiné. Jeden checklist pod „Hotovo, když", tělo do 40 řádků.
 Syrový nápad zadavatele bez nadpisů kontrolu neshodí, čeká na přepsání.
+K tělu patří zařazení: štítek druhu (`bug`, `enhancement`, `documentation`,
+právě jeden) a odpovědný. Druh musí sedět se sekcí zadání, aby si štítek
+a text neprotiřečily; zavřené bez práce (`duplicate`, `wontfix`, `invalid`)
+druh nepotřebuje.
 
 Kontrola běží ve třech místech: při zakládání a změně issue (workflow
 `tvar-issue.yml` nad událostí `issues`, označí štítkem a napíše, co chybí),

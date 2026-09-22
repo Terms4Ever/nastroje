@@ -26,8 +26,12 @@ try { $data = $vstup | ConvertFrom-Json } catch { exit 0 }
 $prikaz = $data.tool_input.command
 if (-not $prikaz) { exit 0 }
 
-$jeIssue = $prikaz -match 'gh\s+issue\s+(create|edit|comment)\b'
-$jeApi = ($prikaz -match 'gh\s+api\b') -and ($prikaz -match '/issues')
+# Volani musi stat na zacatku prikazu, za rourou, strednikem nebo uvozovkou.
+# Bez ukotveni hook zastavil i prikaz, ktery ten retezec jen zminuje v textu
+# (zapis dokumentace o hooku), coz se stalo 22. 9. 2026.
+$zacatek = '(?m)(^|[;&|(\"''`])\s*'
+$jeIssue = $prikaz -match ($zacatek + 'gh\s+issue\s+(create|edit|comment)\b')
+$jeApi = ($prikaz -match ($zacatek + 'gh\s+api\b')) -and ($prikaz -match '/issues')
 if (-not $jeIssue -and -not $jeApi) { exit 0 }
 
 if ($jeApi -and $prikaz -match '(-X|--method)\s+POST') {
@@ -39,6 +43,17 @@ if (-not $jeIssue) { exit 0 }
 # heredoc, viceradkove retezce), takze se rovnou zakazuje.
 if ($prikaz -match '(^|\s)(--body|-b)(\s|=)') {
     Zastav "Tělo předávej souborem: --body-file <soubor>. Vložené --body je zakázané, protože se nedá zkontrolovat proti šabloně (viz Issues v CLAUDE.md)."
+}
+
+# Zarazeni se pridava uz pri zakladani. Doplnovat stitek a odpovedneho pozdeji
+# znamena, ze to nikdo neudela: 22. 9. 2026 byly ctyri issue bez obojiho.
+if ($prikaz -match ($zacatek + 'gh\s+issue\s+create\b')) {
+    if ($prikaz -notmatch '(^|\s)(--label|-l)(\s|=)') {
+        Zastav "Chybí štítek druhu: přidej --label bug u chyby, --label enhancement u nové funkce (podle sekce Problém/Cíl v těle)."
+    }
+    if ($prikaz -notmatch '(^|\s)(--assignee|-a)(\s|=)') {
+        Zastav "Chybí odpovědný: přidej --assignee Terms4Ever. Bez něj se v seznamu issues nepozná, kdo to má na stole."
+    }
 }
 
 $shoda = [regex]::Match($prikaz, '(?:--body-file|-F)[\s=]+(?:"([^"]+)"|''([^'']+)''|(\S+))')
@@ -67,7 +82,7 @@ $skript = Join-Path (Split-Path -Parent $PSScriptRoot) 'kontrola-tvaru-issue.php
 if (-not (Test-Path $skript)) { exit 0 }
 
 $rezim = '--prisne'
-if ($prikaz -match 'gh\s+issue\s+comment\b') { $rezim = '--komentar' }
+if ($prikaz -match ($zacatek + 'gh\s+issue\s+comment\b')) { $rezim = '--komentar' }
 
 # Pozor: `2>&1` u nativniho programu ve Windows PowerShellu 5.1 zabali kazdy
 # radek stderr do chyby a pri ErrorActionPreference = Stop skript spadne

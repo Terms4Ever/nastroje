@@ -36,7 +36,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.7.0';
+const VERZE_ISSUES = '1.8.0';
 
 /**
  * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
@@ -180,13 +180,22 @@ foreach ($issues as $issue) {
         }
     }
 
-    // 7. Když je vidět stav "před", musí být vidět i "po". Jinak zůstane
-    //    v issue jen fotka rozbitého stavu a nikdo nepozná, co se změnilo.
+    // 9. Zařazení: štítek druhu a odpovědný. Bez nich je seznam issues hromada
+    //    nadpisů - nepozná se, co je chyba, ani kdo to má na stole.
     $stitky = array_map(
         static fn (array $s): string => (string) ($s['name'] ?? ''),
         (array) ($issue['labels'] ?? [])
     );
+    $odpovedni = array_map(
+        static fn (array $o): string => (string) ($o['login'] ?? ''),
+        (array) ($issue['assignees'] ?? [])
+    );
+    foreach (problemyZarazeni($stitky, $odpovedni, $telo) as $problem) {
+        $pridej("#$cislo $problem");
+    }
 
+    // 7. Když je vidět stav "před", musí být vidět i "po". Jinak zůstane
+    //    v issue jen fotka rozbitého stavu a nikdo nepozná, co se změnilo.
     if (strtoupper($stav) === 'CLOSED' && !in_array(STITEK_BEZ_SNIMKU, $stitky, true)) {
         $vlastni = array_filter(
             snimkyVRepozitari($koren),
@@ -348,7 +357,7 @@ function nactiIssues(string $slug, bool $jenOtevrene): ?array
 {
     $stav = $jenOtevrene ? 'open' : 'all';
     $prikaz = sprintf(
-        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,comments,labels',
+        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,comments,labels,assignees',
         escapeshellarg($slug),
         $stav
     );

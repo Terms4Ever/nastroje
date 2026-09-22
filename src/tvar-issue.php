@@ -41,6 +41,19 @@ const PORADI_SEKCI = [
 const MAX_RADKU_TELA = 40;
 
 /**
+ * Štítky druhu. Každé issue nese právě jeden: v seznamu issues se jinak
+ * nepozná, co je chyba a co nová funkce, a filtr podle štítku nemá co chytat.
+ * Druh se váže na sekci zadání, aby si štítek a tělo neprotiřečily.
+ */
+const STITKY_DRUHU = ['bug', 'enhancement', 'documentation'];
+
+/**
+ * Zavřené bez práce. Issue, které je duplikát nebo se dělat nebude, nemá
+ * druh ani odpovědného, protože se na něm nic neudělalo.
+ */
+const STITKY_BEZ_PRACE = ['duplicate', 'wontfix', 'invalid'];
+
+/**
  * Co je na tvaru těla špatně. Prázdné pole znamená, že je tvar v pořádku.
  * Hlášky jsou bez čísla issue, to si připíše volající.
  */
@@ -236,4 +249,59 @@ function bodu(int $pocet): string
     }
 
     return $pocet < 5 ? "$pocet body" : "$pocet bodů";
+}
+
+/**
+ * Zařazení issue: štítek druhu a odpovědný. Bez nich je seznam issues jen
+ * hromada nadpisů - nepozná se, co je chyba, ani kdo to má na stole.
+ *
+ * Syrový nápad zadavatele se netrestá: zadavatel píše větu, ne štítky.
+ * Zařadí se, až ho agent přepíše do tvaru.
+ */
+function problemyZarazeni(array $stitky, array $odpovedni, string $telo): array
+{
+    if (jeSyroveIssue($telo)) {
+        return [];
+    }
+    if (array_intersect(STITKY_BEZ_PRACE, $stitky) !== []) {
+        return [];
+    }
+
+    $problemy = [];
+    $druhy = array_values(array_intersect(STITKY_DRUHU, $stitky));
+
+    if ($druhy === []) {
+        $problemy[] = 'nemá štítek druhu, jeden z: ' . implode(', ', STITKY_DRUHU);
+    } elseif (count($druhy) > 1) {
+        $problemy[] = 'má víc štítků druhu (' . implode(', ', $druhy) . '), platí právě jeden';
+    } else {
+        $sekce = sekceZadani($telo);
+        if ($sekce === '## Problém' && $druhy[0] === 'enhancement') {
+            $problemy[] = 'má sekci Problém, ale štítek enhancement; chyba se štítkuje bug';
+        }
+        if ($sekce === '## Cíl' && $druhy[0] === 'bug') {
+            $problemy[] = 'má sekci Cíl, ale štítek bug; nová funkce se štítkuje enhancement';
+        }
+    }
+
+    if ($odpovedni === []) {
+        $problemy[] = 'nemá odpovědného';
+    }
+
+    return $problemy;
+}
+
+/**
+ * Kterým nadpisem issue začíná: `## Problém` u chyby, `## Cíl` u nové funkce.
+ * Vrací prázdný řetězec, když tam není ani jeden.
+ */
+function sekceZadani(string $telo): string
+{
+    foreach (nadpisy($telo) as $nadpis) {
+        if (in_array($nadpis, NADPISY_ZADANI, true)) {
+            return $nadpis;
+        }
+    }
+
+    return '';
 }
