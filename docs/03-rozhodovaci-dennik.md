@@ -725,3 +725,30 @@ ověřené odpovědí 200.
 **Nález vedle.** trenwise.cz neodpovídá vůbec (curl vrací 000), takže se u něj
 provoz netvrdí. Steelset a LabProtocol jdou přes App Store; jestli tam má být
 odkaz na obchod, rozhodne zadavatel.
+
+---
+
+## N29 - Zadání pro přesun FTP projektu na GitHub (22. 9. 2026)
+
+**Podnět.** Zadavatel chce dostat na GitHub další web z FTP hostingu a ptá se,
+jaké zadání dát novému agentovi, aby vyšlo všechno napoprvé.
+
+**Rozhodnutí.** Zadání není jednorázová zpráva, ale vzor v repozitáři:
+`sablony/zadani-novy-projekt.md`. Postup od stažení z FTP po ověření, že web
+běží a dokumentace z něj není čitelná, včetně seznamu souborů, které do kořene
+patří, a tajemství, která nastavuje zadavatel.
+
+**Proč vzor a ne odpověď v chatu.** Stejné kroky jsme letos dělali u tří
+projektů a pokaždé se zapomnělo na něco jiného: jednou docs na webu, jednou
+kolize routy a složky, jednou chybějící šablona issue. Vzor to drží na jednom
+místě a mění se s pravidly.
+
+**Obsahuje i pasti z praxe**: `.htaccess` na nginxu statické soubory
+neblokuje, FTP účet nesmí zapisovat nad webovou složku (553), routa se nesmí
+jmenovat jako složka, kontrola čte pushovaný commit a ne pracovní strom, issue
+se zakládá přes `--body-file`.
+
+**Odkaz na provoz u mobilních aplikací.** Steelset a LabProtocol dostanou
+v hlavičce README řádek `🌐 **Provoz:**` s odkazem na App Store, až odkaz
+vznikne; klíč `provoz` v `.readme-kontrola.json` to pak začne hlídat. Trenwise
+má pauzu, provoz se u něj netvrdí schválně.

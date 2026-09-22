@@ -65,6 +65,7 @@ nastroje/
 ├── sablony/migrace.php          # vzor spouštěče migrací pro projekt
 ├── sablony/issue-ukol.md        # vzor šablony issue pro projekt
 ├── sablony/agents.md            # vzor agentského souboru pro projekt
+├── sablony/zadani-novy-projekt.md  # zadání pro přesun FTP projektu na GitHub
 ├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
 ```

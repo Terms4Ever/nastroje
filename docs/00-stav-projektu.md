@@ -66,6 +66,14 @@ nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
 a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
 vzor agentského souboru je `sablony/agents.md`.
 
+## Nový projekt na GitHub
+
+Zadání pro agenta, který přebírá web z FTP hostingu, je
+v `sablony/zadani-novy-projekt.md`: co se nesmí commitnout, které soubory patří
+do kořene, jaká workflow, jak se ověřuje, že dokumentace není čitelná z webu,
+a pasti z praxe (nginx a `.htaccess`, FTP nad webovou složkou, kolize routy
+a složky).
+
 ## Snímky u issues
 
 Zavřené issue, které má snímek `pred-`, musí mít i `po-`; jinak kontrola issues
