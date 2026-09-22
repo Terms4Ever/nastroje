@@ -9,8 +9,10 @@ závorky a zbytek nechá být.
 ## Co dostaneš
 
 - **Projekt:** [název], běží na [adresa], hosting [Webglobe / jiný].
-- **Přístup k FTP:** údaje ti dám v chatu, až o ně řekneš. Nikam je nezapisuj,
-  ani do souboru v repozitáři, ani do konfigurace.
+- **Přístup k FTP:** leží v trezoru pod cílem `[nazev-cile]`. Pracuj s ním přes
+  `hooky/tajemstvi.ps1` (`seznam`, `ftp <cíl> :: "ls /web"`), heslo neuvidíš
+  a nepotřebuješ. Když cíl v trezoru chybí, napiš mi, ať ho uložím; o heslo
+  v chatu nežádej.
 - **Databáze:** [je / není]. Když je, dostaneš i přístup k phpMyAdminu.
 - **Repozitář:** `Terms4Ever/[jmeno]`, [soukromý / veřejný].
 
@@ -65,7 +67,8 @@ z nasazení vyřadíš.
 
 **7. Tajemství** (`FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, případně
 `MIGRACE_TOKEN`) nastavím v GitHubu já. Napiš mi, která přesně potřebuješ a jak
-se mají jmenovat; ty je nikde nevypisuj.
+se mají jmenovat; ty je nikde nevypisuj. Pro práci z počítače používej trezor
+(`hooky/tajemstvi.ps1`), ne údaje v chatu.
 
 **8. Když má projekt databázi**, zaveď migrace podle standardu z nastroje:
 `db/migrace/` s čistými SQL soubory, spouštěč podle `sablony/migrace.php`,

@@ -66,6 +66,14 @@ nebo do `docs/prilohy/`. Povinné jsou `docs/00-stav-projektu.md`
 a `docs/03-rozhodovaci-dennik.md`. Hlídá to kontrola dokumentace od verze 1.5.0,
 vzor agentského souboru je `sablony/agents.md`.
 
+## Přihlašovací údaje pro agenty
+
+Hesla a tokeny leží v trezoru: `hooky/tajemstvi.ps1` je uloží přes DPAPI do
+`%USERPROFILE%\.tajemstvi\<cíl>.xml`, čitelné jen pod tím účtem na tom
+počítači. Agent zná jen název cíle, hodnotu nikdy nevidí: `spustit` ji vloží
+do prostředí spuštěného příkazu, `ftp` do dočasného skriptu WinSCP, který po
+sobě uklidí.
+
 ## Nový projekt na GitHub
 
 Zadání pro agenta, který přebírá web z FTP hostingu, je

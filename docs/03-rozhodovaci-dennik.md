@@ -752,3 +752,42 @@ se zakládá přes `--body-file`.
 v hlavičce README řádek `🌐 **Provoz:**` s odkazem na App Store, až odkaz
 vznikne; klíč `provoz` v `.readme-kontrola.json` to pak začne hlídat. Trenwise
 má pauzu, provoz se u něj netvrdí schválně.
+
+---
+
+## N30 - Trezor místo hesel v chatu (22. 9. 2026)
+
+**Podnět.** Zadavatel: *„jak udělat, abych do PC zapsal heslo k FTP a pak to
+nemusel agentům psát dokola a zároveň nekřičeli, že heslo prošlo chatem?"*
+
+**Co na počítači už bylo.** WinSCP má 48 uložených sezení včetně
+onlinefakturuj i vyridimestavbu, bez hlavního hesla, takže `open <sezení>`
+funguje bez jediného údaje v příkazu. Ověřeno výpisem `/web`. Hesla ale leží
+v registru jen zaobalená, ne zašifrovaná.
+
+**Rozhodnutí zadavatele.** Trezor pro všechno, tedy i pro FTP, ne jen pro
+tokeny.
+
+**Jak to funguje.** `hooky/tajemstvi.ps1`:
+
+- `ulozit <cíl>` se zeptá na server, uživatele a heslo a uloží je přes DPAPI
+  do `%USERPROFILE%\.tajemstvi\<cíl>.xml`. Soubor jde zkopírovat jinam, ale
+  rozšifrovat ne: klíč drží účet a počítač.
+- `seznam` vypíše cíle, uživatele a servery, nikdy heslo.
+- `spustit <cíl> :: <příkaz>` vloží údaje do prostředí spuštěného příkazu
+  (`TAJ_SERVER`, `TAJ_UZIVATEL`, `TAJ_HESLO`) a po doběhnutí je zahodí.
+- `ftp <cíl> :: <příkazy>` poskládá dočasný skript pro WinSCP, spustí ho
+  a smaže. Heslo se tím nedostane do příkazové řádky, kterou vidí každý proces.
+
+**Pasti při stavbě.** PowerShell 5.1 bez BOM čte skript jako ANSI, takže se
+rozsypala čeština. `--` si PowerShell bere pro sebe, oddělovač je proto `::`.
+A protože se nerozlišuje velikost písmen, proměnná `$SLOZKA` přepisovala
+parametr `$Slozka`; trezor se jmenuje `$TREZOR`.
+
+**Certifikát se neobchází.** K cíli jde uložit otisk certifikátu (`-Otisk`),
+pak se spojení ověřuje. Bez otisku WinSCP u neznámého certifikátu skončí
+a řekne, jaký otisk server má.
+
+**Ověřeno.** Uložení, výpis, vložení do prostředí (příkaz viděl uživatele,
+server a délku hesla, samotné heslo ne) i spuštění WinSCP, které se zastavilo
+přesně na ověření certifikátu. Po běhu nezůstal jediný dočasný soubor.
