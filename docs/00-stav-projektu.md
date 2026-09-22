@@ -74,6 +74,10 @@ počítači. Agent zná jen název cíle, hodnotu nikdy nevidí: `spustit` ji vl
 do prostředí spuštěného příkazu, `ftp` do dočasného skriptu WinSCP, který po
 sobě uklidí.
 
+Zadavatel s trezorem pracuje oknem, ne příkazovou řádkou: zástupce
+**Trezor hesel** na ploše otevře `hooky/trezor-spravce.ps1`, kde jde cíl přidat,
+převzít z WinSCP nebo smazat.
+
 ## Nový projekt na GitHub
 
 Zadání pro agenta, který přebírá web z FTP hostingu, je

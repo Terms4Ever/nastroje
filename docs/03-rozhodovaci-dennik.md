@@ -806,3 +806,9 @@ nefunguje, tam terminál není:
 připojí a vypíše obsah webové složky, takže hesla sedí. U onlinefakturuj si
 sezení pamatovalo `/web`, ale aplikace leží v `/public_html`; proto to
 přepsání složky. Zadavatel už nemusel napsat jediný znak.
+
+**Okno místo příkazové řádky.** Zadavatel: *„nechci to složitě dělat přes
+cmd"*. Přibyl `hooky/trezor-spravce.ps1` a zástupce **Trezor hesel** na ploše:
+seznam uložených cílů a tři tlačítka (přidat ručně, převzít z WinSCP, smazat).
+Příkazy v `tajemstvi.ps1` zůstávají, ale jsou pro agenty, ne pro člověka.
+Ověřeno spuštěním: okno naběhne a drží, zástupce vede na správný skript.
