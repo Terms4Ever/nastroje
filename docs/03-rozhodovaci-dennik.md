@@ -841,3 +841,20 @@ záznamy bez druhu se berou jako `ftp`. Okno mění pole podle druhu a ukládá 
 nevidí. Ověřeno uložením databáze i tokenu, vložením do prostředí (příkaz viděl
 `MYSQL_PWD` nastavené a délku hesla, hodnotu ne) a odmítnutím `ftp` nad cílem
 druhu databáze.
+
+**Úprava a zobrazení.** Zadavatel chtěl umět záznam změnit a taky se podívat,
+co v něm je, včetně hesla. Přibyl příkaz `upravit`, který mění jen vyplněná
+pole a heslo nechá být, dokud nepřijde nové (a to jen s přepínačem `-ZeVstupu`;
+čekání na rouru, do které nikdo nic nepošle, skript jinak zaseklo).
+
+**Zobrazení je jen v okně, ne v příkazu.** Tlačítko Zobrazit údaje otevře detail
+s poli, heslo je zakryté hvězdičkami a odkryje se tlačítkem; vedle je kopírování
+do schránky. Příkaz na vypsání hesla schválně neexistuje: to, co agent spustí,
+by skončilo v jeho výpisu a v přepisu session. Detail si proto okno čte samo.
+
+**Zkouška spojení má limit.** Dřív mohla okno zaseknout, když server neodpovídal.
+Nově se po čtyřiceti vteřinách vzdá a řekne to; výstup se čte na pozadí, aby se
+čekání nezaseklo na plné rouře.
+
+**Ověřeno.** Uložení cíle druhu jiné, úprava poznámky i hesla (nové heslo má
+patnáct znaků, staré mělo devatenáct), výpis a smazání.

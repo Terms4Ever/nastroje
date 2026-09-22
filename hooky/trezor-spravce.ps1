@@ -279,6 +279,8 @@ $xaml = @'
     </Border>
 
     <StackPanel Grid.Row="2" Grid.ColumnSpan="2" Orientation="Horizontal" Margin="0,18,0,0">
+      <Button x:Name="Upravit" Content="Upravit vybraný" Style="{StaticResource TlacitkoZaklad}"/>
+      <Button x:Name="Ukazat" Content="Zobrazit údaje" Style="{StaticResource TlacitkoZaklad}"/>
       <Button x:Name="Smazat" Content="Smazat vybraný" Style="{StaticResource TlacitkoZaklad}"/>
       <Button x:Name="Zkusit" Content="Vyzkoušet spojení" Style="{StaticResource TlacitkoZaklad}"/>
       <Button x:Name="Zavrit" Content="Zavřít" Style="{StaticResource TlacitkoZaklad}"/>
@@ -335,10 +337,25 @@ $PanelFtp = & $prvek 'PanelFtp'
 $PanelDb = & $prvek 'PanelDb'
 $PanelPoznamka = & $prvek 'PanelPoznamka'
 $Ulozit = & $prvek 'Ulozit'
+$Upravit = & $prvek 'Upravit'
+$Ukazat = & $prvek 'Ukazat'
 $Smazat = & $prvek 'Smazat'
 $Zkusit = & $prvek 'Zkusit'
 $Zavrit = & $prvek 'Zavrit'
 $Stav = & $prvek 'Stav'
+
+# Když se něco upravuje, drží se tu název cíle; jinak je prázdný.
+$script:UpravovanyCil = ''
+
+function NactiZaznamCile([string]$cil) {
+    Import-Clixml (Join-Path $TREZOR ($cil + '.xml'))
+}
+
+function TajneJakoText($zaznam) {
+    [Runtime.InteropServices.Marshal]::PtrToStringAuto(
+        [Runtime.InteropServices.Marshal]::SecureStringToBSTR($zaznam.Heslo)
+    )
+}
 
 $DRUHY = [ordered]@{
     'FTP nebo SFTP' = 'ftp'
@@ -385,7 +402,7 @@ function PodleDruhu {
 
 # Tajemství se nástroji podává rourou, ne parametrem: nedostane se tím do
 # příkazové řádky, kterou vidí každý proces v systému.
-function SpustNastroj([string[]]$argumenty, $tajne) {
+function SpustNastroj([string[]]$argumenty, $tajne, [int]$limitVterin = 0) {
     $psi = New-Object System.Diagnostics.ProcessStartInfo
     $psi.FileName = 'powershell.exe'
     $castiArgumentu = @('-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', ('"' + $NASTROJ + '"'))
@@ -402,10 +419,18 @@ function SpustNastroj([string[]]$argumenty, $tajne) {
     $proces = [System.Diagnostics.Process]::Start($psi)
     if ($null -ne $tajne) { $proces.StandardInput.Write($tajne) }
     $proces.StandardInput.Close()
-    $vystup = $proces.StandardOutput.ReadToEnd() + $proces.StandardError.ReadToEnd()
-    $proces.WaitForExit()
 
-    return $vystup.Trim()
+    # Výstup se čte na pozadí, jinak by se čekání na limit zaseklo na plné rouře.
+    $cteniVen = $proces.StandardOutput.ReadToEndAsync()
+    $cteniChyb = $proces.StandardError.ReadToEndAsync()
+
+    if ($limitVterin -gt 0 -and -not $proces.WaitForExit($limitVterin * 1000)) {
+        try { $proces.Kill() } catch { }
+        return "Nestihlo se to do $limitVterin vteřin, zkouška zrušena."
+    }
+    if ($limitVterin -le 0) { $proces.WaitForExit() }
+
+    return ($cteniVen.Result + $cteniChyb.Result).Trim()
 }
 
 function NactiCile {
@@ -477,6 +502,35 @@ $Ulozit.Add_Click({
     }
     $druh = VybranyDruh
 
+    if ($script:UpravovanyCil) {
+        # Úprava mění jen vyplněná pole; prázdné heslo znamená nechat staré.
+        $argumenty = @('upravit', $script:UpravovanyCil, '-Druh', $druh)
+        if ($Server.Text.Trim()) { $argumenty += @('-Server', $Server.Text.Trim()) }
+        if ($Uzivatel.Text.Trim()) { $argumenty += @('-Uzivatel', $Uzivatel.Text.Trim()) }
+        if ($druh -eq 'ftp') {
+            if ($Protokol.Text.Trim()) { $argumenty += @('-Protokol', $Protokol.Text.Trim()) }
+            if ($Slozka.Text.Trim()) { $argumenty += @('-Slozka', $Slozka.Text.Trim()) }
+        }
+        if ($druh -eq 'databaze') {
+            if ($Databaze.Text.Trim()) { $argumenty += @('-Databaze', $Databaze.Text.Trim()) }
+            if ($Port.Text.Trim()) { $argumenty += @('-Port', $Port.Text.Trim()) }
+        }
+        if ($Poznamka.Text.Trim()) { $argumenty += @('-Poznamka', $Poznamka.Text.Trim()) }
+
+        if ($Heslo.Password) {
+            $argumenty += '-ZeVstupu'
+            $Stav.Text = SpustNastroj $argumenty ($Heslo.Password + "`n")
+        } else {
+            $Stav.Text = SpustNastroj $argumenty $null
+        }
+
+        $script:UpravovanyCil = ''
+        $Ulozit.Content = 'Uložit do trezoru'
+        $Heslo.Clear(); $Cil.Text = ''; $Poznamka.Text = ''
+        Obnov
+        return
+    }
+
     if ($druh -eq 'ftp' -and $Sezeni.SelectedIndex -gt 0 -and -not $Heslo.Password) {
         $argumenty = @('zwinscp', [string]$Sezeni.SelectedItem, $cil)
         if ($Slozka.Text.Trim()) { $argumenty += @('-Slozka', $Slozka.Text.Trim()) }
@@ -507,6 +561,154 @@ $Ulozit.Add_Click({
     Obnov
 })
 
+$Upravit.Add_Click({
+    if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
+    $cil = $Seznam.SelectedItem.Cil
+    $z = NactiZaznamCile $cil
+
+    $druh = if ($z.Druh) { $z.Druh } else { 'ftp' }
+    $nazevDruhu = ($DRUHY.GetEnumerator() | Where-Object { $_.Value -eq $druh } | Select-Object -First 1).Key
+    if ($nazevDruhu) { $DruhBox.SelectedItem = $nazevDruhu }
+    PodleDruhu
+
+    $Cil.Text = $z.Cil
+    $Server.Text = [string]$z.Server
+    $Uzivatel.Text = [string]$z.Uzivatel
+    $Protokol.Text = [string]$z.Protokol
+    $Slozka.Text = [string]$z.Slozka
+    $Databaze.Text = [string]$z.Databaze
+    $Port.Text = [string]$z.Port
+    $Poznamka.Text = [string]$z.Poznamka
+    $Heslo.Clear()
+
+    $script:UpravovanyCil = $cil
+    $Ulozit.Content = 'Uložit změny'
+    $Stav.Text = "Upravuješ $cil. Heslo nech prázdné, pokud ho měnit nechceš."
+})
+
+$Ukazat.Add_Click({
+    if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
+    $cil = $Seznam.SelectedItem.Cil
+    $z = NactiZaznamCile $cil
+    $tajne = TajneJakoText $z
+
+    # Detail se čte přímo tady, ne přes příkaz: heslo se tím nedostane do
+    # výpisu, který by si mohl uložit agent.
+    $detail = New-Object System.Windows.Window
+    $detail.Title = "Trezor: $cil"
+    $detail.Width = 560
+    $detail.Height = 420
+    $detail.WindowStartupLocation = 'CenterOwner'
+    $detail.Owner = $okno
+    $detail.Background = $okno.Background
+    $detail.FontFamily = $okno.FontFamily
+
+    $panel = New-Object System.Windows.Controls.StackPanel
+    $panel.Margin = '22'
+
+    function PridejRadek($popis, $hodnota) {
+        if (-not $hodnota) { return }
+        $p = New-Object System.Windows.Controls.TextBlock
+        $p.Text = $popis
+        $p.Foreground = '#8A93A0'
+        $p.FontSize = 11.5
+        $p.Margin = '0,8,0,2'
+        $panel.Children.Add($p) | Out-Null
+
+        $h = New-Object System.Windows.Controls.TextBox
+        $h.Text = [string]$hodnota
+        $h.IsReadOnly = $true
+        $h.Background = '#11141A'
+        $h.Foreground = '#E8EAED'
+        $h.BorderBrush = '#242833'
+        $h.Padding = '8,6'
+        $h.FontSize = 13
+        $panel.Children.Add($h) | Out-Null
+    }
+
+    $druh = if ($z.Druh) { $z.Druh } else { 'ftp' }
+    PridejRadek 'Druh' $druh
+    PridejRadek 'Server' $z.Server
+    PridejRadek 'Uživatel' $z.Uzivatel
+    if ($druh -eq 'databaze') {
+        PridejRadek 'Databáze' $z.Databaze
+        PridejRadek 'Port' $z.Port
+    }
+    if ($druh -eq 'ftp') {
+        PridejRadek 'Protokol' $z.Protokol
+        PridejRadek 'Složka' $z.Slozka
+    }
+    PridejRadek 'Poznámka' $z.Poznamka
+
+    $popisTajne = New-Object System.Windows.Controls.TextBlock
+    $popisTajne.Text = if ($druh -eq 'token') { 'Token nebo klíč' } else { 'Heslo' }
+    $popisTajne.Foreground = '#8A93A0'
+    $popisTajne.FontSize = 11.5
+    $popisTajne.Margin = '0,12,0,2'
+    $panel.Children.Add($popisTajne) | Out-Null
+
+    $poleTajne = New-Object System.Windows.Controls.TextBox
+    $poleTajne.Text = ('*' * $tajne.Length)
+    $poleTajne.IsReadOnly = $true
+    $poleTajne.Background = '#11141A'
+    $poleTajne.Foreground = '#E8EAED'
+    $poleTajne.BorderBrush = '#242833'
+    $poleTajne.Padding = '8,6'
+    $poleTajne.FontSize = 13
+    $panel.Children.Add($poleTajne) | Out-Null
+
+    $radekTlacitek = New-Object System.Windows.Controls.StackPanel
+    $radekTlacitek.Orientation = 'Horizontal'
+    $radekTlacitek.Margin = '0,14,0,0'
+
+    $prepnout = New-Object System.Windows.Controls.Button
+    $prepnout.Content = 'Zobrazit heslo'
+    $prepnout.Padding = '14,7'
+    $prepnout.Margin = '0,0,10,0'
+    $prepnout.Add_Click({
+        if ($poleTajne.Text -match '^\*+$') {
+            $poleTajne.Text = $tajne
+            $prepnout.Content = 'Skrýt heslo'
+        } else {
+            $poleTajne.Text = ('*' * $tajne.Length)
+            $prepnout.Content = 'Zobrazit heslo'
+        }
+    }.GetNewClosure())
+    $radekTlacitek.Children.Add($prepnout) | Out-Null
+
+    $kopirovat = New-Object System.Windows.Controls.Button
+    $kopirovat.Content = 'Kopírovat heslo'
+    $kopirovat.Padding = '14,7'
+    $kopirovat.Margin = '0,0,10,0'
+    $kopirovat.Add_Click({
+        [System.Windows.Clipboard]::SetText($tajne)
+        $kopirovat.Content = 'Zkopírováno'
+    }.GetNewClosure())
+    $radekTlacitek.Children.Add($kopirovat) | Out-Null
+
+    $zavrit = New-Object System.Windows.Controls.Button
+    $zavrit.Content = 'Zavřít'
+    $zavrit.Padding = '14,7'
+    $zavrit.Add_Click({ $detail.Close() }.GetNewClosure())
+    $radekTlacitek.Children.Add($zavrit) | Out-Null
+
+    $panel.Children.Add($radekTlacitek) | Out-Null
+
+    $rolovani = New-Object System.Windows.Controls.ScrollViewer
+    $rolovani.VerticalScrollBarVisibility = 'Auto'
+    $rolovani.Content = $panel
+    $detail.Content = $rolovani
+    $detail.ShowDialog() | Out-Null
+    $Stav.Text = "Detail $cil zavřen."
+})
+
+$Seznam.Add_SelectionChanged({
+    if ($script:UpravovanyCil -and $Seznam.SelectedItem -and $Seznam.SelectedItem.Cil -ne $script:UpravovanyCil) {
+        $script:UpravovanyCil = ''
+        $Ulozit.Content = 'Uložit do trezoru'
+    }
+})
+
 $Smazat.Add_Click({
     if (-not $Seznam.SelectedItem) { $Stav.Text = 'Vyber cíl v seznamu.'; return }
     $cil = $Seznam.SelectedItem.Cil
@@ -525,7 +727,7 @@ $Zkusit.Add_Click({
     }
     $Stav.Text = "Zkouším spojení s $($polozka.Cil) ..."
     $okno.Dispatcher.Invoke([action] {}, 'Background')
-    $vystup = SpustNastroj @('ftp', $polozka.Cil, '::', 'ls') $null
+    $vystup = SpustNastroj @('ftp', $polozka.Cil, '::', 'ls') $null 40
     if ($vystup -match 'Připojeno|Connected') {
         $Stav.Text = "$($polozka.Cil) : spojení funguje."
     } else {

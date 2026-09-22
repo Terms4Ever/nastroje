@@ -5,6 +5,8 @@
 #                                     volitelně -Otisk <otisk certifikátu>
 #   tajemstvi.ps1 okno <cíl>          otevře okno a údaje se vyplní myší
 #   tajemstvi.ps1 zwinscp <sezení> <cíl>  převezme uložené sezení z WinSCP
+#   tajemstvi.ps1 upravit <cíl>       změní vyplněná pole, heslo nechá být
+#                                     (nové heslo: přidej -ZeVstupu a pošli rourou)
 #   tajemstvi.ps1 seznam              vypíše cíle, uživatele a servery
 #   tajemstvi.ps1 smazat <cíl>        zahodí uložené údaje
 #   tajemstvi.ps1 spustit <cíl> :: <příkaz>   spustí příkaz s údaji v prostředí
@@ -36,6 +38,9 @@ param(
     [string]$Port,
     [string]$Databaze,
     [string]$Poznamka,
+    # Bez tohohle přepínače se vstup nečte. Čekání na rouru, do které nikdo
+    # nic nepošle, by skript zaseklo.
+    [switch]$ZeVstupu,
     [Parameter(ValueFromRemainingArguments = $true)][string[]]$Zbytek
 )
 
@@ -111,8 +116,11 @@ switch ($Prikaz) {
         New-Item -ItemType Directory -Path $TREZOR -Force | Out-Null
 
         $druh = if ($Druh) { $Druh } else { 'ftp' }
-        $server = if ($Server) { $Server } elseif ($druh -eq 'token') { '' } else { Read-Host 'Server' }
-        $uzivatel = if ($Uzivatel) { $Uzivatel } elseif ($druh -eq 'token') { '' } else { Read-Host 'Uživatel' }
+        # Ptát se má smysl jen tam, kde údaj patří k věci: token server nemá
+        # a u druhu "jiné" bývá taky zbytečný.
+        $ptatSe = $druh -in @('ftp', 'databaze')
+        $server = if ($Server) { $Server } elseif ($ptatSe) { Read-Host 'Server' } else { '' }
+        $uzivatel = if ($Uzivatel) { $Uzivatel } elseif ($ptatSe) { Read-Host 'Uživatel' } else { '' }
         if ([Console]::IsInputRedirected) {
             $heslo = ConvertTo-SecureString ([Console]::In.ReadLine()) -AsPlainText -Force
         } else {
@@ -140,6 +148,44 @@ switch ($Prikaz) {
 
         $delka = (HesloJakoText (Import-Clixml $c)).Length
         "Uloženo: $Cil (druh $druh, hodnota o $delka znacích)"
+    }
+
+    'upravit' {
+        # Mění se jen to, co je vyplněné. Heslo zůstává, dokud nepřijde nové
+        # rourou: jinak by úprava složky nutila psát heslo znovu.
+        $z = NactiZaznam $Cil
+        $zmeny = @()
+
+        foreach ($dvojice in @(
+            @{ Klic = 'Server'; Hodnota = $Server },
+            @{ Klic = 'Uzivatel'; Hodnota = $Uzivatel },
+            @{ Klic = 'Protokol'; Hodnota = $Protokol },
+            @{ Klic = 'Slozka'; Hodnota = $Slozka },
+            @{ Klic = 'Port'; Hodnota = $Port },
+            @{ Klic = 'Databaze'; Hodnota = $Databaze },
+            @{ Klic = 'Poznamka'; Hodnota = $Poznamka },
+            @{ Klic = 'Otisk'; Hodnota = $Otisk },
+            @{ Klic = 'Druh'; Hodnota = $Druh }
+        )) {
+            if ($dvojice.Hodnota) {
+                $z[$dvojice.Klic] = $dvojice.Hodnota
+                $zmeny += $dvojice.Klic
+            }
+        }
+
+        if ($ZeVstupu) {
+            $nove = [Console]::In.ReadLine()
+            if ($nove -and $nove.Trim()) {
+                $z['Heslo'] = ConvertTo-SecureString $nove.Trim() -AsPlainText -Force
+                $zmeny += 'Heslo'
+            }
+        }
+
+        if (-not $zmeny) { "Nic se nezměnilo: nebylo co upravit."; break }
+
+        $z['UpravenoAt'] = (Get-Date).ToString('s')
+        $z | Export-Clixml -Path (Cesta $Cil)
+        "Upraveno: $Cil (" + ($zmeny -join ', ') + ')'
     }
 
     'seznam' {
@@ -339,6 +385,6 @@ switch ($Prikaz) {
     }
 
     default {
-        throw "Neznámý příkaz '$Prikaz'. Umím: ulozit, okno, zwinscp, sezeni, seznam, smazat, spustit, ftp."
+        throw "Neznámý příkaz '$Prikaz'. Umím: ulozit, upravit, okno, zwinscp, sezeni, seznam, smazat, spustit, ftp."
     }
 }
