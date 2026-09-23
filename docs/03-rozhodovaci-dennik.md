@@ -1079,3 +1079,12 @@ zprávách (odkaz „(#12)" projde, „Closes #12", „Fixes: repo#3" a „Resol
 ne, slova jako „prefix" a „fixture" nevadí). Kompatibilita: všech 7 projektů
 projde; kontrola kompatibility teď klonuje celou historii, protože snímek se
 ověřuje v commitu, na který odkaz míří.
+
+**Doplněno téhož dne: staré odkazy převedené.** Aby upozornění nezahlcovala
+každý výpis, převedlo se všech 39 odkazů na `blob/main` v 18 textech
+(steelset, onlinefakturuj, vyridimestavbu) na otisk commitu, ve kterém snímek
+do repozitáře přibyl; před zápisem se ověřilo, že v něm soubor leží, a mění
+se jen adresa. Kontrola issues 1.10.0 ve všech třech repozitářích prošla bez
+jediného upozornění a 15 běhů workflow, které úpravy vyvolaly, je zelených.
+První pokus narazil na známou past: `escapeshellarg` na Windows mění `%` na
+mezeru, takže `--format=%H` nefungovalo; spouští se proto polem bez shellu.
