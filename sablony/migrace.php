@@ -131,13 +131,19 @@ final class Migrace
     {
         $this->zalozTabulku();
 
-        // Změněná hotová migrace se zatím jen hlásí. Zastavovat nasazení
-        // začne, až se ukáže, že na produkci žádný starý nesoulad není
-        // (nastroje N32).
-        $zprava = [];
-        foreach ($this->zmenene() as $soubor) {
-            $zprava[] = 'Pozor: hotová migrace ' . $soubor . ' se od spuštění změnila (otisk nesedí).';
+        // Změněná hotová migrace zastaví nasazení: databáze by se jinak tiše
+        // rozešla s repozitářem. Do 23. 9. 2026 se jen hlásila, dokud výpisy
+        // z nasazení onlinefakturuj a vyridimestavbu neukázaly, že starý
+        // nesoulad na produkci není (nastroje N32).
+        $zmenene = $this->zmenene();
+        if ($zmenene !== []) {
+            throw new RuntimeException(sprintf(
+                'Hotová migrace %s se od spuštění změnila (otisk nesedí). Hotová migrace'
+                . ' se neupravuje, oprava patří do nové migrace.',
+                implode(', ', $zmenene)
+            ));
         }
+        $zprava = [];
 
         $ceka = $this->nespustene();
         if ($ceka === []) {

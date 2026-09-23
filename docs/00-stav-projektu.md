@@ -36,8 +36,8 @@ hlavní větev:     main
 - `sablony/migrace.php`, spouštěč migrací k okopírování do projektu:
   pustí nespuštěné migrace, zapíše je do tabulky `migrace` a při chybě
   spadne, aby nasazení nepokračovalo s rozladěnou databází. Přejmenovanou
-  hotovou migraci pozná podle otisku a znovu ji nepustí; změněnou hotovou
-  migraci zatím jen ohlásí
+  hotovou migraci pozná podle otisku a znovu ji nepustí; změněná hotová
+  migrace nasazení zastaví
 - Kontrola kostry: povinné sekce, jejich názvy, pořadí, hlavička s odznaky
 - Kontrola pravdivosti: cesty, odkazy a kotvy zmíněné v README musí existovat
 - Zákaz dlouhých pomlček

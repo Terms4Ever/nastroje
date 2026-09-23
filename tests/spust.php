@@ -247,7 +247,7 @@ pripad('spouštěč: první běh migraci pustí, druhý už ne', function (): ar
     return [$ok, $ok ? '' : "první: $prvni\ndruhý: $druhy"];
 });
 
-pripad('spouštěč: změněná hotová migrace se ohlásí (A07)', function (): array {
+pripad('spouštěč: změněná hotová migrace nasazení zastaví (A07)', function (): array {
     if (($pdo = testovaciDatabaze()) === null) {
         return bezDatabaze();
     }
@@ -255,9 +255,13 @@ pripad('spouštěč: změněná hotová migrace se ohlásí (A07)', function ():
     file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT);\n");
     (new Migrace($pdo, $slozka))->spust();
     file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT, b INT);\n");
-    $zprava = implode("\n", (new Migrace($pdo, $slozka))->spust());
+    try {
+        $zprava = implode("\n", (new Migrace($pdo, $slozka))->spust());
 
-    return [str_contains($zprava, 'otisk nesedí'), $zprava];
+        return [false, "nezastavila se: $zprava"];
+    } catch (RuntimeException $e) {
+        return [str_contains($e->getMessage(), 'otisk nesedí'), $e->getMessage()];
+    }
 });
 
 pripad('spouštěč: přejmenovaná hotová migrace se znovu nepustí (A07)', function (): array {

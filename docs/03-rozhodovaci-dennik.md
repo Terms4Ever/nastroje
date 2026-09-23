@@ -1024,3 +1024,9 @@ porovnává otisky: přejmenovanou migraci pozná podle otisku, který zná pod
 starým jménem, a nepustí ji; změněnou zatím jen ohlásí. Zastavovat začne, až
 výpis z nasazení ukáže, že na produkci žádný starý nesoulad není. Čtyři nové
 případy v `tests/spust.php` běží v CI nad MySQL z běhového prostředí.
+
+**Doplněno téhož dne: změněná hotová migrace nasazení zastaví.** Výpisy
+z nasazení onlinefakturuj (15:54) a vyridimestavbu (15:50) po zavedení
+porovnávání ukázaly „Žádná nová migrace, databáze je aktuální" a ani jedno
+hlášení o nesouladu otisku. Starý nesoulad na produkci tedy není a spouštěč
+teď při změněné hotové migraci nasazení zastaví, místo aby ji jen ohlásil.
