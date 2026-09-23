@@ -1030,3 +1030,11 @@ z nasazení onlinefakturuj (15:54) a vyridimestavbu (15:50) po zavedení
 porovnávání ukázaly „Žádná nová migrace, databáze je aktuální" a ani jedno
 hlášení o nesouladu otisku. Starý nesoulad na produkci tedy není a spouštěč
 teď při změněné hotové migraci nasazení zastaví, místo aby ji jen ohlásil.
+
+**Doplněno téhož dne: vlastní chyba v opravě.** Při první ostré zkoušce
+nového pre-push hooku hlásila kontrola dokumentace „0 dokumentů" místo dvou.
+Pravidlo o dávce v 1.6.0 použilo pro změněné dokumenty stejnou proměnnou jako
+seznam všech dokumentů a přepsalo ji. Za pravidlem se už nic nekontrolovalo,
+takže šlo jen o číslo ve výsledné hlášce, ne o přeskočenou kontrolu. Opraveno
+v 1.6.1 a případ „dávka s kódem a změněným dokumentem" nově hlídá i počet;
+proti 1.6.0 padá, proti 1.6.1 projde.

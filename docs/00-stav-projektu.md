@@ -11,7 +11,7 @@ hlavní větev:     main
 ## Co je hotové
 
 - `kontrola-readme.php` ve verzi 2.1.0, čisté PHP bez závislostí
-- `kontrola-dokumentace.php` ve verzi 1.6.0, zapíná se přihlášením,
+- `kontrola-dokumentace.php` ve verzi 1.6.1, zapíná se přihlášením,
   složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení,
   neplatné UTF-8, chybějící `docs/` u zapnuté kontroly, neexistující cesta
   i neznámý základ rozsahu jsou chyba, ne důvod k přeskočení. Když zná

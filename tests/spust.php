@@ -72,7 +72,9 @@ pripad('dokumentace: dávka s kódem a změněným dokumentem projde', function 
     pripis($repo, 'docs/03-rozhodovaci-dennik.md', "\n## T2 - Pozdrav se změnil (23. 9. 2026)\n\nFunkce vrací jiný text.\n");
     commit($repo, 'Kód i deník');
 
-    return ocekavej(php('kontrola-dokumentace.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 0, 'v pořádku');
+    // Počet dokumentů v hlášce: s rozsahem se dřív vypsal počet změněných
+    // místo všech, protože pravidlo o dávce přepsalo proměnnou.
+    return ocekavej(php('kontrola-dokumentace.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 0, '(2 dokumentů');
 });
 
 pripad('dokumentace: kód a jen obrázek v docs/snimky neprojde (A04)', function (): array {

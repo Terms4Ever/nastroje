@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.6.0';
+const VERZE_DOKUMENTACE = '1.6.1';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -312,13 +312,13 @@ if ($nastaveni['docs-vymahat-aktualizaci'] && $zaklad !== null && $cil !== null)
         } else {
             $zmeny = zmeneneSoubory($koren, $rozsah);
             $kod = array_filter(array_keys($zmeny), static fn (string $s): bool => jeKod($s));
-            $dokumenty = array_filter(
+            $zmeneneDokumenty = array_filter(
                 $zmeny,
                 static fn (string $stav, string $cesta): bool => jeZmenenyDokument($cesta, $stav),
                 ARRAY_FILTER_USE_BOTH
             );
 
-            if ($kod !== [] && $dokumenty === []) {
+            if ($kod !== [] && $zmeneneDokumenty === []) {
                 $chyby[] = sprintf(
                     'dávka mění %d souborů s kódem, ale žádný dokument v docs/ nepřibyl'
                     . ' ani se nezměnil (obrázky, přílohy a mazání se nepočítají).'
