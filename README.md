@@ -159,7 +159,9 @@ php tests/kompatibilita.php      # kontroly z tohohle stromu proti všem projekt
 ```
 
 Testy stavějí dočasné repozitáře a `gh` nahrazují atrapou, takže nesahají
-na síť ani na skutečné issues. Běží v CI nastroje a pre-push hook je pustí
+na síť ani na skutečné issues. Spouštěč migrací se zkouší na skutečné
+databázi, kterou dodá proměnná `NASTROJE_TEST_MYSQL` ve tvaru
+`dsn|uživatel|heslo`; každý případ si založí vlastní databázi a smaže ji. Běží v CI nastroje a pre-push hook je pustí
 před každým pushem do nastroje spolu s kontrolou kompatibility.
 
 ---

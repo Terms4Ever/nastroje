@@ -25,15 +25,19 @@ hlavní větev:     main
   migraci přidá
 - `kontrola-issues.php` ve verzi 1.9.0. Když issues nepřečte (chybí gh,
   přihlášení nebo `issues: read` v tokenu), neprojde; dřív skončila zeleně
-- `tests/spust.php`, 38 regresních případů. Každá díra z auditu 23. 9. 2026
-  má případ, který ji shodí; běží v CI nastroje i v pre-push hooku
+- `tests/spust.php`, 42 regresních případů. Každá díra z auditu 23. 9. 2026
+  má případ, který ji shodí; běží v CI nastroje i v pre-push hooku. Čtyři
+  případy spouštěče migrací potřebují jednorázovou databázi
+  (`NASTROJE_TEST_MYSQL`); bez ní se vypíšou jako přeskočené
 - `tests/kompatibilita.php` pustí kontroly z pracovního stromu proti výchozí
   větvi všech projektů, které je volají. Pre-push hook nepustí změnu pravidla,
   kvůli které by některý projekt spadl
 - `prehled-migraci.php`, generátor přehledu migrací do `db/prehled.md`
 - `sablony/migrace.php`, spouštěč migrací k okopírování do projektu:
   pustí nespuštěné migrace, zapíše je do tabulky `migrace` a při chybě
-  spadne, aby nasazení nepokračovalo s rozladěnou databází
+  spadne, aby nasazení nepokračovalo s rozladěnou databází. Přejmenovanou
+  hotovou migraci pozná podle otisku a znovu ji nepustí; změněnou hotovou
+  migraci zatím jen ohlásí
 - Kontrola kostry: povinné sekce, jejich názvy, pořadí, hlavička s odznaky
 - Kontrola pravdivosti: cesty, odkazy a kotvy zmíněné v README musí existovat
 - Zákaz dlouhých pomlček

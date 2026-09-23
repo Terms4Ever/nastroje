@@ -67,6 +67,42 @@ final class Migrace
         return $kandidati[0] ?? '';
     }
 
+    /**
+     * Hotové migrace, jejichž soubor se od spuštění změnil.
+     *
+     * Otisk se ukládal od začátku, ale nikdy neporovnával: upravená hotová
+     * migrace se tiše přeskočila a databáze na produkci se rozešla
+     * s repozitářem (audit 23. 9. 2026, nastroje N32).
+     *
+     * @return string[]
+     */
+    public function zmenene(): array
+    {
+        $this->zalozTabulku();
+
+        $otisky = $this->otisky();
+        $zmenene = [];
+        foreach ($this->vsechny() as $soubor) {
+            if (isset($otisky[$soubor]) && !hash_equals($otisky[$soubor], hash('sha256', $this->obsah($soubor)))) {
+                $zmenene[] = $soubor;
+            }
+        }
+
+        return $zmenene;
+    }
+
+    /** @return array<string, string> soubor => otisk hotových migrací */
+    private function otisky(): array
+    {
+        $radky = $this->pdo->query('SELECT soubor, otisk FROM ' . $this->tabulka)->fetchAll(PDO::FETCH_KEY_PAIR);
+        $otisky = [];
+        foreach ($radky as $soubor => $otisk) {
+            $otisky[(string) $soubor] = (string) $otisk;
+        }
+
+        return $otisky;
+    }
+
     /** Migrace, které v téhle databázi ještě neběžely. */
     public function nespustene(): array
     {
@@ -95,11 +131,37 @@ final class Migrace
     {
         $this->zalozTabulku();
 
+        // Změněná hotová migrace se zatím jen hlásí. Zastavovat nasazení
+        // začne, až se ukáže, že na produkci žádný starý nesoulad není
+        // (nastroje N32).
+        $zprava = [];
+        foreach ($this->zmenene() as $soubor) {
+            $zprava[] = 'Pozor: hotová migrace ' . $soubor . ' se od spuštění změnila (otisk nesedí).';
+        }
+
         $ceka = $this->nespustene();
         if ($ceka === []) {
-            return is_dir($this->slozka)
-                ? ['Žádná nová migrace, databáze je aktuální.']
-                : ['Složka ' . $this->slozka . ' tu není, nic se nespouští.'];
+            $zprava[] = is_dir($this->slozka)
+                ? 'Žádná nová migrace, databáze je aktuální.'
+                : 'Složka ' . $this->slozka . ' tu není, nic se nespouští.';
+
+            return $zprava;
+        }
+
+        // Přejmenovaná hotová migrace vypadá jako nová a pustila by se znovu:
+        // CREATE TABLE by shodil nasazení, INSERT by zdvojil data. Pozná se
+        // podle otisku, který zná pod starým jménem (nastroje N32).
+        $hotoveOtisky = array_flip($this->otisky());
+        foreach ($ceka as $soubor) {
+            $otisk = hash('sha256', $this->obsah($soubor));
+            if (isset($hotoveOtisky[$otisk])) {
+                throw new RuntimeException(sprintf(
+                    'Migrace %s má stejný obsah jako hotová %s. Vypadá jako přejmenovaná,'
+                    . ' znovu se nepustí; hotová migrace si nechává název.',
+                    $soubor,
+                    $hotoveOtisky[$otisk]
+                ));
+            }
         }
 
         // Zámek: dvě nasazení naráz by jinak pustila tutéž migraci dvakrát.
@@ -108,7 +170,6 @@ final class Migrace
             throw new RuntimeException('Migrace už běží jinde, zkus to za chvíli.');
         }
 
-        $zprava = [];
         try {
             // Seznam se načítá znovu: mezitím mohlo doběhnout jiné nasazení.
             foreach ($this->nespustene() as $soubor) {

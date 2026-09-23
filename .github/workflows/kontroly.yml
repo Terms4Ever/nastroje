@@ -22,5 +22,13 @@ jobs:
     runs-on: ubuntu-24.04
     steps:
       - uses: actions/checkout@v7
+      # Spouštěč migrací se zkouší na skutečné databázi. Běhové prostředí má
+      # MySQL předinstalovanou, stačí ji pustit (uživatel root, heslo root).
+      - name: Jednorázová databáze
+        run: |
+          sudo systemctl start mysql.service
+          php -m | grep -qi pdo_mysql
       - name: Testy kontrol
+        env:
+          NASTROJE_TEST_MYSQL: "mysql:host=127.0.0.1;port=3306|root|root"
         run: php tests/spust.php

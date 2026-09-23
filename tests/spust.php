@@ -19,8 +19,11 @@ declare(strict_types=1);
 const NASTROJE = __DIR__ . '/..';
 const DNES = '2026-09-23';
 
+require_once NASTROJE . '/sablony/migrace.php';
+
 $filtr = $argv[1] ?? null;
 $docasne = [];
+$databaze = [];
 $vysledky = [];
 
 // ==========================================================================
@@ -224,6 +227,69 @@ foreach ([
     });
 }
 
+// --- spouštěč migrací (sablony/migrace.php) -------------------------------
+//
+// Potřebuje jednorázovou databázi: NASTROJE_TEST_MYSQL="dsn|uživatel|heslo".
+// Každý případ si založí vlastní databázi a na konci ji smaže. Na GitHubu ji
+// dává MySQL z běhového prostředí, doma dočasná instance MariaDB z Laragonu.
+
+pripad('spouštěč: první běh migraci pustí, druhý už ne', function (): array {
+    if (($pdo = testovaciDatabaze()) === null) {
+        return bezDatabaze();
+    }
+    $slozka = docasna('migrace');
+    file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT);\n");
+    $prvni = implode("\n", (new Migrace($pdo, $slozka))->spust());
+    $druhy = implode("\n", (new Migrace($pdo, $slozka))->spust());
+
+    $ok = str_contains($prvni, 'Spuštěno: 2026-01-10-zaklad.sql') && str_contains($druhy, 'databáze je aktuální');
+
+    return [$ok, $ok ? '' : "první: $prvni\ndruhý: $druhy"];
+});
+
+pripad('spouštěč: změněná hotová migrace se ohlásí (A07)', function (): array {
+    if (($pdo = testovaciDatabaze()) === null) {
+        return bezDatabaze();
+    }
+    $slozka = docasna('migrace');
+    file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT);\n");
+    (new Migrace($pdo, $slozka))->spust();
+    file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT, b INT);\n");
+    $zprava = implode("\n", (new Migrace($pdo, $slozka))->spust());
+
+    return [str_contains($zprava, 'otisk nesedí'), $zprava];
+});
+
+pripad('spouštěč: přejmenovaná hotová migrace se znovu nepustí (A07)', function (): array {
+    if (($pdo = testovaciDatabaze()) === null) {
+        return bezDatabaze();
+    }
+    $slozka = docasna('migrace');
+    file_put_contents("$slozka/2026-01-10-zaklad.sql", "-- Základ\nCREATE TABLE a (id INT);\n");
+    (new Migrace($pdo, $slozka))->spust();
+    rename("$slozka/2026-01-10-zaklad.sql", "$slozka/2026-01-10-zaklad-uctu.sql");
+    try {
+        $zprava = implode("\n", (new Migrace($pdo, $slozka))->spust());
+
+        return [false, "spustila se znovu: $zprava"];
+    } catch (RuntimeException $e) {
+        return [str_contains($e->getMessage(), 'přejmenovaná'), $e->getMessage()];
+    }
+});
+
+pripad('spouštěč: zamčené kopie jako na produkci nic nehlásí', function (): array {
+    if (($pdo = testovaciDatabaze()) === null) {
+        return bezDatabaze();
+    }
+    $slozka = docasna('migrace');
+    file_put_contents("$slozka/2026-01-10-zaklad.sql.php", Migrace::ZAMEK . "\n-- Základ\nCREATE TABLE a (id INT);\n");
+    file_put_contents("$slozka/2026-01-11-dalsi.sql.php", Migrace::ZAMEK . "\n-- Další\nCREATE TABLE b (id INT);\n");
+    (new Migrace($pdo, $slozka))->spust();
+    $zprava = implode("\n", (new Migrace($pdo, $slozka))->spust());
+
+    return [str_contains($zprava, 'databáze je aktuální') && !str_contains($zprava, 'Pozor'), $zprava];
+});
+
 // --- README a generátor stavu ---------------------------------------------
 
 pripad('readme: neexistující cesta neprojde', function (): array {
@@ -274,6 +340,9 @@ foreach ([
 foreach ($docasne as $slozka) {
     smaz($slozka);
 }
+foreach ($databaze as [$pdo, $nazev]) {
+    $pdo->exec("DROP DATABASE IF EXISTS `$nazev`");
+}
 
 $chyb = count(array_filter($vysledky, static fn (array $v): bool => !$v[1]));
 echo "\n";
@@ -283,7 +352,8 @@ foreach ($vysledky as [$nazev, $ok, $detail]) {
         echo '         ' . str_replace("\n", "\n         ", rtrim($detail)) . "\n";
     }
 }
-printf("\n  %d případů, %d neprošlo.\n\n", count($vysledky), $chyb);
+$preskoceno = count(array_filter($vysledky, static fn (array $v): bool => str_starts_with($v[2], 'přeskočeno')));
+printf("\n  %d případů, %d neprošlo, %d přeskočeno.\n\n", count($vysledky), $chyb, $preskoceno);
 exit($chyb === 0 ? 0 : 1);
 
 // ==========================================================================
@@ -409,6 +479,33 @@ function docasna(string $nazev): string
     $docasne[] = $slozka;
 
     return $slozka;
+}
+
+/** Vlastní jednorázová databáze pro případ, nebo null, když žádná není. */
+function testovaciDatabaze(): ?PDO
+{
+    global $databaze;
+    $nastaveni = (string) getenv('NASTROJE_TEST_MYSQL');
+    if ($nastaveni === '') {
+        return null;
+    }
+    [$dsn, $uzivatel, $heslo] = array_pad(explode('|', $nastaveni), 3, '');
+    $pdo = new PDO($dsn, $uzivatel, $heslo, [PDO::ATTR_ERRMODE => PDO::ERRMODE_EXCEPTION]);
+    $nazev = 'nastroje_test_' . bin2hex(random_bytes(4));
+    $pdo->exec("CREATE DATABASE `$nazev` CHARACTER SET utf8mb4");
+    $pdo->exec("USE `$nazev`");
+    $databaze[] = [$pdo, $nazev];
+
+    return $pdo;
+}
+
+/** Bez databáze se případ nepředstírá: je vidět, že neproběhl. */
+function bezDatabaze(): array
+{
+    global $bezDatabaze;
+    $bezDatabaze = true;
+
+    return [true, 'přeskočeno, chybí jednorázová databáze (NASTROJE_TEST_MYSQL)'];
 }
 
 function neexistujici(): string

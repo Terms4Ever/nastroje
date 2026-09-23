@@ -1014,3 +1014,13 @@ byl ze 13:35 a pravidlo přibylo ve 20:28. Opraveno v projektech (R234 v Igrisu)
 nasazení: FTP účet nesmí zapisovat nad složku webu, takže vedle nejde nahrát
 nic. Červený běh workflow u issue s nálezem: signálem je štítek, červený běh
 by posílal e-mail při každé úpravě.
+
+**Doplněno téhož dne: spouštěč migrací.** Statická kontrola přejmenování
+nezastaví, když se na ni zapomene, proto se to ověřilo i za běhu na
+jednorázové MariaDB z Laragonu: změněná hotová migrace se tiše přeskočila
+(„Žádná nová migrace") a přejmenovaná se pustila znovu a spadla na
+`Table 'a' already exists`; s `INSERT` by zdvojila data. Spouštěč teď
+porovnává otisky: přejmenovanou migraci pozná podle otisku, který zná pod
+starým jménem, a nepustí ji; změněnou zatím jen ohlásí. Zastavovat začne, až
+výpis z nasazení ukáže, že na produkci žádný starý nesoulad není. Čtyři nové
+případy v `tests/spust.php` běží v CI nad MySQL z běhového prostředí.
