@@ -19,6 +19,10 @@ declare(strict_types=1);
 const NASTROJE = __DIR__ . '/..';
 const DNES = '2026-09-23';
 
+/** Nejmenší platné PNG: podpis a hlavička, odlišná podle posledního bajtu. */
+const PNG_PRED = "\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x02\0\0\0\x01";
+const PNG_PO = "\x89PNG\r\n\x1a\n\0\0\0\rIHDR\0\0\0\x01\0\0\0\x01\x08\x02\0\0\0\x02";
+
 require_once NASTROJE . '/sablony/migrace.php';
 
 $filtr = $argv[1] ?? null;
@@ -296,6 +300,179 @@ pripad('spouštěč: zamčené kopie jako na produkci nic nehlásí', function (
     return [str_contains($zprava, 'databáze je aktuální') && !str_contains($zprava, 'Pozor'), $zprava];
 });
 
+// --- snímky odkazem na commit (N33) --------------------------------------
+//
+// Odkaz na větev (blob/main) se rozbije, když se soubor přesune nebo
+// přejmenuje, a neřekne, kterou verzi snímek dokládá. Nový obsah proto
+// odkazuje na otisk commitu; starší issues jen upozorní.
+
+$otiskPriklad = str_repeat('a1b2c3d4', 5);
+$teloSeSnimkem = static fn (string $vetev): string => "## Problém\n\nTlačítko Uložit nic neudělá.\n\n"
+    . "## Hotovo, když\n\n- [ ] tlačítko uloží\n\n## Snímky\n\n"
+    . "![Tlačítko, před](https://github.com/Terms4Ever/x/blob/$vetev/docs/snimky/1-ulozit/pred-tlacitko.png?raw=1)\n";
+
+pripad('snímky: odkaz na větev main v novém těle neprojde', function () use ($teloSeSnimkem): array {
+    $soubor = docasna('telo') . '/telo.md';
+    file_put_contents($soubor, $teloSeSnimkem('main'));
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $soubor), 1, 'otisk commitu');
+});
+
+pripad('snímky: odkaz na otisk commitu projde', function () use ($teloSeSnimkem, $otiskPriklad): array {
+    $soubor = docasna('telo') . '/telo.md';
+    file_put_contents($soubor, $teloSeSnimkem($otiskPriklad));
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $soubor), 0);
+});
+
+pripad('snímky: staré issue s odkazem na main projde', function () use ($teloSeSnimkem): array {
+    $soubor = docasna('telo') . '/telo.md';
+    file_put_contents($soubor, $teloSeSnimkem('main'));
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $soubor, '--vznik', '2026-09-20T10:00:00Z'), 0);
+});
+
+pripad('snímky: komentář s odkazem na main neprojde', function (): array {
+    $soubor = docasna('komentar') . '/komentar.md';
+    file_put_contents($soubor, "Opraveno v app/kod.php, ověřeno testem.\n\n"
+        . "![Po](https://github.com/Terms4Ever/x/blob/main/docs/snimky/1-ulozit/po-tlacitko.png?raw=1)\n");
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $soubor, '--komentar'), 1, 'otisk commitu');
+});
+
+pripad('snímky: issue s platnými snímky v commitu projde', function (): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $komentar = ['body' => "Opraveno, ověřeno.\n\n" . obrazek($otisk, 'pred') . "\n" . obrazek($otisk, 'po') . "\n",
+        'createdAt' => DNES . 'T12:00:00Z'];
+
+    return ocekavej(issuesSAtrapou('ok', [issue(['comments' => [$komentar]])], $repo), 0, 'v pořádku');
+});
+
+pripad('snímky: snímek, který v odkazovaném commitu není, neprojde', function (): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $prvni = git($repo, 'rev-list', '--max-parents=0', 'HEAD');
+    $komentar = ['body' => "Opraveno.\n\n" . obrazek($prvni, 'pred') . "\n" . obrazek($otisk, 'po') . "\n",
+        'createdAt' => DNES . 'T12:00:00Z'];
+
+    return ocekavej(issuesSAtrapou('ok', [issue(['comments' => [$komentar]])], $repo), 1, 'není');
+});
+
+pripad('snímky: soubor, který není obrázek, neprojde', function (): array {
+    [$repo, $otisk] = projektSeSnimky(['po' => "tohle neni obrazek\n"]);
+    $komentar = ['body' => "Opraveno.\n\n" . obrazek($otisk, 'pred') . "\n" . obrazek($otisk, 'po') . "\n",
+        'createdAt' => DNES . 'T12:00:00Z'];
+
+    return ocekavej(issuesSAtrapou('ok', [issue(['comments' => [$komentar]])], $repo), 1, 'není obrázek');
+});
+
+pripad('snímky: stejný soubor jako před i po neprojde', function (): array {
+    [$repo, $otisk] = projektSeSnimky(['po' => PNG_PRED]);
+    $komentar = ['body' => "Opraveno.\n\n" . obrazek($otisk, 'pred') . "\n" . obrazek($otisk, 'po') . "\n",
+        'createdAt' => DNES . 'T12:00:00Z'];
+
+    return ocekavej(issuesSAtrapou('ok', [issue(['comments' => [$komentar]])], $repo), 1, 'tentýž');
+});
+
+pripad('snímky: starý komentář s odkazem na main jen upozorní', function (): array {
+    [$repo] = projektSeSnimky();
+    $odkaz = '![Před](https://github.com/Terms4Ever/zkusebni/blob/main/docs/snimky/1-ulozit/pred-tlacitko.png?raw=1)';
+    $komentar = ['body' => "Opraveno.\n\n$odkaz\n", 'createdAt' => '2026-09-20T12:00:00Z'];
+    $stare = issue(['createdAt' => '2026-09-20T10:00:00Z', 'comments' => [$komentar]]);
+
+    return ocekavej(issuesSAtrapou('ok', [$stare], $repo), 0, 'upozornění');
+});
+
+// --- zavření issue s důkazem (N33) ---------------------------------------
+//
+// gh nahrazuje atrapa v PHP: vrací issue, výchozí větev a běhy commitu podle
+// scénáře a zapisuje, co se volalo. Nic se neposílá na GitHub.
+
+$hotovyChecklist = "## Problém\n\nTlačítko Uložit nic neudělá.\n\n## Hotovo, když\n\n- [x] tlačítko uloží\n";
+
+pripad('zavření: bez --zavrit jen posoudí a nic nezapíše', function () use ($hotovyChecklist): array {
+    [$vysledek, $log] = zavreni(['body' => $hotovyChecklist]);
+    $ok = $vysledek['kod'] === 0 && str_contains($vysledek['vystup'], 'lze zavřít') && !str_contains($log, 'issue close');
+
+    return [$ok, $ok ? '' : "kód {$vysledek['kod']}\n{$vysledek['vystup']}\n$log"];
+});
+
+pripad('zavření: s --zavrit zapíše komentář a zavře', function () use ($hotovyChecklist): array {
+    [$vysledek, $log] = zavreni(['body' => $hotovyChecklist], [], ['--zavrit']);
+    $ok = $vysledek['kod'] === 0 && str_contains($log, 'issue comment') && str_contains($log, 'issue close');
+
+    return [$ok, $ok ? '' : "kód {$vysledek['kod']}\n{$vysledek['vystup']}\n$log"];
+});
+
+pripad('zavření: neodškrtnutý bod neprojde', function (): array {
+    [$vysledek] = zavreni([]);
+
+    return ocekavej($vysledek, 1, 'neodškrtnutých');
+});
+
+pripad('zavření: bod schválně nezaškrtnutý s vysvětlením projde', function (): array {
+    [$vysledek] = zavreni([], [], [], 'Bod o telefonu zůstává schválně nezaškrtnutý, ověřit jde jen na zařízení.');
+
+    return ocekavej($vysledek, 0, 'lze zavřít');
+});
+
+pripad('zavření: červený běh commitu neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => behy('completed', 'failure')]);
+
+    return ocekavej($vysledek, 1, 'skončil failure');
+});
+
+pripad('zavření: běh, který ještě běží, neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => behy('in_progress', null)]);
+
+    return ocekavej($vysledek, 1, 'ještě běží');
+});
+
+pripad('zavření: commit bez jediného běhu neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => ['total_count' => 0, 'check_runs' => []]]);
+
+    return ocekavej($vysledek, 1, 'žádný běh');
+});
+
+pripad('zavření: komentář bez odkazu na commit neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], [], [], null, 'Opraveno a ověřeno testem.');
+
+    return ocekavej($vysledek, 1, 'odkazovat na ověřený commit');
+});
+
+pripad('zavření: bez závěrečného komentáře neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], [], ['--bez-komentare']);
+
+    return ocekavej($vysledek, 1, 'chybí závěrečný komentář');
+});
+
+pripad('zavření: snímek před bez snímku po neprojde', function () use ($hotovyChecklist): array {
+    $repo = novyProjekt();
+    git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    zapis($repo, 'docs/snimky/1-ulozit/pred-tlacitko.png', PNG_PRED);
+    commit($repo, 'Snímek před');
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], [], [], null, null, $repo);
+
+    return ocekavej($vysledek, 1, 'snímek po');
+});
+
+pripad('zavření: issue, které nejde načíst, neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['selhat' => ['issue view']]);
+
+    return ocekavej($vysledek, 1, 'nepodařilo načíst');
+});
+
+pripad('zavření: už zavřené issue se znovu nezavírá', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist, 'state' => 'CLOSED']);
+
+    return ocekavej($vysledek, 1, 'už je zavřené');
+});
+
+pripad('zavření: commit mimo výchozí větev neprojde', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['srovnani' => 'diverged'], ['--commit', str_repeat('b', 40)]);
+
+    return ocekavej($vysledek, 1, 'není');
+});
+
 // --- README a generátor stavu ---------------------------------------------
 
 pripad('readme: neexistující cesta neprojde', function (): array {
@@ -321,6 +498,9 @@ foreach ([
     ['zkratky -l a -a projdou', "gh issue $akce -R Terms4Ever/x -t T -l bug -a Terms4Ever --body-file %s", 0],
     ['vložené --body neprojde', "gh issue $akce -R Terms4Ever/x -t T -l bug -a Terms4Ever --body \"text\"", 2],
     ['jen zmínka v textu projde', "echo \"napsat, že gh issue $akce potřebuje --label\"", 0],
+    ['holé zavření issue neprojde', 'gh issue ' . 'close 5 -R Terms4Ever/x', 2],
+    ['zavření přes gh api neprojde', 'gh api -X PATCH repos/Terms4Ever/x/' . 'issues/5 -f state=closed', 2],
+    ['zavření přes zavrit-issue.php projde', 'php C:/laragon/www/nastroje/zavrit-issue.php . 5 --komentar k.md --zavrit', 0],
 ] as [$nazev, $vzor, $kod]) {
     pripad('hook: ' . $nazev, function () use ($vzor, $kod, $teloChyby): array {
         if (PHP_OS_FAMILY !== 'Windows') {
@@ -588,6 +768,130 @@ function projektSMigraci(): string
     return $repo;
 }
 
+/**
+ * Projekt se snímky k issue #1 v commitu. Vrací cestu a otisk commitu,
+ * ve kterém snímky leží.
+ *
+ * @return array{0: string, 1: string}
+ */
+function projektSeSnimky(array $obsah = []): array
+{
+    $repo = novyProjekt();
+    git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    zapis($repo, 'docs/snimky/1-ulozit/pred-tlacitko.png', $obsah['pred'] ?? PNG_PRED);
+    zapis($repo, 'docs/snimky/1-ulozit/po-tlacitko.png', $obsah['po'] ?? PNG_PO);
+    commit($repo, 'Snímky k issue 1');
+
+    return [$repo, git($repo, 'rev-parse', 'HEAD')];
+}
+
+function obrazek(string $otisk, string $druh): string
+{
+    return sprintf(
+        '![%s](https://github.com/Terms4Ever/zkusebni/blob/%s/docs/snimky/1-ulozit/%s-tlacitko.png?raw=1)',
+        $druh === 'pred' ? 'Před' : 'Po',
+        $otisk,
+        $druh
+    );
+}
+
+/** Běhy commitu v odpovědi GitHubu: kontrola a nasazení. */
+function behy(string $stav, ?string $zaver): array
+{
+    return ['total_count' => 2, 'check_runs' => [
+        ['name' => 'readme / kontrola', 'status' => 'completed', 'conclusion' => 'success'],
+        ['name' => 'FTP Deploy', 'status' => $stav, 'conclusion' => $zaver],
+    ]];
+}
+
+/**
+ * Pustí zavrit-issue.php proti atrapě gh. Vrací výsledek a záznam volání gh.
+ *
+ * @return array{0: array{kod: int, vystup: string}, 1: string}
+ */
+function zavreni(
+    array $zmenyIssue,
+    array $zmenyScenare = [],
+    array $prepinace = [],
+    ?string $dodatek = null,
+    ?string $komentarText = null,
+    ?string $repo = null
+): array {
+    if ($repo === null) {
+        $repo = novyProjekt();
+        git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    }
+    $hlava = git($repo, 'rev-parse', 'HEAD');
+    $atrapa = docasna('gh-zavreni');
+
+    $scenar = array_merge([
+        'issue' => issue($zmenyIssue),
+        'hlava' => $hlava,
+        'behy' => behy('completed', 'success'),
+    ], $zmenyScenare);
+    file_put_contents($atrapa . '/scenar.json', json_encode($scenar, JSON_UNESCAPED_UNICODE));
+    file_put_contents($atrapa . '/gh.php', <<<'PHP'
+        <?php
+        $scenar = json_decode((string) file_get_contents((string) getenv('STUB_SCENAR')), true);
+        $a = array_slice($argv, 1);
+        file_put_contents((string) getenv('STUB_LOG'), implode(' ', $a) . "\n", FILE_APPEND);
+        if (in_array(($a[0] ?? '') . ' ' . ($a[1] ?? ''), (array) ($scenar['selhat'] ?? []), true)) {
+            fwrite(STDERR, "gh: chyba (atrapa)\n");
+            exit(1);
+        }
+        if (($a[0] ?? '') === 'issue' && ($a[1] ?? '') === 'view') {
+            echo json_encode($scenar['issue']);
+            exit(0);
+        }
+        if (($a[0] ?? '') === 'issue') {
+            exit(0);
+        }
+        $cesta = $a[1] ?? '';
+        if (($a[0] ?? '') === 'api') {
+            if (str_contains($cesta, '/check-runs')) {
+                echo json_encode($scenar['behy']);
+            } elseif (str_contains($cesta, '/compare/')) {
+                echo json_encode(['status' => $scenar['srovnani'] ?? 'identical']);
+            } elseif (preg_match('#^repos/[^/]+/[^/]+/commits/#', $cesta)) {
+                echo json_encode(['sha' => $scenar['hlava']]);
+            } elseif (preg_match('#^repos/[^/]+/[^/]+$#', $cesta)) {
+                echo json_encode(['default_branch' => 'main']);
+            } else {
+                exit(1);
+            }
+            exit(0);
+        }
+        exit(1);
+        PHP);
+    // Absolutní cesta, ne %~dp0: když cmd najde gh.cmd přes PATH a jméno je
+    // v uvozovkách, ukazuje %~dp0 do aktuální složky, ne ke skriptu.
+    file_put_contents($atrapa . '/gh.cmd', '@"' . PHP_BINARY . '" "' . $atrapa . DIRECTORY_SEPARATOR . 'gh.php" %*' . "\r\n");
+    file_put_contents($atrapa . '/gh', "#!/bin/sh\nexec \"" . PHP_BINARY . "\" \"\$(dirname \"\$0\")/gh.php\" \"\$@\"\n");
+    chmod($atrapa . '/gh', 0755);
+
+    $komentar = $atrapa . DIRECTORY_SEPARATOR . 'komentar.md';
+    file_put_contents($komentar, ($komentarText ?? 'Opraveno v app/kod.php, ověřeno testem, commit ' . substr($hlava, 0, 7) . '.')
+        . ($dodatek !== null ? "\n$dodatek" : '') . "\n");
+
+    $argumenty = [PHP_BINARY, NASTROJE . '/zavrit-issue.php', $repo, '1'];
+    if (!in_array('--bez-komentare', $prepinace, true)) {
+        array_push($argumenty, '--komentar', $komentar);
+    }
+    foreach ($prepinace as $prepinac) {
+        if ($prepinac !== '--bez-komentare') {
+            $argumenty[] = $prepinac;
+        }
+    }
+    $log = $atrapa . DIRECTORY_SEPARATOR . 'volani.log';
+    $vysledek = spust($argumenty, [
+        'PATH' => $atrapa . PATH_SEPARATOR . (string) getenv('PATH'),
+        'STUB_SCENAR' => $atrapa . DIRECTORY_SEPARATOR . 'scenar.json',
+        'STUB_LOG' => $log,
+    ]);
+
+    return [$vysledek, (string) @file_get_contents($log)];
+}
+
 function issue(array $zmeny = []): array
 {
     return array_merge([
@@ -607,10 +911,12 @@ function issue(array $zmeny = []): array
  * Režimy: ok, chyba (gh skončí kódem 1), nesmysl (kód 0, ale ne JSON),
  * api-chyba (seznam issues projde, gh api selže).
  */
-function issuesSAtrapou(string $rezim, array $issues): array
+function issuesSAtrapou(string $rezim, array $issues, ?string $repo = null): array
 {
-    $repo = novyProjekt();
-    git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    if ($repo === null) {
+        $repo = novyProjekt();
+        git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    }
 
     $atrapa = docasna('gh');
     file_put_contents($atrapa . '/data.json', json_encode($issues, JSON_UNESCAPED_UNICODE));

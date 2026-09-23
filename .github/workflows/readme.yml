@@ -21,18 +21,23 @@ jobs:
     runs-on: ubuntu-24.04
 
     steps:
+      # Akce jsou připnuté na otisk commitu, ne na značku verze: značku jde
+      # přesunout na jiný kód, otisk ne (N33). Přihlašovací údaje se po
+      # stažení v gitu nenechávají, kontroly je nepotřebují.
       - name: Stáhnout projekt
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # Kontrola dokumentace porovnává rozsah commitů, takže potřebuje
           # historii, ne jen poslední commit.
           fetch-depth: 0
+          persist-credentials: false
 
       - name: Stáhnout kontrolu
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Terms4Ever/nastroje
           path: .nastroje
+          persist-credentials: false
 
       - name: Ověřit, že je čím kontrolovat
         run: php --version

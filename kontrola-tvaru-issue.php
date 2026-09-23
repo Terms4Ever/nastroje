@@ -13,6 +13,8 @@
  * napsat zadavatel, agent ne: ten tvar zná a má ho dodat rovnou.
  * --zavrene hlídá, že zavírané issue nemá neodškrtnutý bod.
  * --komentar kontroluje komentář místo těla: délku, zmínky a pomlčky.
+ * --vznik <datum> říká, kdy issue vzniklo; pravidla zavedená později ho pak
+ * nezastaví, jen je to vidět v hromadné kontrole. Bez něj jde o nový obsah.
  * --stitky a --odpovedni (čárkou oddělené seznamy) navíc ověří zařazení:
  * štítek druhu a odpovědného. Ty nejsou v těle, proto se předávají zvlášť;
  * prázdná hodnota znamená, že issue žádné nemá.
@@ -27,6 +29,7 @@ $zavrene = false;
 $komentar = false;
 $titulek = '';
 $zarazeni = false;
+$vznik = null;
 $stitky = [];
 $odpovedni = [];
 for ($i = 1; $i < $argc; $i++) {
@@ -45,6 +48,10 @@ for ($i = 1; $i < $argc; $i++) {
     }
     if ($arg === '--titulek') {
         $titulek = $argv[++$i] ?? '';
+        continue;
+    }
+    if ($arg === '--vznik') {
+        $vznik = substr((string) ($argv[++$i] ?? ''), 0, 10);
         continue;
     }
     if ($arg === '--stitky' || $arg === '--odpovedni') {
@@ -91,6 +98,11 @@ if (str_contains($telo, "\u{2013}") || str_contains($telo, "\u{2014}")) {
 }
 if (zminujeNastroj($telo . ' ' . $titulek)) {
     $problemy[] = 'zmiňuje nástroj, kterým se text psal';
+}
+// Snímek odkazuje na otisk commitu, ne na větev (N33). Platí pro nový obsah;
+// issue starší než pravidlo ho nemusí splnit, když se jen upraví.
+if ($vznik === null || $vznik >= OD_SNIMKU_S_OTISKEM) {
+    $problemy = array_merge($problemy, problemySnimkuVTextu($telo));
 }
 if ($zarazeni && !$komentar) {
     $problemy = array_merge($problemy, problemyZarazeni($stitky, $odpovedni, $telo));

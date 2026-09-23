@@ -116,6 +116,9 @@ Po pushi:
   v jiném klonu ti kontrolu shodí, i když u tebe prochází.
 - **Issue zakládej přes `--body-file`**, ne vloženým `--body`; hook to jinak
   zastaví. Snímky se vkládají jako obrázek `![popis](adresa)`.
+- **Issue se zavírá přes `zavrit-issue.php`**, ne `gh issue close`: ověří
+  checklist, snímky a zelené běhy commitu na main. Commit nesmí obsahovat
+  „Closes #N", issue by se zavřelo samo. Snímky odkazují na otisk commitu.
 - **K issue patří štítek druhu i odpovědný** rovnou při zakládání:
   `--label bug` (nebo `enhancement`) a `--assignee Terms4Ever`. Bez nich hook
   příkaz zastaví a kontrola issues spadne.

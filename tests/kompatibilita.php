@@ -46,7 +46,9 @@ foreach ($repozitare as $nazev) {
     }
 
     $cil = $zaklad . DIRECTORY_SEPARATOR . $nazev;
-    $klon = spust(['gh', 'repo', 'clone', "Terms4Ever/$nazev", $cil, '--', '--depth', '1', '--quiet']);
+    // Úplný klon, ne mělký: kontrola issues ověřuje snímky v commitu, na který
+    // odkaz míří, a ten v mělkém klonu není (N33).
+    $klon = spust(['gh', 'repo', 'clone', "Terms4Ever/$nazev", $cil, '--', '--quiet']);
     if ($klon['kod'] !== 0) {
         $spadlo[] = $nazev;
         printf("  %-20s NEPROŠLO  klon se nepodařil: %s\n", $nazev, strtok(trim($klon['vystup']), "\n"));

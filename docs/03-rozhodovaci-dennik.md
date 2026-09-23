@@ -1038,3 +1038,44 @@ seznam všech dokumentů a přepsalo ji. Za pravidlem se už nic nekontrolovalo,
 takže šlo jen o číslo ve výsledné hlášce, ne o přeskočenou kontrolu. Opraveno
 v 1.6.1 a případ „dávka s kódem a změněným dokumentem" nově hlídá i počet;
 proti 1.6.0 padá, proti 1.6.1 projde.
+
+## N33 - Z pracovní nadstavby: Windows v CI, snímky na commit, zavření s důkazem (23. 9. 2026)
+
+**Podnět.** Zadavatel nechal prověřit `nastroje-prace` (osobní nadstavba pro
+pracovní projekty se SVN a Mantis, vznikla 23. 9. na jiném počítači) a z návrhů
+vybral tři věci k převzetí. Kontrolu citlivých souborů nevybral.
+
+**Windows v CI, akce na otisk.** Kontroly se pouštějí hlavně na Windows (hook
+Claude Code, pre-push), ale CI je zkoušelo jen na Linuxu; sedm případů (hook,
+cesta `/c/...`) tam vůbec neběželo, přitom chyby specifické pro Windows byly
+nejčastější. CI nastroje má job `testy-windows` (PHP 8.3 přes setup-php).
+Akce ve sdílených workflow jsou připnuté na otisk commitu místo značky
+(`actions/checkout` na otisk vydání 7.0.1) a stažený kód si nenechává
+přihlašovací údaje: značku jde přesunout na jiný kód, otisk ne, a `issue-tvar`
+smí zapisovat do issues.
+
+**Snímky odkazem na commit.** Odkaz `blob/main/...` se rozbije, když se soubor
+přesune, a neřekne, kterou verzi snímek dokládá. Od 23. 9. musí nový obsah
+odkazovat na otisk commitu; kontrola issues navíc ověří, že v tom commitu
+snímek je, že je to obrázek (PNG, JPEG, WebP) a že před a po nejsou tentýž
+soubor. Starší obsah jen upozorní, hook i workflow dostávají datum vzniku issue.
+Nadpis upozornění už netvrdí jediné datum, které u pozdějších pravidel neplatilo.
+
+**Zavření s důkazem.** `zavrit-issue.php` zavře issue, jen když sedí tvar
+a zařazení, checklist je odškrtaný (nebo komentář říká, proč bod zůstal
+schválně), ke snímku před je snímek po, všechny běhy commitu na výchozí větvi
+doběhly úspěšně (kontroly, testy i nasazení) a závěrečný komentář odkazuje na
+ten commit. Bez `--zavrit` jen posoudí. Obejít to jde dvěma cestami a obě jsou
+zavřené: holé `gh issue close` a zavření přes `gh api` zastaví hook, zprávu
+commitu s „Closes #N" nebo „Fixes owner/repo#N" zastaví pravidla commitu.
+
+**Past při testech.** Atrapa `gh.cmd` s `%~dp0` na Windows ukazovala do
+aktuální složky, ne ke skriptu, když ji cmd našel přes PATH a jméno bylo
+v uvozovkách. Atrapa teď nese absolutní cestu.
+
+**Ověřeno.** 67 případů: 9 na snímky, 13 na zavírání, 3 nové na hook; proti
+starým kontrolám nové případy padaly. Pravidla commitu vyzkoušená na šesti
+zprávách (odkaz „(#12)" projde, „Closes #12", „Fixes: repo#3" a „Resolved #4"
+ne, slova jako „prefix" a „fixture" nevadí). Kompatibilita: všech 7 projektů
+projde; kontrola kompatibility teď klonuje celou historii, protože snímek se
+ověřuje v commitu, na který odkaz míří.

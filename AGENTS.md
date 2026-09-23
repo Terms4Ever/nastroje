@@ -15,6 +15,8 @@ předinstalované, takže kontrola na GitHubu nepotřebuje instalační krok.
 - `kontrola-readme.php`, `kontrola-dokumentace.php`, `kontrola-migraci.php`,
   `kontrola-issues.php` - samostatné kontroly, každá vrací kód 1 při nálezu
 - `kontrola-tvaru-issue.php` - jedno tělo issue, volá ji hook i workflow
+- `zavrit-issue.php` - zavření issue s důkazem; jediný nástroj, který na GitHub
+  zapisuje, a to jen s přepínačem `--zavrit`
 - `src/tvar-issue.php` - pravidla tvaru issue na jednom místě
 - `hooky/tvar-issue.ps1` - hook Claude Code, zastaví špatné issue před založením
 - `stav-projektu.php`, `prehled-migraci.php` - generátory bloků do dokumentů

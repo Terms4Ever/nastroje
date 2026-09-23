@@ -30,6 +30,18 @@ if (-not $prikaz) { exit 0 }
 # Bez ukotveni hook zastavil i prikaz, ktery ten retezec jen zminuje v textu
 # (zapis dokumentace o hooku), coz se stalo 22. 9. 2026.
 $zacatek = '(?m)(^|[;&|(\"''`])\s*'
+
+# Issue se zaviraji pres zavrit-issue.php, ktery overi checklist, snimky
+# a zelene behy commitu na vychozi vetvi (N33). Hole zavreni to overit neumi,
+# proto se zastavi, at uz jde pres gh issue close, nebo pres gh api.
+$zavreniPres = 'Issue se zavírá přes php C:/laragon/www/nastroje/zavrit-issue.php <repozitář> <číslo> --komentar <soubor> --zavrit. Ověří checklist, snímky a zelené běhy commitu na main; holé zavření to neumí.'
+if ($prikaz -match ($zacatek + 'gh\s+issue\s+close\b')) {
+    Zastav $zavreniPres
+}
+if (($prikaz -match ($zacatek + 'gh\s+api\b')) -and ($prikaz -match '/issues/\d+') -and ($prikaz -match 'state[=:]\s*[''"]?closed')) {
+    Zastav $zavreniPres
+}
+
 $jeIssue = $prikaz -match ($zacatek + 'gh\s+issue\s+(create|edit|comment)\b')
 $jeApi = ($prikaz -match ($zacatek + 'gh\s+api\b')) -and ($prikaz -match '/issues')
 if (-not $jeIssue -and -not $jeApi) { exit 0 }

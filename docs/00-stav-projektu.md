@@ -23,9 +23,16 @@ hlavní větev:     main
   `"migrace-kontrola": true`. Hlídá tvar migrací, přehled, neměnnost hotové
   migrace (změnu, smazání i přejmenování) a to, že dávka měnící schéma
   migraci přidá
-- `kontrola-issues.php` ve verzi 1.9.0. Když issues nepřečte (chybí gh,
-  přihlášení nebo `issues: read` v tokenu), neprojde; dřív skončila zeleně
-- `tests/spust.php`, 42 regresních případů. Každá díra z auditu 23. 9. 2026
+- `kontrola-issues.php` ve verzi 1.10.0. Když issues nepřečte (chybí gh,
+  přihlášení nebo `issues: read` v tokenu), neprojde; dřív skončila zeleně.
+  Snímek ověří v commitu, na který odkaz míří: že tam je, že je to obrázek
+  a že před a po nejsou tentýž soubor
+- `zavrit-issue.php` zavře issue jen s důkazem: tvar a zařazení, odškrtaný
+  checklist, snímek po ke snímku před, všechny běhy commitu na výchozí větvi
+  úspěšné a závěrečný komentář s odkazem na ten commit. Bez `--zavrit` jen
+  posoudí. Holé `gh issue close` zastaví hook a commit s „Closes #N" zastaví
+  pravidla commitu
+- `tests/spust.php`, 67 regresních případů, v CI na Linuxu i na Windows. Každá díra z auditu 23. 9. 2026
   má případ, který ji shodí; běží v CI nastroje i v pre-push hooku. Čtyři
   případy spouštěče migrací potřebují jednorázovou databázi
   (`NASTROJE_TEST_MYSQL`); bez ní se vypíšou jako přeskočené
@@ -106,6 +113,12 @@ a složky).
 Zavřené issue, které má snímek `pred-`, musí mít i `po-`; jinak kontrola issues
 (1.3.0) neprojde. Bez snímku „před" se nic nevyžaduje, aby backendové issues
 nebyly obtěžované.
+
+Od 23. 9. 2026 (N33) odkazuje snímek na otisk commitu, ne na větev:
+`.../blob/<otisk>/docs/snimky/...?raw=1`. Odkaz na `main` se rozbije, když se
+soubor přesune nebo přejmenuje (tak dopadly Igrisovy předlohy při přesunu do
+`docs/prilohy/`), a neřekne, kterou verzi snímek dokládá. Otisk dá
+`git log -1 --format=%H -- docs/snimky/<číslo>-<název>/`.
 
 ## Autorství issues
 

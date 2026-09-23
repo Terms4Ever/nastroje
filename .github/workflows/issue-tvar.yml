@@ -27,10 +27,13 @@ jobs:
 
     steps:
       - name: Stáhnout kontrolu
-        uses: actions/checkout@v7
+        # Připnuto na otisk commitu, ne na značku (N33). Běh smí zapisovat
+        # do issues, takže na tom, jaký kód se stáhne, záleží víc než jinde.
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: Terms4Ever/nastroje
           path: .nastroje
+          persist-credentials: false
 
       - name: Zkontrolovat tvar
         id: tvar
@@ -52,6 +55,9 @@ jobs:
           # checklist. Dřív se to hlídalo jen v okamžiku zavření (N32).
           STAV=$(gh issue view "$CISLO" --json state --jq .state)
           if [ "$STAV" = "CLOSED" ]; then ARGY+=(--zavrene); fi
+          # Pravidla zavedená později platí jen pro issue, které vzniklo po nich.
+          VZNIK=$(gh issue view "$CISLO" --json createdAt --jq .createdAt)
+          ARGY+=(--vznik "$VZNIK")
           if php .nastroje/kontrola-tvaru-issue.php telo.md "${ARGY[@]}" 2> nalezy.txt; then
             echo "sedi=ano" >> "$GITHUB_OUTPUT"
           else

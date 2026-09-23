@@ -54,6 +54,13 @@ const STITKY_DRUHU = ['bug', 'enhancement', 'documentation'];
 const STITKY_BEZ_PRACE = ['duplicate', 'wontfix', 'invalid'];
 
 /**
+ * Od kdy snímek v issue odkazuje na otisk commitu, ne na větev (N33).
+ * Odkaz na blob/main se rozbije, když se soubor přesune nebo přejmenuje,
+ * a neřekne, kterou verzi snímek dokládá. Starší obsah jen upozorní.
+ */
+const OD_SNIMKU_S_OTISKEM = '2026-09-23';
+
+/**
  * Co je na tvaru těla špatně. Prázdné pole znamená, že je tvar v pořádku.
  * Hlášky jsou bez čísla issue, to si připíše volající.
  */
@@ -304,4 +311,73 @@ function sekceZadani(string $telo): string
     }
 
     return '';
+}
+
+/**
+ * Snímky vložené jako obrázek z repozitáře na GitHubu.
+ *
+ * @return list<array{adresa: string, ref: string, cesta: string, druh: ?string, pripona: ?string}>
+ */
+function snimkyObrazky(string $text): array
+{
+    preg_match_all(
+        '#!\[[^\]]*\]\((https://github\.com/[^/\s)]+/[^/\s)]+/blob/([^/\s)]+)/(docs/snimky/[^\s)?\#]+)[^\s)]*)\)#',
+        sjednotRadky($text),
+        $shody,
+        PREG_SET_ORDER
+    );
+
+    $snimky = [];
+    foreach ($shody as $shoda) {
+        $cesta = rawurldecode($shoda[3]);
+        $druh = preg_match('#/(pred|po)-([^/]+)$#', $cesta, $casti) === 1 ? $casti : [null, null, null];
+        $snimky[] = [
+            'adresa' => $shoda[1],
+            'ref' => $shoda[2],
+            'cesta' => $cesta,
+            'druh' => $druh[1],
+            'pripona' => $druh[2],
+        ];
+    }
+
+    return $snimky;
+}
+
+/** Je odkaz na snímek připnutý na otisk commitu (40 znaků hex)? */
+function jeOtiskCommitu(string $ref): bool
+{
+    return preg_match('/^[0-9a-f]{40}$/', $ref) === 1;
+}
+
+/**
+ * Problémy se snímky v jednom textu, které jdou poznat bez repozitáře:
+ * odkaz na větev místo otisku commitu.
+ *
+ * @return string[]
+ */
+function problemySnimkuVTextu(string $text): array
+{
+    $problemy = [];
+    foreach (snimkyObrazky($text) as $snimek) {
+        if (!jeOtiskCommitu($snimek['ref'])) {
+            $problemy[] = sprintf(
+                'snímek %s odkazuje na větev %s, ne na otisk commitu; použij adresu'
+                . ' .../blob/<otisk>/%s?raw=1 (otisk dá git log -1 --format=%%H -- %s)',
+                $snimek['cesta'],
+                $snimek['ref'],
+                $snimek['cesta'],
+                dirname($snimek['cesta'])
+            );
+        }
+    }
+
+    return $problemy;
+}
+
+/** Začíná obsah podpisem PNG, JPEG nebo WebP? */
+function jeObrazek(string $obsah): bool
+{
+    return str_starts_with($obsah, "\x89PNG\r\n\x1a\n")
+        || str_starts_with($obsah, "\xff\xd8\xff")
+        || (substr($obsah, 0, 4) === 'RIFF' && substr($obsah, 8, 4) === 'WEBP');
 }

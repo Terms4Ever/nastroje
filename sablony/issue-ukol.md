@@ -32,4 +32,6 @@ Soubory a funkce, kterých se to týká. Cesty z kořene repozitáře.
 ## Snímky
 
 Před a po, až bude hotovo. Leží v `docs/snimky/<číslo issue>-<krátký-název>/`
-a jmenují se `pred-neco.png` a `po-neco.png`.
+a jmenují se `pred-neco.png` a `po-neco.png`. Vkládají se jako obrázek odkazem
+na otisk commitu, ne na větev:
+`![popis](https://github.com/<repozitář>/blob/<otisk>/docs/snimky/...png?raw=1)`.

@@ -28,7 +28,8 @@ Kontrola hlídá pět věcí:
 - **Issues** - pevný seznam sekcí, jeden checklist pod „Hotovo, když", tělo do
   40 řádků, odškrtaný checklist u zavřeného issue, komentáře do pěti řádků
   a žádná zmínka o nástroji, kterým se psaly. Syrový nápad zadavatele (tělo bez
-  nadpisů) chyba není, jen čeká na přepsání.
+  nadpisů) chyba není, jen čeká na přepsání. Snímky odkazují na otisk commitu
+  a issue se zavírá přes `zavrit-issue.php`, který chce zelené CI.
 
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.
@@ -57,6 +58,7 @@ nastroje/
 ├── kontrola-migraci.php         # kontrola migrací databáze
 ├── kontrola-issues.php          # kontrola tvaru issues na GitHubu
 ├── kontrola-tvaru-issue.php     # kontrola jednoho těla, než issue vznikne
+├── zavrit-issue.php             # zavření issue jen s důkazem ze zeleného CI
 ├── src/tvar-issue.php           # pravidla tvaru issue na jednom místě
 ├── hooky/tvar-issue.ps1         # hook, který špatné issue nepustí vzniknout
 ├── hooky/tajemstvi.ps1          # trezor přihlašovacích údajů pro agenty
@@ -159,7 +161,8 @@ php tests/kompatibilita.php      # kontroly z tohohle stromu proti všem projekt
 ```
 
 Testy stavějí dočasné repozitáře a `gh` nahrazují atrapou, takže nesahají
-na síť ani na skutečné issues. Spouštěč migrací se zkouší na skutečné
+na síť ani na skutečné issues. V CI běží na Linuxu i na Windows: případy
+s hookem Claude Code a cestou z Git Bashe jdou pustit jen na Windows. Spouštěč migrací se zkouší na skutečné
 databázi, kterou dodá proměnná `NASTROJE_TEST_MYSQL` ve tvaru
 `dsn|uživatel|heslo`; každý případ si založí vlastní databázi a smaže ji. Běží v CI nastroje a pre-push hook je pustí
 před každým pushem do nastroje spolu s kontrolou kompatibility.

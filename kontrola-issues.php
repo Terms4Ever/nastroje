@@ -21,6 +21,8 @@
  *   9. issue ani komentář nevznikl přes aplikaci: GitHub takový záznam označí
  *      jmenovkou "with <aplikace>" vedle autora a smazat to jde jen tak, že se
  *      text napíše znovu
+ *  10. snímek odkazuje na otisk commitu, ne na větev; v tom commitu leží,
+ *      je to obrázek a před a po nejsou tentýž soubor (od 23. 9. 2026, N33)
  *
  * Starší issues se berou mírněji: přísné jsou od data, kdy standard vznikl
  * (přepínač --od, výchozí 2026-09-21, tedy den po zavedení standardu).
@@ -36,7 +38,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.9.0';
+const VERZE_ISSUES = '1.10.0';
 
 /**
  * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
@@ -200,6 +202,54 @@ foreach ($issues as $issue) {
         }
     }
 
+    // 10. Snímky odkazem na commit (N33). Odkaz na větev se rozbije, když se
+    //     soubor přesune; odkaz na commit ukazuje právě tu verzi, kterou snímek
+    //     dokládá. Ověří se, že v tom commitu snímek je, že je to obrázek
+    //     a že před a po nejsou tentýž soubor. Starší obsah jen upozorní.
+    $textySDatem = $syrove ? [] : [['tělo', $telo, $vznik]];
+    foreach ($issue['comments'] ?? [] as $poradi => $komentar) {
+        $textySDatem[] = [
+            'komentář ' . ($poradi + 1),
+            (string) ($komentar['body'] ?? ''),
+            substr((string) ($komentar['createdAt'] ?? ''), 0, 10),
+        ];
+    }
+    $otiskySnimku = ['pred' => [], 'po' => []];
+    foreach ($textySDatem as [$kde, $text, $datum]) {
+        $hlas = static function (string $zprava) use (&$chyby, &$varovani, $datum): void {
+            if ($datum >= OD_SNIMKU_S_OTISKEM) {
+                $chyby[] = $zprava;
+            } else {
+                $varovani[] = $zprava;
+            }
+        };
+        foreach (problemySnimkuVTextu($text) as $problem) {
+            $hlas("#$cislo $kde: $problem");
+        }
+        foreach (snimkyObrazky($text) as $snimek) {
+            if (!jeOtiskCommitu($snimek['ref'])) {
+                continue;
+            }
+            $obsah = souborVCommitu($koren, $snimek['ref'], $snimek['cesta']);
+            if ($obsah === null) {
+                $hlas(sprintf('#%d %s: snímek %s v commitu %s není', $cislo, $kde, $snimek['cesta'], substr($snimek['ref'], 0, 7)));
+                continue;
+            }
+            if (!jeObrazek($obsah)) {
+                $hlas(sprintf('#%d %s: snímek %s není obrázek (PNG, JPEG ani WebP)', $cislo, $kde, $snimek['cesta']));
+                continue;
+            }
+            if ($snimek['druh'] !== null) {
+                $otiskySnimku[$snimek['druh']][$snimek['pripona']] = hash('sha256', $obsah);
+            }
+        }
+    }
+    foreach ($otiskySnimku['pred'] as $pripona => $otisk) {
+        if (($otiskySnimku['po'][$pripona] ?? null) === $otisk) {
+            $pridej("#$cislo snímek před a po ($pripona) je tentýž soubor; po musí ukázat nový stav");
+        }
+    }
+
     // 9. Zařazení: štítek druhu a odpovědný. Bez nich je seznam issues hromada
     //    nadpisů - nepozná se, co je chyba, ani kdo to má na stole.
     $stitky = array_map(
@@ -259,7 +309,10 @@ if ($napady !== []) {
 }
 
 if ($varovani !== []) {
-    echo "\n  Issues $nazev, starší než $od (jen upozornění):\n\n";
+    // Každé pravidlo má vlastní den zavedení; obsah starší než pravidlo, které
+    // porušuje, se jen hlásí. Dřív tu stálo jediné datum, které u pravidel
+    // zavedených později neplatilo.
+    echo "\n  Issues $nazev, jen upozornění (obsah starší než pravidlo, které porušuje):\n\n";
     foreach ($varovani as $radek) {
         echo "    $radek\n";
     }
@@ -481,4 +534,24 @@ function git(string $koren, string $prikaz): ?string
     }
 
     return trim($vystup[0]);
+}
+
+/**
+ * Obsah souboru v daném commitu, binárně, nebo null, když tam není.
+ * Pole místo řetězce: bez shellu, takže otisk ani cesta nic nerozbijí.
+ */
+function souborVCommitu(string $koren, string $otisk, string $cesta): ?string
+{
+    $proces = proc_open(
+        ['git', '-C', proGit($koren), 'cat-file', 'blob', $otisk . ':' . $cesta],
+        [1 => ['pipe', 'w'], 2 => ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'w']],
+        $roury
+    );
+    if (!is_resource($proces)) {
+        return null;
+    }
+    $obsah = (string) stream_get_contents($roury[1]);
+    fclose($roury[1]);
+
+    return proc_close($proces) === 0 ? $obsah : null;
 }
