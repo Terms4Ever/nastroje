@@ -18,6 +18,8 @@ předinstalované, takže kontrola na GitHubu nepotřebuje instalační krok.
 - `src/tvar-issue.php` - pravidla tvaru issue na jednom místě
 - `hooky/tvar-issue.ps1` - hook Claude Code, zastaví špatné issue před založením
 - `stav-projektu.php`, `prehled-migraci.php` - generátory bloků do dokumentů
+- `tests/spust.php` - regresní testy kontrol, `tests/kompatibilita.php` -
+  kontroly z pracovního stromu proti všem projektům
 - `sablony/` - vzory k opsání: README, migrace, issue, agents
 - `.github/workflows/readme.yml` a `issue-tvar.yml` - volají je ostatní repozitáře
 
@@ -40,6 +42,7 @@ Kontroly se pouští samy na sebe, proto po každé změně:
 
 ```bash
 php -l <zmeneny-soubor>.php
+php tests/spust.php
 php kontrola-readme.php .
 php kontrola-dokumentace.php .
 php kontrola-issues.php .
@@ -52,8 +55,14 @@ Obejít jde jen vědomě přes `git push --no-verify`.
 
 Nikam se nenasazuje. Repozitář je zdroj pravidel: ostatní projekty na něj
 odkazují větví `@main` ve svých workflow a globální hook si ho čte z disku.
-Změna pravidla je proto okamžitě všude, což je záměr i riziko: po každé úpravě
-projít kontrolou aspoň tři repozitáře, ať se nezablokují pushe všude naráz.
+Změna pravidla je proto okamžitě všude, což je záměr i riziko. Pre-push hook
+proto před každým pushem pustí `tests/kompatibilita.php` a změnu, kvůli které
+by některý projekt spadl, nepustí. Projekt se opraví ve stejné dávce; když
+ho opravit nejde, dokud nevyjde nová verze kontrol, pushuje se nejdřív
+nastroje a hned potom projekt.
+
+Nové pravidlo nebo oprava kontroly začíná testem: případ, který před opravou
+padá a po ní projde.
 
 ## Jak se domlouváme
 

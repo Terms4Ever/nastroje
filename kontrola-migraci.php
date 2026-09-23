@@ -23,7 +23,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_MIGRACI = '1.0.0';
+const VERZE_MIGRACI = '1.1.0';
 
 /** Cesty, které skript čte z disku. Musí sedět na pushovaný commit. */
 const CTENE_CESTY_MIGRACI = [
@@ -60,6 +60,18 @@ const ZNACKA_KONEC = '<!-- konec generovaneho bloku -->';
 $koren = rtrim($argv[1] ?? getcwd(), "/\\");
 $zaklad = $argv[2] ?? null;
 $cil = $argv[3] ?? null;
+
+// Cesta z Git Bashe (/c/...) je pro PHP na Windows neexistující složka.
+if (PHP_OS_FAMILY === 'Windows') {
+    $koren = proGit($koren);
+}
+
+// Neexistující cesta dřív skončila hláškou "kontrola není zapnutá" a kódem 0,
+// protože se nenašlo nastavení (audit 23. 9. 2026, N32).
+if (!is_dir($koren)) {
+    fwrite(STDERR, "\n  Cesta $koren neexistuje, kontrola migrací nemá co ověřit.\n\n");
+    exit(1);
+}
 
 $nastaveni = nactiNastaveni($koren);
 $nazevProjektu = basename(realpath($koren) ?: $koren);
@@ -189,6 +201,13 @@ if ($zaklad !== null && $cil !== null) {
         if ($stav === 'D') {
             $chyby[] = "$cesta se v dávce maže; hotová migrace zůstává,"
                 . ' i když se její efekt ruší novou migrací';
+        }
+        // Přejmenování dřív prošlo: git ho hlásí jako R100 a kontrola znala
+        // jen M a D. Spouštěč přitom pozná hotovou migraci jen podle názvu,
+        // takže přejmenovanou by na produkci pustil znovu (audit 23. 9. 2026).
+        if ($stav === 'R') {
+            $chyby[] = "$cesta se v dávce přejmenovává; hotová migrace si nechává"
+                . ' název, spouštěč ji pozná jen podle něj a přejmenovanou by pustil znovu';
         }
     }
 
@@ -340,7 +359,12 @@ function jeNovaVetev(string $zaklad): bool
     return $zaklad === '' || trim($zaklad, '0') === '';
 }
 
-/** Změněné soubory v rozsahu: cesta => A/M/D. */
+/**
+ * Změněné soubory v rozsahu: cesta => A/M/D/R.
+ *
+ * U přejmenování dostane starý název R (to hlídá pravidlo o hotových
+ * migracích) a nový A. U kopie jen nový A.
+ */
 function zmeneneSoubory(string $koren, string $rozsah): array
 {
     $vystup = git($koren, 'diff --name-status ' . escapeshellarg($rozsah), true);
@@ -355,6 +379,13 @@ function zmeneneSoubory(string $koren, string $rozsah): array
             continue;
         }
         $stav = substr($casti[0], 0, 1);
+        if (($stav === 'R' || $stav === 'C') && count($casti) >= 3) {
+            if ($stav === 'R') {
+                $soubory[$casti[1]] = 'R';
+            }
+            $soubory[$casti[2]] = 'A';
+            continue;
+        }
         $soubory[$casti[count($casti) - 1]] = $stav;
     }
 

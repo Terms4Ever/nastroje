@@ -40,30 +40,67 @@ jobs:
       - name: Zkontrolovat README
         run: php .nastroje/kontrola-readme.php "$GITHUB_WORKSPACE"
 
+      - name: Určit rozsah změn
+        id: rozsah
+        env:
+          UDALOST: ${{ github.event_name }}
+          PRED: ${{ github.event.before }}
+          PR_ZAKLAD: ${{ github.event.pull_request.base.sha }}
+          VYCHOZI: ${{ github.event.repository.default_branch }}
+        run: |
+          # Proti čemu se měří, jestli dávka sáhla na dokumentaci a jestli
+          # nemění hotové migrace. Dřív se bral jen github.event.before: u pull
+          # requestu neexistuje a u první vlny commitů na nové větvi je samá
+          # nula, takže se obě pravidla tiše neuplatnila (audit 23. 9. 2026, N32).
+          NULY=0000000000000000000000000000000000000000
+          ZAKLAD=""
+          case "$UDALOST" in
+            pull_request)
+              # Checkout je slučovací commit a jeho první rodič je základ PR,
+              # takže rozsah ukáže přesně to, co pull request přinese.
+              ZAKLAD="$PR_ZAKLAD"
+              ;;
+            push)
+              if [ -n "$PRED" ] && [ "$PRED" != "$NULY" ] && git cat-file -e "$PRED^{commit}" 2>/dev/null; then
+                ZAKLAD="$PRED"
+              elif [ -n "$VYCHOZI" ] && git rev-parse -q --verify "origin/$VYCHOZI" >/dev/null; then
+                # Nová větev, nebo push přes vynucený přepis historie: měří se
+                # od společného předka s výchozí větví.
+                ZAKLAD=$(git merge-base "origin/$VYCHOZI" "$GITHUB_SHA" || true)
+                if [ "$ZAKLAD" = "$GITHUB_SHA" ]; then ZAKLAD=""; fi
+                if [ -n "$PRED" ] && [ "$PRED" != "$NULY" ]; then
+                  echo "::warning::Předchozí commit $PRED v historii není (přepis historie?), měří se od společného předka s $VYCHOZI."
+                fi
+              fi
+              ;;
+          esac
+          if [ -n "$ZAKLAD" ] && ! git cat-file -e "$ZAKLAD^{commit}" 2>/dev/null; then
+            echo "::error::Základ rozsahu $ZAKLAD v klonu není, pravidla o dávce nejde ověřit."
+            exit 1
+          fi
+          if [ -n "$ZAKLAD" ]; then
+            echo "Rozsah změn: $ZAKLAD..$GITHUB_SHA"
+          else
+            echo "::notice::Rozsah změn není ($UDALOST), ověří se jen obsah dokumentů a migrací."
+          fi
+          echo "zaklad=$ZAKLAD" >> "$GITHUB_OUTPUT"
+
       - name: Zkontrolovat dokumentaci
         env:
-          ZAKLAD: ${{ github.event.before }}
-          CIL: ${{ github.sha }}
+          ZAKLAD: ${{ steps.rozsah.outputs.zaklad }}
         run: |
-          # Při pull requestu a při první vlně commitů na nové větvi žádný
-          # použitelný základ není. Tehdy se ověří jen obsah dokumentů.
-          if [ -n "$ZAKLAD" ] && [ "$ZAKLAD" != "0000000000000000000000000000000000000000" ] \
-             && git cat-file -e "$ZAKLAD^{commit}" 2>/dev/null; then
-            php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$CIL"
+          if [ -n "$ZAKLAD" ]; then
+            php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$GITHUB_SHA"
           else
             php .nastroje/kontrola-dokumentace.php "$GITHUB_WORKSPACE"
           fi
 
       - name: Zkontrolovat migrace databáze
         env:
-          ZAKLAD: ${{ github.event.before }}
-          CIL: ${{ github.sha }}
+          ZAKLAD: ${{ steps.rozsah.outputs.zaklad }}
         run: |
-          # Stejné pravidlo jako u dokumentace: bez použitelného základu se
-          # ověří jen tvar migrací a přehled.
-          if [ -n "$ZAKLAD" ] && [ "$ZAKLAD" != "0000000000000000000000000000000000000000" ] \
-             && git cat-file -e "$ZAKLAD^{commit}" 2>/dev/null; then
-            php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$CIL"
+          if [ -n "$ZAKLAD" ]; then
+            php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE" "$ZAKLAD" "$GITHUB_SHA"
           else
             php .nastroje/kontrola-migraci.php "$GITHUB_WORKSPACE"
           fi

@@ -62,6 +62,8 @@ nastroje/
 ├── hooky/tajemstvi.ps1          # trezor přihlašovacích údajů pro agenty
 ├── hooky/trezor-spravce.ps1     # okno trezoru, spouští se zástupcem z plochy
 ├── hooky/test-trezor.ps1        # proklikání okna přes UI Automation
+├── tests/spust.php              # regresní testy kontrol, každá díra má případ
+├── tests/kompatibilita.php      # nové kontroly proti všem projektům před pushem
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání
@@ -123,7 +125,7 @@ Co ověřuje:
 |---|---|
 | generovaný blok | `docs/00-stav-projektu.md` musí nést blok se skutečnými čísly a ten musí sedět na to, co by generátor vypsal teď |
 | pomlčky | dlouhá ani polovičná pomlčka v dokumentech; `"varovat"` místo `"blokovat"` hlášku jen vypíše |
-| aktualizace | dávka commitů, která změnila kód, musí změnit i něco v `docs/` |
+| aktualizace | dávka commitů, která změnila kód, musí přidat nebo upravit dokument `.md` v `docs/`; obrázek, příloha ani smazání se nepočítají |
 
 Blok se skutečnými čísly do stavu projektu vloží nebo přegeneruje:
 
@@ -138,6 +140,27 @@ v commitu, který ho obsahuje.
 Cesty uvnitř dokumentů se **nekontrolují**. V README to smysl dává, tam se
 popisuje současný stav. Rozhodovací deník ale musí umět napsat, že se soubor
 smazal nebo přejmenoval.
+
+Jestli text ke změně opravdu sedí, kontrola nepozná. Pozná jen, že dávka
+s kódem přidala nebo upravila dokument; levná obejití (obrázek mezi
+snímky, smazání souboru) zavírá, věcnou správnost nezaručí.
+
+---
+
+## 🧪 Testy kontrol
+
+Každá kontrola má případ, který ji shodí. Bez něj se nepozná, že přestala
+fungovat: audit 23. 9. 2026 našel šest děr a žádný test by je nepustil.
+
+```bash
+php tests/spust.php              # všechny případy
+php tests/spust.php migrace      # jen případy s "migrace" v názvu
+php tests/kompatibilita.php      # kontroly z tohohle stromu proti všem projektům
+```
+
+Testy stavějí dočasné repozitáře a `gh` nahrazují atrapou, takže nesahají
+na síť ani na skutečné issues. Běží v CI nastroje a pre-push hook je pustí
+před každým pushem do nastroje spolu s kontrolou kompatibility.
 
 ---
 
@@ -183,8 +206,23 @@ jobs:
     uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main
 ```
 
+**Projekt, který nasazuje**, volá stejný workflow i jako první job
+svého workflow nasazení a nahrává až po jeho úspěchu:
+
+```yaml
+jobs:
+  kontroly:
+    permissions:
+      contents: read
+      issues: read
+    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main
+  deploy:
+    needs: kontroly
+```
+
 **Lokálně** ji pouští pre-push hook ze složky `.git-hooks` v domovském
-adresáři. Ohlásí se dřív, než se commity dostanou na GitHub.
+adresáři. Ohlásí se dřív, než se commity dostanou na GitHub. Když chybí PHP
+nebo skript kontroly, push zastaví, místo aby ho tiše pustil.
 
 **Repozitář je veřejný schválně.** Sdílený workflow ze soukromého repozitáře
 potřebuje u osobního účtu nastavovat přístup navíc, a tady není co skrývat.

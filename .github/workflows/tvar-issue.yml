@@ -4,7 +4,9 @@ name: Tvar issue
 # pushe. Pravidla žijí v Terms4Ever/nastroje.
 on:
   issues:
-    types: [opened, edited, closed]
+    # Štítky, odpovědný a znovuotevření patří k tvaru stejně jako text.
+    # Dřív se odebrání štítku druhu nepoznalo vůbec (audit 23. 9. 2026).
+    types: [opened, edited, closed, reopened, labeled, unlabeled, assigned, unassigned]
 
 # Kontrola štítkuje a píše komentář, proto zápis do issues.
 permissions:

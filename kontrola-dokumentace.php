@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.5.0';
+const VERZE_DOKUMENTACE = '1.6.0';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -74,6 +74,19 @@ const NENI_KOD = [
 $koren = rtrim($argv[1] ?? getcwd(), "/\\");
 $zaklad = $argv[2] ?? null;
 $cil = $argv[3] ?? null;
+
+// Cesta z Git Bashe (/c/laragon/...) je pro PHP na Windows neexistující
+// složka. Kontrola se kvůli tomu dřív tiše přeskočila jako projekt bez docs/.
+if (PHP_OS_FAMILY === 'Windows') {
+    $koren = proGit($koren);
+}
+
+// Kontrola, která nemá co zkontrolovat, nesmí skončit úspěchem. Překlep
+// v cestě dřív znamenal zelenou (audit 23. 9. 2026, N32).
+if (!is_dir($koren)) {
+    fwrite(STDERR, "\n  Cesta $koren neexistuje, kontrola dokumentace nemá co ověřit.\n\n");
+    exit(1);
+}
 
 $nastaveni = [
     'docs-kontrola' => false,
@@ -139,19 +152,23 @@ foreach (['docs-kontrola', 'docs-vymahat-aktualizaci'] as $klic) {
     }
 }
 
-$slozka = $koren . '/docs';
-if (!is_dir($slozka)) {
-    echo "  Složka docs/ není, kontrola dokumentace se přeskakuje.\n";
-    exit(0);
-}
-
 // Kontrola se zapíná přihlášením, ne automaticky. Repozitář, který má docs/
 // v jiném tvaru, tím nespadne dřív, než si ho srovná. Zapíná se řádkem
 // "docs-kontrola": true v .readme-kontrola.json.
 if (($nastaveni['docs-kontrola'] ?? false) !== true) {
-    echo "  Kontrola dokumentace není pro tenhle repozitář zapnutá.
-";
+    echo "  Kontrola dokumentace není pro tenhle repozitář zapnutá.\n";
     exit(0);
+}
+
+// Zapnutá kontrola bez složky docs/ je chyba, ne důvod se vzdát. Dřív se
+// existence složky testovala dřív než zapnutí, takže projekt, který si
+// kontrolu zapnul a docs/ pak smazal nebo přejmenoval, procházel zeleně
+// (audit 23. 9. 2026, N32).
+$slozka = $koren . '/docs';
+if (!is_dir($slozka)) {
+    fwrite(STDERR, "\n  Kontrola dokumentace je zapnutá, ale složka docs/ chybí.\n"
+        . "  Založ docs/00-stav-projektu.md a docs/03-rozhodovaci-dennik.md, nebo kontrolu vypni.\n\n");
+    exit(1);
 }
 
 $chyby = [];
@@ -274,31 +291,42 @@ foreach ($dokumenty as $dokument) {
 // ---------------------------------------------------------------------------
 
 if ($nastaveni['docs-vymahat-aktualizaci'] && $zaklad !== null && $cil !== null) {
-    $rozsah = overRozsah($koren, $zaklad, $cil);
+    if (jeNovaVetev($zaklad)) {
+        // Volající má předat základ (workflow i hook ho u nové větve dopočítají
+        // ze společného předka s main). Když ho nemá, řekne se to nahlas.
+        echo "  pozn.: nová větev bez základu, pravidlo o dávce se neuplatnilo;"
+            . " ověřil se jen obsah dokumentů.\n";
+    } else {
+        $rozsah = overRozsah($koren, $zaklad, $cil);
 
-    // Nova vetev nema proti cemu merit, to je v poradku. Neznamy zaklad ale
-    // znamena melky klon nebo zastaraly origin, a pravidlo by tise neplatilo
-    // (nalez N12). Radsi to rict nahlas.
-    if ($rozsah === null && !jeNovaVetev($zaklad)) {
-        $varovani[] = sprintf(
-            'zaklad rozsahu "%s" v repozitari neni, pravidlo o davce se neuplatnilo'
-            . ' (melky klon nebo zastaraly origin?)',
-            $zaklad
-        );
-    }
-
-    if ($rozsah !== null) {
-        $zmenene = zmeneneSoubory($koren, $rozsah);
-        $kod = array_filter($zmenene, static fn (string $s): bool => jeKod($s));
-        $docs = array_filter($zmenene, static fn (string $s): bool => str_starts_with($s, 'docs/'));
-
-        if ($kod !== [] && $docs === []) {
+        // Neznámý základ znamená mělký klon nebo zastaralý origin. Dřív to bylo
+        // jen upozornění a kontrola prošla, aniž dávku posoudila (nález N12,
+        // audit 23. 9. 2026). Kontrola, která nemohla proběhnout, neprojde.
+        if ($rozsah === null) {
             $chyby[] = sprintf(
-                'dávka mění %d souborů s kódem, ale na docs/ nesáhla.'
-                . ' Zapiš, co se změnilo, do docs/00-stav-projektu.md,'
-                . ' a proč, do docs/03-rozhodovaci-dennik.md',
-                count($kod)
+                'základ rozsahu "%s" nebo cíl "%s" v repozitáři není; nejde ověřit,'
+                . ' jestli dávka sáhla na dokumentaci (mělký klon nebo zastaralý origin?)',
+                $zaklad,
+                $cil
             );
+        } else {
+            $zmeny = zmeneneSoubory($koren, $rozsah);
+            $kod = array_filter(array_keys($zmeny), static fn (string $s): bool => jeKod($s));
+            $dokumenty = array_filter(
+                $zmeny,
+                static fn (string $stav, string $cesta): bool => jeZmenenyDokument($cesta, $stav),
+                ARRAY_FILTER_USE_BOTH
+            );
+
+            if ($kod !== [] && $dokumenty === []) {
+                $chyby[] = sprintf(
+                    'dávka mění %d souborů s kódem, ale žádný dokument v docs/ nepřibyl'
+                    . ' ani se nezměnil (obrázky, přílohy a mazání se nepočítají).'
+                    . ' Zapiš, co se změnilo, do docs/00-stav-projektu.md,'
+                    . ' a proč, do docs/03-rozhodovaci-dennik.md',
+                    count($kod)
+                );
+            }
         }
     }
 }
@@ -505,13 +533,18 @@ function overRozsah(string $koren, string $zaklad, string $cil): ?string
     return $zaklad . '..' . $cil;
 }
 
-/** @return string[] */
+/**
+ * Změněné soubory v rozsahu jako cesta => stav z git diff --name-status
+ * (A, M, D, R100, R087...). U přejmenování dostane starý název stav D.
+ *
+ * @return array<string, string>
+ */
 function zmeneneSoubory(string $koren, string $rozsah): array
 {
     $vystup = [];
     $kod = 0;
     exec(sprintf(
-        'git -C %s diff --name-only %s %s',
+        'git -C %s diff --name-status %s %s',
         escapeshellarg(proGit($koren)),
         escapeshellarg($rozsah),
         PHP_OS_FAMILY === 'Windows' ? '2>NUL' : '2>/dev/null'
@@ -525,7 +558,51 @@ function zmeneneSoubory(string $koren, string $rozsah): array
         );
     }
 
-    return array_values(array_filter(array_map('trim', $vystup)));
+    $soubory = [];
+    foreach ($vystup as $radek) {
+        $casti = explode("\t", trim($radek));
+        if (count($casti) < 2 || $casti[0] === '') {
+            continue;
+        }
+        $stav = $casti[0];
+        if (($stav[0] === 'R' || $stav[0] === 'C') && count($casti) >= 3) {
+            if ($stav[0] === 'R') {
+                $soubory[$casti[1]] = 'D';
+            }
+            $soubory[$casti[2]] = $stav;
+            continue;
+        }
+        $soubory[$casti[1]] = $stav;
+    }
+
+    return $soubory;
+}
+
+/**
+ * Změnil se v dávce dokument? Počítá se jen přidaný nebo upravený soubor .md
+ * v docs/ mimo snímky a přílohy. Obrázek, příloha ani smazání nejsou zápis
+ * toho, co se změnilo: dřív stačilo do docs/ přidat nesouvisející obrázek
+ * (audit 23. 9. 2026, N32). Přejmenování se počítá, jen když se změnil i obsah.
+ *
+ * Jestli text ke změně opravdu sedí, žádná kontrola cestou souboru nepozná.
+ * Tohle zavírá jen levná obejití.
+ */
+function jeZmenenyDokument(string $cesta, string $stav): bool
+{
+    if (!str_starts_with($cesta, 'docs/') || !str_ends_with(strtolower($cesta), '.md')) {
+        return false;
+    }
+    if (str_starts_with($cesta, 'docs/snimky/') || str_starts_with($cesta, 'docs/prilohy/')) {
+        return false;
+    }
+    if ($stav === 'D') {
+        return false;
+    }
+    if ($stav[0] === 'R') {
+        return (int) substr($stav, 1) < 100;
+    }
+
+    return true;
 }
 
 

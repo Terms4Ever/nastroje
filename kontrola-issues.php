@@ -36,7 +36,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.8.0';
+const VERZE_ISSUES = '1.9.0';
 
 /**
  * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
@@ -51,6 +51,9 @@ const VZOR_SNIMKU = '#^docs/snimky/\d+-[a-z0-9]+(-[a-z0-9]+)*/(pred|po)-[a-z0-9]
 const MAX_RADKU_KOMENTARE = 5;
 
 $koren = rtrim($argv[1] ?? getcwd(), "/\\");
+if (PHP_OS_FAMILY === 'Windows') {
+    $koren = proGit($koren);
+}
 $od = '2026-09-21';
 $jenOtevrene = false;
 foreach ($argv as $i => $arg) {
@@ -62,16 +65,33 @@ foreach ($argv as $i => $arg) {
     }
 }
 
+// Kontrola, která nemohla proběhnout, neprojde. Dřív skončila kódem 0 vždy,
+// když něco chybělo: cesta, git, přihlášení gh, práva tokenu. Igris takhle
+// měl zelenou kontrolu, přestože jeho issues CI nikdy nepřečetlo
+// (audit 23. 9. 2026, N32).
+if (!is_dir($koren)) {
+    fwrite(STDERR, "\n  Cesta $koren neexistuje, kontrola issues nemá co ověřit.\n\n");
+    exit(1);
+}
+if (git($koren, 'rev-parse --git-dir') === null) {
+    fwrite(STDERR, "\n  $koren není repozitář gitu (nebo chybí git), kontrola issues neproběhla.\n\n");
+    exit(1);
+}
+
+// Repozitář mimo Terms4Ever se nekontroluje schválně, to je vědomé vypnutí.
 $slug = slugRepozitare($koren);
 if ($slug === null) {
     echo "  Kontrola issues: repozitář není na github.com/Terms4Ever, přeskakuji.\n";
     exit(0);
 }
 
-$issues = nactiIssues($slug, $jenOtevrene);
+$chybaNacteni = null;
+$issues = nactiIssues($slug, $jenOtevrene, $chybaNacteni);
 if ($issues === null) {
-    echo "  Kontrola issues: nepodařilo se načíst issues přes gh (chybí přihlášení?).\n";
-    exit(0);
+    fwrite(STDERR, "\n  Kontrola issues neproběhla: $chybaNacteni\n"
+        . "  Bez seznamu issues nejde nic ověřit. Na GitHubu zkontroluj, že workflow\n"
+        . "  dává tokenu issues: read; doma, že je gh přihlášené (gh auth status).\n\n");
+    exit(1);
 }
 
 $chyby = [];
@@ -214,7 +234,7 @@ foreach ($issues as $issue) {
 }
 
 // 7. Razítko aplikace u autora
-foreach (razitkaAplikace($slug, $varovani) as $popis) {
+foreach (razitkaAplikace($slug, $chyby) as $popis) {
     $chyby[] = $popis;
 }
 
@@ -275,7 +295,7 @@ exit(0);
  * Schválně bez `--jq`: escapeshellarg na Windows zahodí uvozovky a ze `!=`
  * udělá ` =`, takže by se filtr rozpadl a kontrola by mlčky procházela.
  */
-function razitkaAplikace(string $slug, array &$varovani): array
+function razitkaAplikace(string $slug, array &$chyby): array
 {
     $nalezy = [];
 
@@ -283,7 +303,9 @@ function razitkaAplikace(string $slug, array &$varovani): array
         for ($stranka = 1; $stranka <= 10; $stranka++) {
             $data = ghJson(sprintf('repos/%s/%sper_page=100&page=%d', $slug, $cesta, $stranka));
             if ($data === null) {
-                $varovani[] = 'nepodařilo se ověřit, jestli issues nevznikly přes aplikaci (gh api selhalo)';
+                // Dřív jen upozornění, a to ještě pod nadpisem o starých
+                // issues. Neověřené razítko je neproběhlá kontrola (N32).
+                $chyby[] = 'nepodařilo se ověřit, jestli issues nevznikly přes aplikaci (gh api selhalo)';
                 break 2;
             }
             if ($data === []) {
@@ -353,7 +375,12 @@ function slugRepozitare(string $koren): ?string
 }
 
 /** Issues i s komentáři. Null, když gh selže. */
-function nactiIssues(string $slug, bool $jenOtevrene): ?array
+/**
+ * Seznam issues přes gh. Při neúspěchu vrátí null a do $chyba napíše proč,
+ * včetně první řádky chybového výstupu gh: "nemám přístup" a "gh tu není"
+ * se musí dát rozlišit, ne obojí schovat za zelenou.
+ */
+function nactiIssues(string $slug, bool $jenOtevrene, ?string &$chyba = null): ?array
 {
     $stav = $jenOtevrene ? 'open' : 'all';
     $prikaz = sprintf(
@@ -362,16 +389,35 @@ function nactiIssues(string $slug, bool $jenOtevrene): ?array
         $stav
     );
 
-    $vystup = [];
-    $kod = 0;
-    exec($prikaz . (PHP_OS_FAMILY === 'Windows' ? ' 2>NUL' : ' 2>/dev/null'), $vystup, $kod);
+    $soubor = tempnam(sys_get_temp_dir(), 'gh');
+    $proces = proc_open($prikaz, [1 => ['pipe', 'w'], 2 => ['file', $soubor, 'w']], $roury);
+    if (!is_resource($proces)) {
+        $chyba = 'nepodařilo se spustit gh';
+        @unlink($soubor);
+
+        return null;
+    }
+    $vystup = (string) stream_get_contents($roury[1]);
+    fclose($roury[1]);
+    $kod = proc_close($proces);
+    $chybovy = trim((string) @file_get_contents($soubor));
+    @unlink($soubor);
+
     if ($kod !== 0) {
+        $radek = $chybovy === '' ? 'bez hlášky' : strtok($chybovy, "\n");
+        $chyba = sprintf('gh issue list skončil kódem %d (%s)', $kod, trim((string) $radek));
+
         return null;
     }
 
-    $data = json_decode(implode("\n", $vystup), true);
+    $data = json_decode($vystup, true);
+    if (!is_array($data) || ($data !== [] && !array_is_list($data))) {
+        $chyba = 'gh vrátil odpověď, která není seznam issues';
 
-    return is_array($data) ? $data : null;
+        return null;
+    }
+
+    return $data;
 }
 
 /** Cesty ke snímkům zmíněné v textu. */

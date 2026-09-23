@@ -10,16 +10,26 @@ hlavní větev:     main
 
 ## Co je hotové
 
-- `kontrola-readme.php` ve verzi 2.0.0, čisté PHP bez závislostí
-- `kontrola-dokumentace.php` ve verzi 1.4.1, zapíná se přihlášením,
-  složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení
-  a neplatné UTF-8 hlásí jako chybu, ne jako důvod k přeskočení. Když zná
+- `kontrola-readme.php` ve verzi 2.1.0, čisté PHP bez závislostí
+- `kontrola-dokumentace.php` ve verzi 1.6.0, zapíná se přihlášením,
+  složku `docs/` prochází rekurzivně včetně podsložek. Vadné nastavení,
+  neplatné UTF-8, chybějící `docs/` u zapnuté kontroly, neexistující cesta
+  i neznámý základ rozsahu jsou chyba, ne důvod k přeskočení. Když zná
   pushovaný commit, ověří, že pracovní strom v čtených cestách sedí
 - `stav-projektu.php`, generátor bloku se skutečnými čísly. Hlavní větev
-  bere z repozitáře, ne z větve, na které se zrovna stojí
-- `kontrola-migraci.php` ve verzi 1.0.0, zapíná se přihlášením přes
+  bere z repozitáře, ne z větve, na které se zrovna stojí; u mobilní
+  aplikace bere verzi z `app.json`, ne z `package.json`
+- `kontrola-migraci.php` ve verzi 1.1.0, zapíná se přihlášením přes
   `"migrace-kontrola": true`. Hlídá tvar migrací, přehled, neměnnost hotové
-  migrace a to, že dávka měnící schéma migraci přidá
+  migrace (změnu, smazání i přejmenování) a to, že dávka měnící schéma
+  migraci přidá
+- `kontrola-issues.php` ve verzi 1.9.0. Když issues nepřečte (chybí gh,
+  přihlášení nebo `issues: read` v tokenu), neprojde; dřív skončila zeleně
+- `tests/spust.php`, 38 regresních případů. Každá díra z auditu 23. 9. 2026
+  má případ, který ji shodí; běží v CI nastroje i v pre-push hooku
+- `tests/kompatibilita.php` pustí kontroly z pracovního stromu proti výchozí
+  větvi všech projektů, které je volají. Pre-push hook nepustí změnu pravidla,
+  kvůli které by některý projekt spadl
 - `prehled-migraci.php`, generátor přehledu migrací do `db/prehled.md`
 - `sablony/migrace.php`, spouštěč migrací k okopírování do projektu:
   pustí nespuštěné migrace, zapíše je do tabulky `migrace` a při chybě
@@ -128,7 +138,9 @@ od vlastníka a spolupracovníků: repozitáře jsou zčásti veřejné a běh s
 do issues nemá jít spustit zvenčí. Zavřené issue má checklist odškrtaný, komentáře mají
 do pěti řádků, nikde se nepíše, čím se text psal, a snímky před a po leží
 v `docs/snimky/<číslo>-<název>/`. Hlídá to `kontrola-issues.php`, která běží
-v kontrolách na GitHubu při pushi a jednou denně.
+v kontrolách na GitHubu při pushi. Denní běh zrušila 20. 9. 2026 N21,
+workflow nad událostmi `issues` teď reaguje i na změnu štítků, odpovědného
+a znovuotevření a přísnost bere ze skutečného stavu issue, ne z události.
 
 ## Standard migrací
 
@@ -149,3 +161,12 @@ nezapojují, pravidla si nese framework.
   chybu jen nahlásí po faktu. Zastavit push umí jen pre-push hook. Ochranu
   větví zadavatel 16. 9. 2026 odmítl, pull requesty schvalovat nechce (N16),
   takže to tak zůstane.
+- **Nasazení ale na kontroly čeká.** Od 23. 9. 2026 volá `deploy.yml` ve
+  třech webech stejné kontroly jako svůj první job a nahrává až po jejich
+  úspěchu (N32). Nouzové nasazení bez kontrol jde jen ručním spuštěním
+  s volbou `bez_kontrol`.
+- **Změna pravidla platí všude hned.** Před pushem do nastroje proto hook
+  pustí `tests/kompatibilita.php`; když by projekt spadl, opraví se ve stejné
+  dávce. Změna, kterou projekt splnit nemůže, dokud nevyjde nová verze
+  kontrol (třeba jiný zdroj verze v generátoru), se pushuje v pořadí:
+  nejdřív nastroje, hned potom projekt.

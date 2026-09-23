@@ -19,6 +19,11 @@ on:
 jobs:
   tvar:
     runs-on: ubuntu-24.04
+    # Založení issue se štítkem a odpovědným pošle naráz tři události.
+    # Platí poslední, starší běh se zruší, ať se štítek nepřehazuje.
+    concurrency:
+      group: tvar-issue-${{ github.repository }}-${{ github.event.issue.number }}
+      cancel-in-progress: true
 
     steps:
       - name: Stáhnout kontrolu
@@ -42,7 +47,11 @@ jobs:
           # Pole, ne řetězec: prázdný seznam štítků by se bez uvozovek ztratil
           # a PHP by za hodnotu vzalo další přepínač.
           ARGY=(--stitky "$STITKY" --odpovedni "$ODPOVEDNI")
-          if [ "$AKCE" = "closed" ]; then ARGY+=(--zavrene); fi
+          # Přísnost podle skutečného stavu, ne podle události: zavřené issue,
+          # kterému někdo upraví text nebo štítek, pořád musí mít hotový
+          # checklist. Dřív se to hlídalo jen v okamžiku zavření (N32).
+          STAV=$(gh issue view "$CISLO" --json state --jq .state)
+          if [ "$STAV" = "CLOSED" ]; then ARGY+=(--zavrene); fi
           if php .nastroje/kontrola-tvaru-issue.php telo.md "${ARGY[@]}" 2> nalezy.txt; then
             echo "sedi=ano" >> "$GITHUB_OUTPUT"
           else

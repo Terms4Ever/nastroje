@@ -52,9 +52,13 @@ v sekci `## 📚 Dokumentace`.
 
 - `kontroly.yml` - volá `Terms4Ever/nastroje/.github/workflows/readme.yml@main`,
   práva `contents: read` a `issues: read`
-- `tvar-issue.yml` - volá `issue-tvar.yml@main` nad událostí `issues`, práva
-  `issues: write`, jen pro autory se vztahem k repozitáři
-- `deploy.yml` - kontrola syntaxe PHP, pak FTPS nahrání
+- `tvar-issue.yml` - volá `issue-tvar.yml@main` nad událostí `issues` (typy
+  `opened, edited, closed, reopened, labeled, unlabeled, assigned,
+  unassigned`), práva `issues: write`, jen pro autory se vztahem k repozitáři
+- `deploy.yml` - první job volá `readme.yml@main` (práva `contents: read`
+  a `issues: read`), nasazení na něj čeká přes `needs`. Pak kontrola syntaxe
+  PHP a FTPS nahrání. `concurrency` s `cancel-in-progress: false`, ať druhý
+  push nepřeruší běžící přenos. Nouzové ruční spuštění s volbou `bez_kontrol`
 
 K tomu `.github/ISSUE_TEMPLATE/ukol.md` (vzor `sablony/issue-ukol.md`)
 a `config.yml` s `blank_issues_enabled: false`. Opiš je z vyridimestavbu.cz,

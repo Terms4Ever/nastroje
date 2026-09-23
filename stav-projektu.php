@@ -113,19 +113,23 @@ function vlozBlok(string $obsah, string $blok): string
 
 function zjistiVerzi(string $koren): ?string
 {
-    $balicek = $koren . '/package.json';
-    if (is_file($balicek)) {
-        $data = json_decode((string) file_get_contents($balicek), true);
-        if (is_array($data) && isset($data['version'])) {
-            return (string) $data['version'];
-        }
-    }
-
+    // U mobilní aplikace je verze aplikace v app.json, verze v package.json
+    // patří balíku a s tím, co je v obchodě, nemusí souhlasit. Dřív se četl
+    // package.json první, takže LabProtocol měl ve stavu 1.0.0 místo 1.0.2
+    // (audit 23. 9. 2026, N32).
     $app = $koren . '/app.json';
     if (is_file($app)) {
         $data = json_decode((string) file_get_contents($app), true);
         if (is_array($data) && isset($data['expo']['version'])) {
             return (string) $data['expo']['version'];
+        }
+    }
+
+    $balicek = $koren . '/package.json';
+    if (is_file($balicek)) {
+        $data = json_decode((string) file_get_contents($balicek), true);
+        if (is_array($data) && isset($data['version'])) {
+            return (string) $data['version'];
         }
     }
 

@@ -947,3 +947,70 @@ označilo štítkem `tvar nesedí` a napsalo přesný nález, po doplnění št�
 označení samo zmizelo, běh nad zavřením prošel. Workflow čte stav issue přes
 API, ne z těla události, takže vidí i štítek přidaný o vteřinu později.
 
+## N32 - Kontrola, která nemohla proběhnout, neprojde (23. 9. 2026)
+
+**Podnět.** Nezávislý audit od jiného agenta (16 tvrzení A01 až A16). Zadavatel:
+*„analyzuj a zjisti jestli to je pravdivé"*, pak *„Takže co z toho plánuješ
+opravit?"* Ověřeno proti dnešnímu stavu reprodukcemi v dočasných
+repozitářích; výsledek v `C:\laragon\www\audit-2026-09-23\`. Nepravdivé nebylo
+ani jedno tvrzení, dvě byla nadhodnocená, tři ve skutečnosti horší.
+
+**Rozhodnutí zadavatele.** Opravit celý plán. Nasazení tří webů bude čekat na
+kontroly, s nouzovou výjimkou. Profil prohlížeče v LabProtocolu se jen vyřadí
+ze sledování, historie se nepřepisuje.
+
+**Co bylo špatně v kontrolách a proč.** Společný kořen: kontrola, která neměla
+co zkontrolovat, skončila kódem 0. Přímý rozpor s pravidlem „nález nesmí
+projít tiše" z `AGENTS.md`.
+
+- **Zapnutá kontrola bez `docs/` prošla.** Existence složky se testovala dřív
+  než zapnutí.
+- **Neexistující cesta prošla** u dokumentace i migrací, u dokumentace i cesta
+  z Git Bashe (`/c/...`), kterou PHP na Windows nezná. Při ověřování auditu jsem
+  na to sám naletěl a málem vydal falešný nález.
+- **Nepřečtené issues prošly.** Chyba `gh`, nesmysl místo JSON i zamítnutý
+  přístup skončily zeleně. U Igrisu to běželo v provozu: log hlásil
+  „nepodařilo se načíst issues" a běh byl zelený, protože workflow nedávalo
+  tokenu `issues: read`.
+- **Neznámý základ rozsahu byl jen upozornění.** Pull request a nová větev
+  pravidla o dávce neuplatnily vůbec.
+- **Do `docs/` stačilo přidat obrázek**, nebo dokonce něco smazat, a pravidlo
+  o aktualizaci dokumentace bylo spokojené.
+- **Přejmenování hotové migrace prošlo.** Git ho hlásí jako `R100`, kontrola
+  znala jen `M` a `D`. Spouštěč přitom pozná hotovou migraci jen podle názvu,
+  otisk sice ukládá, ale nikdy neporovná.
+- **Generátor bral verzi z `package.json` dřív než z `app.json`**, u LabProtocolu
+  tak stav tvrdil 1.0.0 místo 1.0.2.
+- **Workflow issues reagovalo jen na text a zavření**, odebrání štítku druhu
+  (pravidlo N31) se nepoznalo, a přísnost bralo z události, ne ze stavu.
+- **Tenhle stav projektu tvrdil „jednou denně"**, přestože denní běh zrušila
+  N21. Pravidlo o pravdivé dokumentaci jsem porušil vlastním textem.
+
+**Proč to nikdo nechytil.** Kontroly neměly jediný test. CI je pouštělo samy na
+sebe, což ověří, že na čistém repozitáři projdou, ne že chybu chytí. Pravidlo
+„pravidlo bez testu neexistuje" stálo v `AGENTS.md` a nic ho nevynucovalo.
+
+**Co se změnilo.**
+
+- `tests/spust.php`: 38 případů, napřed napsaných tak, aby dnešní kontroly
+  shodily (15 padalo), teprve pak opravy. Běží v CI a v pre-push hooku.
+- Dokumentace 1.6.0, migrace 1.1.0, issues 1.9.0: neexistující cesta, chybějící
+  `docs/`, nepřečtené issues i neznámý základ jsou chyba. Za změnu dokumentace
+  se počítá jen přidaný nebo upravený `.md` mimo `snimky/` a `prilohy/`.
+- `readme.yml` určí rozsah i u pull requestu (základ PR) a nové větve
+  (společný předek s výchozí větví). Ověřeno nasucho na šesti situacích.
+- `issue-tvar.yml` bere přísnost ze stavu issue a souběžné běhy téhož issue
+  ruší; volající reagují i na štítky, odpovědného a znovuotevření.
+- Pre-push hook se při chybějícím PHP, skriptu nebo pravidlech commitů zastaví,
+  u nové větve měří od společného předka a u nastroje pustí testy
+  a `tests/kompatibilita.php`.
+
+**Kompatibilita našla dva projekty hned.** LabProtocol (blok verze po změně
+generátoru) a Igris, který by novými ani starými pravidly neprošel: chyběl
+`AGENTS.md` a v `docs/` leželo 25 obrázků. Igris to nesl od 20. 9., zelený běh
+byl ze 13:35 a pravidlo přibylo ve 20:28. Opraveno v projektech (R234 v Igrisu).
+
+**Co jsem vědomě nechal.** Ochrana větví (N16). Atomické přepnutí verze při
+nasazení: FTP účet nesmí zapisovat nad složku webu, takže vedle nejde nahrát
+nic. Červený běh workflow u issue s nálezem: signálem je štítek, červený běh
+by posílal e-mail při každé úpravě.
