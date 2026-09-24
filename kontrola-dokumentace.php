@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.7.1';
+const VERZE_DOKUMENTACE = '1.7.2';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -443,6 +443,12 @@ if (is_file($cestaClaude) && trim((string) file_get_contents($cestaClaude)) !== 
 // naráz a co přesně do dokumentu patří, kontrola stejně nepozná.
 
 $sledovane = souboryVGitu($koren);
+// Dokument se hledá v gitu i na disku. Kdo ho podle doporučení právě založil
+// a kontrolu pustil před commitem, dostával tutéž radu znovu (1.7.2).
+$znameDokumenty = array_values(array_unique(array_merge(
+    $sledovane,
+    array_map(static fn (string $cesta): string => nazevDokumentu($koren, $cesta), $dokumenty)
+)));
 $doporuceni = [];
 foreach (TEMATA_DOKUMENTU as [$tema, $proc, $vzorDokumentu, $navrh, $spoustece]) {
     $duvod = null;
@@ -461,14 +467,14 @@ foreach (TEMATA_DOKUMENTU as [$tema, $proc, $vzorDokumentu, $navrh, $spoustece])
     if ($duvod === null) {
         continue;
     }
-    $dokument = array_filter($sledovane, static fn (string $s): bool => preg_match($vzorDokumentu, $s) === 1);
+    $dokument = array_filter($znameDokumenty, static fn (string $s): bool => preg_match($vzorDokumentu, $s) === 1);
     if ($dokument === []) {
         $doporuceni[] = sprintf(
             'projekt %s (%s), chybí dokument o %s; založ %s (vzor sablony/docs/ v nastroje)',
             $proc,
             $duvod,
             $tema,
-            volneCislo($sledovane, $navrh)
+            volneCislo($znameDokumenty, $navrh)
         );
     }
 }

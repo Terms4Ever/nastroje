@@ -11,7 +11,7 @@ starému kódu padat (N32).
 
 | Oblast | Případů | Co shodí |
 |---|---|---|
-| dokumentace | 17 | chybějící `docs/`, úprava `AGENTS.md` není kód, neexistující cesta, dávka s kódem bez dokumentu, obrázek nebo smazání místo dokumentu, neznámý základ rozsahu, doporučení k nasazení a testům |
+| dokumentace | 18 | chybějící `docs/`, úprava `AGENTS.md` není kód, právě založený dokument umlčí doporučení, neexistující cesta, dávka s kódem bez dokumentu, obrázek nebo smazání místo dokumentu, neznámý základ rozsahu, doporučení k nasazení a testům |
 | zavření issue | 13 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po |
 | snímky | 9 | odkaz na větev místo commitu, snímek, který v commitu není, soubor, který není obrázek, stejný soubor před i po |
 | hook | 9 | zakládání bez štítku a odpovědného, vložené `--body`, holé zavření issue |

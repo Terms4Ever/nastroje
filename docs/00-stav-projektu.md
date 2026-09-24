@@ -14,7 +14,7 @@ hlavní větev:     main
 | Nástroj | Verze | Podrobně |
 |---|---|---|
 | `kontrola-readme.php` | 2.1.0 | README |
-| `kontrola-dokumentace.php` | 1.7.1 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
+| `kontrola-dokumentace.php` | 1.7.2 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
 | `kontrola-migraci.php` | 1.1.0 | [06 standard migrací](06-standard-migraci.md) |
 | `kontrola-issues.php` | 1.10.0 | [05 standard issues](05-standard-issues.md) |
 | `kontrola-tvaru-issue.php`, `hooky/tvar-issue.ps1` | - | [05 standard issues](05-standard-issues.md) |
@@ -22,7 +22,7 @@ hlavní větev:     main
 | `stav-projektu.php`, `prehled-migraci.php` | - | generátory bloků |
 | `sablony/migrace.php` | - | [06 standard migrací](06-standard-migraci.md) |
 | `hooky/tajemstvi.ps1`, `hooky/trezor-spravce.ps1` | - | [07 trezor hesel](07-trezor-hesel.md) |
-| `tests/spust.php` (73 případů), `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
+| `tests/spust.php` (74 případů), `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
 
 Kontroly končí chybou i tehdy, když nemohly proběhnout (chybí `docs/`,
 neexistuje cesta, gh nepřečte issues, neznámý základ rozsahu); dřív to byla

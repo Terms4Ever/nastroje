@@ -153,6 +153,17 @@ pripad('dokumentace: testy bez dokumentu o ověření dostanou doporučení', fu
     return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'docs/04-overeni.md');
 });
 
+pripad('dokumentace: právě založený dokument doporučení umlčí', function (): array {
+    // Agent dokument podle doporučení založí a kontrolu pustí znovu ještě
+    // před commitem. Dřív dostal tutéž radu, protože se hledalo jen v gitu.
+    $repo = novyProjekt([], ['tests/prvni.php' => "<?php\n"]);
+    zapis($repo, 'docs/04-overeni.md', "# Ověření\n\nTesty v tests/.\n");
+    $vysledek = php('kontrola-dokumentace.php', $repo);
+    $ok = $vysledek['kod'] === 0 && !str_contains($vysledek['vystup'], 'doporučení');
+
+    return [$ok, $ok ? '' : "kód {$vysledek['kod']}\n{$vysledek['vystup']}"];
+});
+
 pripad('dokumentace: doporučení nenavrhne obsazené číslo dokumentu', function (): array {
     $repo = novyProjekt([], [
         'tests/prvni.php' => "<?php\n",

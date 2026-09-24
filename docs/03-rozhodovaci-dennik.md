@@ -1125,3 +1125,9 @@ projektů zastavil pre-push hook úpravu `AGENTS.md`: kontrola ji počítala jak
 změnu kódu a chtěla k ní dokument v `docs/`. Dokumenty dovolené v kořeni
 (`README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE.md`, `CHANGELOG.md`) jsou
 dokumentace; od 1.7.1 se za kód nepočítají. Případ v testech proti 1.7.0 padal.
+
+**Doplněno téhož dne: doporučení vidí i necommitnutý dokument.** Ve steelsetu
+jsem podle doporučení založil `docs/04-overeni.md`, pustil kontrolu před
+commitem a dostal tutéž radu znovu: doporučení hledalo dokument jen v gitu,
+počet dokumentů přitom bral disk. Od 1.7.2 se dokument hledá v obou, stejně
+i volné číslo. Případ v testech proti 1.7.1 padal.
