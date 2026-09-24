@@ -92,6 +92,7 @@ pro vestavěný server, jinak vrací hezké adresy 404.
 ## Ověření, než řekneš hotovo
 
 ```bash
+php /c/laragon/www/nastroje/kontrola-pravidel.php . --online
 php /c/laragon/www/nastroje/kontrola-readme.php .
 php /c/laragon/www/nastroje/kontrola-dokumentace.php .
 php /c/laragon/www/nastroje/kontrola-issues.php .
@@ -100,7 +101,7 @@ php /c/laragon/www/nastroje/kontrola-migraci.php .   # jen s databází
 
 Po pushi:
 
-- běh **Kontroly** na GitHubu je zelený (ověř, nepředpokládej)
+- běh **Pravidla / nastroje** na GitHubu je zelený (ověř, nepředpokládej)
 - běh **Deploy** prošel a web dál funguje: titulní stránka, formulář,
   přihlášení do administrace
 - `curl -s -o /dev/null -w '%{http_code}' https://[adresa]/docs/00-stav-projektu.md`
@@ -131,7 +132,7 @@ Po pushi:
 ## Hotovo, když
 
 - [ ] repozitář má v kořeni jen povolené soubory a v `docs/` stav i deník
-- [ ] všechny čtyři kontroly lokálně projdou
-- [ ] Kontroly i Deploy na GitHubu jsou zelené
+- [ ] všech pět kontrol lokálně projde
+- [ ] běhy Pravidla / nastroje i Deploy na GitHubu jsou zelené
 - [ ] web po nasazení funguje a dokumentace z něj není čitelná
 - [ ] v deníku je záznam o přesunu: odkud, co se nepřeneslo a proč

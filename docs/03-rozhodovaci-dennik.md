@@ -1158,3 +1158,10 @@ zapojení. Přesný výsledný rozsah testů uvádí dokument 04 a důkazy issue
 README jsou ve složce `docs/snimky/3-sada-pravidel`. Nový odznak byl ověřen přímo
 na GitHubu. Výsledek kontrol na konkrétním commitu a čitelné srovnání
 před a po jsou doloženy v issue.
+
+**Doplněno téhož dne: starý název workflow.** Přejmenování z `Kontroly` na
+`Pravidla / nastroje` nechalo starý název v šabloně zadání nového projektu
+(běh a checklist „Kontroly i Deploy"), v dokumentech o ověření onlinefakturuj
+a steelsetu a v globálních pokynech agenta. Šablona navíc v bloku kontrol
+neměla `kontrola-pravidel.php` a počítala se čtyřmi kontrolami místo pěti.
+Srovnáno; globální pokyny dostaly i krátký popis výběru sady.
