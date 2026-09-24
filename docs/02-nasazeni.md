@@ -58,6 +58,11 @@ Když chybí PHP, skript kontroly nebo pravidla commitů, push se zastaví
 Projekty s vlastní cestou hooků (Igris, nastroje-prace) globální hooky
 nespouštějí; mají vlastní, které kontroly volají samy.
 
+Když vlastní hook neběží, protože klon ještě neprošel `npm install`, spustí
+se místo něj globální `pre-push`. U projektu s `tools/git-hooks/pre-push` push
+zastaví: jinak by prošel jen společnými kontrolami, bez testů a razítek
+projektu (N36, adversariální běh Igrisu R238).
+
 ## 4. Hook Claude Code
 
 `hooky/tvar-issue.ps1` je zapsaný v `~/.claude/settings.json` jako

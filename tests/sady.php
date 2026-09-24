@@ -149,8 +149,8 @@ function projektSeStarymNazvem(): string
     return $root;
 }
 
-pripad('sady: starý název Pravidla / nastroje projde jen během přechodu (N36)', fn() =>
-    ocekavej(vysledekSady(projektSeStarymNazvem()), 0));
+pripad('sady: starý název Pravidla / nastroje už neprojde (N36)', fn() =>
+    ocekavej(vysledekSady(projektSeStarymNazvem()), 1, 'Kontroly'));
 pripad('sady: společná kontrola bez názvu Pravidla nastroje neprojde (N36)', function (): array {
     $root = projektSeSadou();
     $path = '.github/workflows/kontrola.yml';

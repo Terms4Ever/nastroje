@@ -52,9 +52,7 @@ vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapo
 
 ## Co se dělá
 
-Přejmenování kontrol na GitHubu (N36). Kontrola sady zatím přijímá starý
-název workflow `Pravidla / nastroje` i nový `Kontroly`; po přejmenování
-všech zapojených projektů starý přestane platit.
+Nic rozdělaného.
 
 ## Co je dál
 

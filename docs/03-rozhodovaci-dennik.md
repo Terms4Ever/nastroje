@@ -1200,3 +1200,16 @@ kompatibilitu nepustil ani ji. Po přejmenování projektů výjimka zmizí.
 (společná kontrola bez názvu, pod názvem cizí sady, v nasazení bez názvu
 i s ním, starý a nový název zároveň), přechodný případ se starým názvem
 prošel. Po úpravě `src/sada-pravidel.php` prošlo všech 45 případů sady.
+
+**Doplněno téhož dne: přechod skončil.** Přejmenovaných je všech sedm
+zapojených projektů a jejich běhy `Kontroly` (u webů i `Nasazení`) na GitHubu
+prošly s novými názvy. Kontrola sady proto starý název `Pravidla / nastroje`
+už nepřijímá; případ v testech proti přechodné verzi padal.
+
+Při pushi Igrisu vyžadoval jeho postup adversariální běh (R181). Ten našel dvě
+díry v branách, které s přejmenováním nesouvisely, ale bez opravy se pushovat
+nesmělo (Igris R238). Jedna se týkala i nastroje: čerstvý klon projektu
+s vlastním hookem bez `npm install` pouštěl místo něj jen globální `pre-push`,
+tedy bez testů a razítek projektu. Globální `pre-push` teď u projektu
+s `tools/git-hooks/pre-push` push zastaví; ověřeno v klonu Igrisu s vypnutým
+`core.hooksPath`. Hook není v gitu, popis je v `02-nasazeni.md`.

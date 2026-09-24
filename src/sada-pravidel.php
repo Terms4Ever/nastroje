@@ -70,15 +70,11 @@ final class SadaPravidel
                 }
             }
         }
-        // Přechod N36: projekt, který se ještě nepřejmenoval, projde se starým
-        // názvem workflow. Výjimka zmizí, jakmile budou přejmenované všechny
-        // zapojené projekty; do té doby by nová kontrola shodila jejich CI.
-        $prechod = $primarni === [] && count($predN36) === 1;
-        if ($prechod) {
-            $primarni = $predN36;
-        } elseif ($predN36 !== []) {
+        // Starý název z N35 se od N36 nepřijímá. Přechod, po který projde, trval
+        // jen do přejmenování všech zapojených projektů (24. 9. 2026).
+        if ($predN36 !== []) {
             throw new RuntimeException('Právě jeden primární workflow musí mít název ' . self::nazevWorkflow($sada)
-                . '; starý název Pravidla / nastroje vedle něj nepatří.');
+                . '; starý název Pravidla / nastroje od N36 neplatí.');
         }
         if (count($primarni) !== 1) {
             throw new RuntimeException('Právě jeden primární workflow musí mít název ' . self::nazevWorkflow($sada) . '.');
@@ -97,9 +93,7 @@ final class SadaPravidel
             if (!$nalezeno) {
                 throw new RuntimeException('Chybí skutečné zapojení sdíleného readme.yml@main v primárním workflow.');
             }
-            if (!$prechod) {
-                self::nazvySpolecneKontroly($vsechny, $sada);
-            }
+            self::nazvySpolecneKontroly($vsechny, $sada);
         } else {
             $central = !is_file($root . '/nastroje-prace.lock.json');
             $path = $central ? 'scripts/ci.php' : '.nastroje-prace/scripts/ci.php';
