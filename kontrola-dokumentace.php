@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.7.0';
+const VERZE_DOKUMENTACE = '1.7.1';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -566,6 +566,11 @@ function normalizuj(string $text): string
 
 function jeKod(string $cesta): bool
 {
+    // Dokumenty dovolené v kořeni jsou dokumentace, ne kód. Dřív se úprava
+    // AGENTS.md počítala jako kód a chtěla změnu v docs/ (N34).
+    if (in_array($cesta, SOUBORY_V_KORENI, true)) {
+        return false;
+    }
     foreach (NENI_KOD as $vyjimka) {
         // Predpona jen u slozky (konci lomitkem). U souboru presna shoda:
         // str_starts_with pro vsechno vyradilo i LICENSE.php nebo

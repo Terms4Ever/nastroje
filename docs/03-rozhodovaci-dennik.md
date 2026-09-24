@@ -1119,3 +1119,9 @@ práce, předání, ověření, nový projekt) a krátký stav.
 **Ověřeno.** 72 případů, pět nových na doporučení (nasazení, ověření,
 skript v `package.json`, obsazené číslo, mlčení s dokumentem); proti 1.6.1
 tři padaly. Doporučení v osmi repozitářích našla devět chybějících dokumentů.
+
+**Doplněno téhož dne: `AGENTS.md` není kód.** Při doplňování dokumentů do
+projektů zastavil pre-push hook úpravu `AGENTS.md`: kontrola ji počítala jako
+změnu kódu a chtěla k ní dokument v `docs/`. Dokumenty dovolené v kořeni
+(`README.md`, `AGENTS.md`, `CLAUDE.md`, `LICENSE.md`, `CHANGELOG.md`) jsou
+dokumentace; od 1.7.1 se za kód nepočítají. Případ v testech proti 1.7.0 padal.

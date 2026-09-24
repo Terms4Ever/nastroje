@@ -121,6 +121,15 @@ pripad('dokumentace: nulový základ se ohlásí, ne zamlčí', function (): arr
     );
 });
 
+pripad('dokumentace: úprava AGENTS.md není změna kódu', function (): array {
+    $repo = novyProjekt();
+    $zaklad = git($repo, 'rev-parse', 'HEAD');
+    pripis($repo, 'AGENTS.md', "\nDokumenty: stav a deník.\n");
+    commit($repo, 'Pokyny pro agenty doplněné');
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 0, 'v pořádku');
+});
+
 pripad('dokumentace: nasazení bez dokumentu o nasazení dostane doporučení', function (): array {
     $repo = novyProjekt([], ['.github/workflows/deploy.yml' => "name: Deploy\n"]);
 
