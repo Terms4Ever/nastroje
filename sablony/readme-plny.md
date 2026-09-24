@@ -8,6 +8,7 @@ a čím se liší. Tři až pět řádků, ne víc - kdo chce podrobnosti, čte 
 ![PHP](https://img.shields.io/badge/PHP-8.3+-777BB4?logo=php&logoColor=white)
 ![MySQL](https://img.shields.io/badge/MariaDB-11.2+-003545?logo=mariadb&logoColor=white)
 ![License](https://img.shields.io/badge/license-proprietary-red)
+[![Pravidla: nastroje](https://img.shields.io/badge/pravidla-nastroje-0969da)](https://github.com/Terms4Ever/nastroje)
 
 ---
 

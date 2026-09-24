@@ -1,8 +1,15 @@
 # nastroje - pokyny pro agenty
 
+Sada pravidel: `nastroje` (určuje `.pravidla.json`).
+Zdroj pravidel: https://github.com/Terms4Ever/nastroje.
+
+Nejdřív přečti výběr sady v projektu. Tato sada patří osobním projektům;
+pracovní projekty vybírají nastroje-prace a řídí se její připnutou kopií.
+Použití knihovny z tohoto projektu uvnitř pracovní sady její výběr nemění.
+
 Sdílené kontroly pro repozitáře Terms4Ever: README, dokumentace, migrace
 databáze a tvar issues. Pouští je pre-push hook lokálně a workflow `Kontroly`
-na GitHubu, takže pravidla žijí na jednom místě a mění se tady.
+na GitHubu pod názvem `Pravidla / nastroje`, takže pravidla žijí na jednom místě a mění se tady.
 
 Obecná pravidla (commity, README, dokumentace, issues, migrace) jsou
 v `~/.claude/CLAUDE.md` a nepřepisují se sem.
@@ -49,6 +56,7 @@ Kontroly se pouští samy na sebe, proto po každé změně:
 php -l <zmeneny-soubor>.php
 php tests/spust.php
 php kontrola-readme.php .
+php kontrola-pravidel.php . --online
 php kontrola-dokumentace.php .
 php kontrola-issues.php .
 ```

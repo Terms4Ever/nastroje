@@ -13,7 +13,8 @@ hlavní větev:     main
 
 | Nástroj | Verze | Podrobně |
 |---|---|---|
-| `kontrola-readme.php` | 2.1.0 | README |
+| `kontrola-readme.php` | 2.2.0 | README a místní označení osobní sady |
+| `kontrola-pravidel.php`, `src/sada-pravidel.php` | 1 | výběr sady, README, AGENTS, workflow, online topic (N35) |
 | `kontrola-dokumentace.php` | 1.7.2 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
 | `kontrola-migraci.php` | 1.1.0 | [06 standard migrací](06-standard-migraci.md) |
 | `kontrola-issues.php` | 1.10.0 | [05 standard issues](05-standard-issues.md) |
@@ -22,7 +23,7 @@ hlavní větev:     main
 | `stav-projektu.php`, `prehled-migraci.php` | - | generátory bloků |
 | `sablony/migrace.php` | - | [06 standard migrací](06-standard-migraci.md) |
 | `hooky/tajemstvi.ps1`, `hooky/trezor-spravce.ps1` | - | [07 trezor hesel](07-trezor-hesel.md) |
-| `tests/spust.php` (74 případů), `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
+| `tests/spust.php`, `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
 
 Kontroly končí chybou i tehdy, když nemohly proběhnout (chybí `docs/`,
 neexistuje cesta, gh nepřečte issues, neznámý základ rozsahu); dřív to byla
@@ -44,6 +45,10 @@ nebo testům, když ho projekt nemá (N34).
 
 `nastroje-prace` (osobní nadstavba pro pracovní projekty) společné kontroly
 nevolá, má je připnuté zámkem na konkrétní commit.
+
+Tabulka je přehled. Výběr pravidel vždy určuje `.pravidla.json` v konkrétním
+projektu. Těchto osm projektů vybírá `nastroje`, samostatné nastroje-prace
+vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapojují.
 
 ## Co se dělá
 

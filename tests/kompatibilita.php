@@ -21,7 +21,7 @@ declare(strict_types=1);
 
 const NASTROJE = __DIR__ . '/..';
 const ODKAZ = 'Terms4Ever/nastroje/.github/workflows/readme.yml';
-const KONTROLY = ['kontrola-readme.php', 'kontrola-dokumentace.php', 'kontrola-migraci.php', 'kontrola-issues.php'];
+const KONTROLY = ['kontrola-pravidel.php', 'kontrola-readme.php', 'kontrola-dokumentace.php', 'kontrola-migraci.php', 'kontrola-issues.php'];
 
 $seznam = spust(['gh', 'repo', 'list', 'Terms4Ever', '--limit', '100', '--json', 'name', '--jq', '.[].name']);
 if ($seznam['kod'] !== 0) {
@@ -63,7 +63,9 @@ foreach ($repozitare as $nazev) {
     $overeno++;
     $nalezy = [];
     foreach (KONTROLY as $kontrola) {
-        $vysledek = spust([PHP_BINARY, NASTROJE . '/' . $kontrola, $cil]);
+        $prikaz = [PHP_BINARY, NASTROJE . '/' . $kontrola, $cil];
+        if ($kontrola === 'kontrola-pravidel.php') { $prikaz[] = '--online'; }
+        $vysledek = spust($prikaz);
         if ($vysledek['kod'] !== 0) {
             $nalezy[$kontrola] = $vysledek['vystup'];
         }

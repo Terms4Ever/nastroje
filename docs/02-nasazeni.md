@@ -68,14 +68,42 @@ nebo uvozovkou; text, který ho jen zmiňuje, nezastaví.
 
 ## Zapojení nového projektu
 
-1. `.readme-kontrola.json` s profilem `plny` a zapnutými kontrolami, které
+1. `.pravidla.json` podle `sablony/pravidla.json`, jediná sada `nastroje`.
+   Úvod README má odznak ze vzoru a AGENTS deklaraci stejné sady se zdrojem.
+2. `.readme-kontrola.json` s profilem `plny` a zapnutými kontrolami, které
    projekt splní (`docs-kontrola`, případně `migrace-kontrola`, `provoz`).
-2. `kontroly.yml` a `tvar-issue.yml` opsané z vyridimestavbu, u webu
-   `deploy.yml` s jobem `kontroly`.
-3. `.github/ISSUE_TEMPLATE/ukol.md` a `config.yml` z `sablony/`.
-4. Dokumenty podle [08 soubory a dokumentace](08-soubory-a-dokumentace.md).
-5. `php tests/kompatibilita.php` v nastroje: projekt se objeví v seznamu
+3. `kontroly.yml` a `tvar-issue.yml` opsané z vyridimestavbu, u webu
+   `deploy.yml` s jobem `kontroly`. Primární workflow má jméno
+   `Pravidla / nastroje`, soubor může mít dosavadní jméno (Igris `kontrola.yml`).
+4. GitHub topic `pravidla-nastroje`, ostatní topics zachovat. Topic pracovní sady sem nepatří.
+5. `.github/ISSUE_TEMPLATE/ukol.md` a `config.yml` z `sablony/`.
+6. Dokumenty podle [08 soubory a dokumentace](08-soubory-a-dokumentace.md).
+7. `php kontrola-pravidel.php <projekt> --online` a `php tests/kompatibilita.php`
+   v nastroje: projekt se objeví v seznamu
    a musí projít.
 
 Celé zadání pro agenta, který přebírá web z FTP, je v
 `sablony/zadani-novy-projekt.md`.
+
+## Jedna primární sada a její závislosti
+
+Zdroj výběru je verzovaný `.pravidla.json`, nikoli odhad podle jména projektu.
+README, začátek AGENTS, display name workflow a GitHub topic tento výběr ukazují.
+Kontrola vyžaduje jejich shodu a skutečně zapojený kontrolní job.
+Osobní projekty stále volají sdílené workflow větví `@main`.
+
+Pracovní projekty vybírají `nastroje-prace` a používají její postup napojení
+s přesnou kopií kontrol. `upstream.lock.json` uvnitř pracovní sady připíná
+knihovnu nastroje; neznamená přihlášení k druhé primární sadě.
+Přímé osobní workflow v pracovní sadě kontrola odmítne.
+
+Online kontrola čte skutečné GitHub topics a při nedostupném API končí chybou.
+Samotná změna topicu workflow nespustí: ověří se při dalším běhu kontroly
+nebo ručně příkazem s `--online`. Žádný denní plán se nezavádí.
+Lokální kontrola README ověřuje označení a zapojení osobních projektů;
+téma na GitHubu ověřuje samostatný online příkaz.
+
+Kontrola rozpoznává běžné dvoumezerové YAML šablony. Komentáře, blokové
+skaláry a text příkazu uvnitř echo nepočítá jako zapojení. Nejde o úplný
+interpret GitHub Actions ani ochranu proti vlastníkovi, který kontrolu odstraní.
+Výjimky v pravidlech a schvalování se tímto úkolem nemění.

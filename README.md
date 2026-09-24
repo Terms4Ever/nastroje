@@ -2,13 +2,14 @@
 
 **Společná pravidla pro repozitáře Terms4Ever**
 
-Jedno místo, kde žijí pravidla pro README všech mých projektů, a jeden skript,
+Jedno místo, kde žijí pravidla pro README osobních projektů, a jeden skript,
 který je umí vynutit. Stejný skript pouští pre-push hook na počítači i kontrola
 na GitHubu, takže se pravidla mění na jednom místě a platí všude.
 
 ![PHP](https://img.shields.io/badge/PHP-8.3+-777BB4?logo=php&logoColor=white)
 ![Bez závislostí](https://img.shields.io/badge/z%C3%A1vislosti-%C5%BE%C3%A1dn%C3%A9-success)
 ![License](https://img.shields.io/badge/license-proprietary-red)
+[![Pravidla: nastroje](https://img.shields.io/badge/pravidla-nastroje-0969da)](https://github.com/Terms4Ever/nastroje)
 
 ---
 
@@ -18,9 +19,11 @@ Sedm projektů mělo sedm různých README. Tytéž sekce se jmenovaly pokaždé
 (`Stack`, `Tech Stack`, `Použité technologie`), dva projekty README neměly
 vůbec a jeden popisoval instalaci, která nefungovala.
 
-Kontrola hlídá pět věcí:
+Kontrola hlídá šest věcí:
 
 - **Kostru** - povinné sekce, jejich názvy a pořadí.
+- **Příslušnost pravidel** - jedinou sadu v `.pravidla.json`, shodný odznak,
+  pokyny agenta, skutečné zapojení workflow a odpovídající GitHub topic.
 - **Pravdivost** - každá cesta a odkaz, o kterých README mluví, musí existovat.
 - **Aktualizaci** - dávka, která sáhla na kód, musí sáhnout i na dokumentaci.
 - **Migrace databáze** - změna schématu má vlastní soubor ve složce migrací,
@@ -53,6 +56,8 @@ takže kontrola na GitHubu nepotřebuje jediný instalační krok.
 
 ```
 nastroje/
+├── .pravidla.json               # jediná primární sada pro tento projekt
+├── kontrola-pravidel.php        # výběr sady a shoda označení, online i topic
 ├── kontrola-readme.php          # kontrola README
 ├── kontrola-dokumentace.php     # kontrola složky docs/
 ├── kontrola-migraci.php         # kontrola migrací databáze
@@ -60,6 +65,7 @@ nastroje/
 ├── kontrola-tvaru-issue.php     # kontrola jednoho těla, než issue vznikne
 ├── zavrit-issue.php             # zavření issue jen s důkazem ze zeleného CI
 ├── src/tvar-issue.php           # pravidla tvaru issue na jednom místě
+├── src/sada-pravidel.php        # společná kontrola označení obou sad
 ├── hooky/tvar-issue.ps1         # hook, který špatné issue nepustí vzniknout
 ├── hooky/tajemstvi.ps1          # trezor přihlašovacích údajů pro agenty
 ├── hooky/trezor-spravce.ps1     # okno trezoru, spouští se zástupcem z plochy
@@ -81,6 +87,12 @@ nastroje/
 ---
 
 ## 🏷️ Profily
+
+Každý zapojený projekt vybírá v `.pravidla.json` právě jednu sadu. Osobní
+projekty mají `nastroje`, topic `pravidla-nastroje` a workflow `Pravidla / nastroje`.
+Pracovní projekty mají `nastroje-prace` a její vlastní postup napojení.
+Připnutá knihovna nastroje uvnitř pracovní sady není druhá primární sada.
+Rozdíl a kontrola jsou popsány v `docs/02-nasazeni.md`.
 
 Každý projekt si v kořeni drží `.readme-kontrola.json`:
 
@@ -194,6 +206,7 @@ Stav vždy platný je v `docs/00-stav-projektu.md`, ne v tomhle souboru.
 git clone https://github.com/Terms4Ever/nastroje.git
 cd nastroje
 php kontrola-readme.php ../nazev-projektu
+php kontrola-pravidel.php ../nazev-projektu --online
 ```
 
 Bez parametru se kontroluje aktuální adresář. Návratový kód 0 znamená
@@ -203,7 +216,7 @@ v pořádku, 1 nálezy.
 
 ## 📦 Nasazení
 
-**Do projektu se to zapojí dvěma soubory.** Nastavením:
+**Projekt má výslovný výběr sady a společné workflow.** Nastavením README:
 
 ```json
 { "profil": "plny" }
@@ -212,12 +225,19 @@ v pořádku, 1 nálezy.
 a workflow, který zavolá kontrolu odsud:
 
 ```yaml
-name: Kontroly
+name: Pravidla / nastroje
 on: [push, pull_request]
+permissions:
+  contents: read
+  issues: read
 jobs:
   readme:
     uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main
 ```
+
+Výběr v `.pravidla.json` je `{"sada":"nastroje"}`. V úvodu README je
+odznak s odkazem na tuto sadu, začátek AGENTS ji deklaruje a GitHub má topic
+`pravidla-nastroje`. Přesné vzory obsahuje složka `sablony/`.
 
 **Projekt, který nasazuje**, volá stejný workflow i jako první job
 svého workflow nasazení a nahrává až po jeho úspěchu:

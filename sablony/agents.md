@@ -1,5 +1,10 @@
 # <Projekt> - pokyny pro agenty
 
+Sada pravidel: `nastroje` (určuje `.pravidla.json`).
+Zdroj pravidel: https://github.com/Terms4Ever/nastroje.
+
+Před prací ověř výběr sady. Pracovní sada nastroje-prace se do tohoto projektu nepřimíchává.
+
 <Jedna až dvě věty: co projekt je, pro koho běží a kde.>
 
 Obecná pravidla (commity, README, dokumentace, issues, migrace) jsou

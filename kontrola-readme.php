@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE = '2.1.0';
+const VERZE = '2.2.0';
 
 /**
  * Povinné nadpisy podle profilu, v pořadí, v jakém musí v souboru stát.
@@ -67,6 +67,18 @@ final class Nalez
 $nalezy = [];
 
 $korenRepozitare = rtrim($argv[1] ?? getcwd(), "/\\");
+
+// Zapojené osobní projekty nesmí přijít o výběr sady ani při místní kontrole.
+// Pracovní sada používá tutéž knihovnu přes vlastní adaptér s očekáváním nastroje-prace.
+require_once __DIR__ . '/src/sada-pravidel.php';
+try {
+    if (\Terms4Ever\SadaPravidel::osobni($korenRepozitare)) {
+        \Terms4Ever\SadaPravidel::over($korenRepozitare, 'nastroje');
+    }
+} catch (Throwable $e) {
+    fwrite(STDERR, '  ' . $e->getMessage() . "\n");
+    exit(1);
+}
 
 // ---------------------------------------------------------------------------
 // Načtení nastavení a README

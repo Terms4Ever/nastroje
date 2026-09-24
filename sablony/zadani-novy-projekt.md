@@ -41,6 +41,7 @@ v `~/.claude/CLAUDE.md`.
 | `AGENTS.md` | podle vzoru `sablony/agents.md`, jen to, co je vlastní projektu |
 | `CLAUDE.md` | jediný řádek `@AGENTS.md` |
 | `.readme-kontrola.json` | `profil`, `provoz`, `cesty-bez-kontroly`, `docs-kontrola`, `docs-pomlcky`, `docs-vymahat-aktualizaci` |
+| `.pravidla.json` | jediný primární výběr `{"sada":"nastroje"}` podle `sablony/pravidla.json` |
 | `.gitignore` | soubory s hesly, `vendor/`, `.claude/settings.local.json` |
 
 **4. Dokumentace** do `docs/`: `00-stav-projektu.md` (živý stav, generovaný blok
@@ -51,7 +52,7 @@ v sekci `## 📚 Dokumentace`.
 **5. Workflow** do `.github/workflows/`:
 
 - `kontroly.yml` - volá `Terms4Ever/nastroje/.github/workflows/readme.yml@main`,
-  práva `contents: read` a `issues: read`
+  jméno `Pravidla / nastroje`, práva `contents: read` a `issues: read`
 - `tvar-issue.yml` - volá `issue-tvar.yml@main` nad událostí `issues` (typy
   `opened, edited, closed, reopened, labeled, unlabeled, assigned,
   unassigned`), práva `issues: write`, jen pro autory se vztahem k repozitáři
@@ -65,9 +66,13 @@ a `config.yml` s `blank_issues_enabled: false`. Opiš je z vyridimestavbu.cz,
 je to nejmenší projekt s kompletní sadou.
 
 **6. Nasazení nenahrává na web:** `docs/**`, `**/*.md`, `.github/**`, `tests/**`,
-`db/**`, `vendor/**`, soubory s hesly, `.readme-kontrola.json` ani router pro
+`db/**`, `vendor/**`, soubory s hesly, `.readme-kontrola.json`, `.pravidla.json` ani router pro
 lokální server. Co se jednou nahraje, zůstane na serveru, i když to pak
 z nasazení vyřadíš.
+
+Nastav GitHub topic `pravidla-nastroje`, zachovej ostatní topics a nepřidávej
+současně `pravidla-nastroje-prace`. README a AGENTS mají označení ze šablon.
+Před dokončením musí projít `php kontrola-pravidel.php <projekt> --online`.
 
 **7. Tajemství** (`FTP_HOST`, `FTP_USER`, `FTP_PASSWORD`, případně
 `MIGRACE_TOKEN`) nastavím v GitHubu já. Napiš mi, která přesně potřebuješ a jak

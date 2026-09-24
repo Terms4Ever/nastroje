@@ -1131,3 +1131,25 @@ jsem podle doporučení založil `docs/04-overeni.md`, pustil kontrolu před
 commitem a dostal tutéž radu znovu: doporučení hledalo dokument jen v gitu,
 počet dokumentů přitom bral disk. Od 1.7.2 se dokument hledá v obou, stejně
 i volné číslo. Případ v testech proti 1.7.1 padal.
+
+## N35 - Každý projekt vybírá jedinou sadu pravidel (24. 9. 2026)
+
+**Podnět.** Zadavatel chtěl jasně odlišit nastroje a nastroje-prace a poznat,
+které repozitáře se řídí kterou sadou. Návrh výběru v `.pravidla.json`,
+shodného topicu, README, AGENTS a názvu kontrol schválil: „Schvaluji, dobrý nápad proveď".
+
+**Rozhodnutí.** Osobní projekty vybírají `nastroje`, pracovní `nastroje-prace`.
+Výběr je právě jeden; odznak, deklarace agenta, skutečně zapojené workflow
+a online topic musí souhlasit. Osobní sdílené workflow zůstává na `@main`.
+Pracovní připnutá kopie a její upstream závislost nejsou druhá primární sada.
+Nemění se pravidla větví, soukromí, schvalování ani aplikační funkce.
+
+**Provedení.** Kontrola je v `src/sada-pravidel.php`, osobní příkaz
+`kontrola-pravidel.php` umí i online topic. Místní kontrola README ji volá
+u zapojených osobních projektů; sdílené workflow vždy i s online ověřením.
+Šablony a postup založení popisují celý výběr. Projektové změny se publikují
+před novou centrální kontrolou a ověří kompatibilitou.
+
+**Ověření.** Nejprve 18 červených případů bez implementace, po implementaci
+prošly. Doplněny případy CLI, chyb API, připnutého pracovního vstupu a falešného
+zapojení. Přesný výsledný rozsah testů uvádí dokument 04 a důkazy issue #3.

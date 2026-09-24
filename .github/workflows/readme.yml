@@ -45,6 +45,11 @@ jobs:
       - name: Zkontrolovat README
         run: php .nastroje/kontrola-readme.php "$GITHUB_WORKSPACE"
 
+      - name: Ověřit sadu pravidel a GitHub topic
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: php .nastroje/kontrola-pravidel.php "$GITHUB_WORKSPACE" --online
+
       - name: Určit rozsah změn
         id: rozsah
         env:
