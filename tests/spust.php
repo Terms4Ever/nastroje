@@ -121,6 +121,44 @@ pripad('dokumentace: nulový základ se ohlásí, ne zamlčí', function (): arr
     );
 });
 
+pripad('dokumentace: nasazení bez dokumentu o nasazení dostane doporučení', function (): array {
+    $repo = novyProjekt([], ['.github/workflows/deploy.yml' => "name: Deploy\n"]);
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'docs/02-nasazeni.md');
+});
+
+pripad('dokumentace: s dokumentem o nasazení doporučení mlčí', function (): array {
+    $repo = novyProjekt([], [
+        '.github/workflows/deploy.yml' => "name: Deploy\n",
+        'docs/02-nasazeni.md' => "# Nasazení\n\nWeb se nahrává po pushi do main.\n",
+    ]);
+    $vysledek = php('kontrola-dokumentace.php', $repo);
+    $ok = $vysledek['kod'] === 0 && !str_contains($vysledek['vystup'], 'doporučení');
+
+    return [$ok, $ok ? '' : "kód {$vysledek['kod']}\n{$vysledek['vystup']}"];
+});
+
+pripad('dokumentace: testy bez dokumentu o ověření dostanou doporučení', function (): array {
+    $repo = novyProjekt([], ['tests/prvni.php' => "<?php\n"]);
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'docs/04-overeni.md');
+});
+
+pripad('dokumentace: doporučení nenavrhne obsazené číslo dokumentu', function (): array {
+    $repo = novyProjekt([], [
+        'tests/prvni.php' => "<?php\n",
+        'docs/04-koncept.md' => "# Koncept\n\nOtevřené otázky.\n",
+    ]);
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'docs/05-overeni.md');
+});
+
+pripad('dokumentace: testovací skript v package.json dostane doporučení', function (): array {
+    $repo = novyProjekt([], ['package.json' => "{\n  \"name\": \"x\",\n  \"scripts\": { \"test\": \"jest\" }\n}\n"]);
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'docs/04-overeni.md');
+});
+
 pripad('dokumentace: cesta z Git Bashe (/c/...) funguje', function (): array {
     if (PHP_OS_FAMILY !== 'Windows') {
         return [true, 'přeskočeno, jen pro Windows'];

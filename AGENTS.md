@@ -22,7 +22,10 @@ předinstalované, takže kontrola na GitHubu nepotřebuje instalační krok.
 - `stav-projektu.php`, `prehled-migraci.php` - generátory bloků do dokumentů
 - `tests/spust.php` - regresní testy kontrol, `tests/kompatibilita.php` -
   kontroly z pracovního stromu proti všem projektům
-- `sablony/` - vzory k opsání: README, migrace, issue, agents
+- `sablony/` - vzory k opsání: README, migrace, issue, agents, dokumenty
+  01, 02 a 04 pro projekt (`sablony/docs/`)
+- `docs/` - stav, postup práce, nasazení, deník, ověření a standardy;
+  tabulka je v README, začni stavem a postupem práce
 - `.github/workflows/readme.yml` a `issue-tvar.yml` - volají je ostatní repozitáře
 
 ## Doménová pravidla

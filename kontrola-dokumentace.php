@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.6.1';
+const VERZE_DOKUMENTACE = '1.7.0';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -48,6 +48,16 @@ const ZAKAZANE_NAZVY_VZDY = [
 
 /** Dokumenty, které musí mít každý projekt. */
 const POVINNE_DOKUMENTY = ['docs/00-stav-projektu.md', 'docs/03-rozhodovaci-dennik.md'];
+
+/**
+ * Témata, která jde poznat ze souborů, a dokument, který je má popsat:
+ * [téma, proč, vzor názvu dokumentu, navržený název, spouštěče]. Spouštěč
+ * končící lomítkem je složka. Chybějící dokument kontrola jen doporučí (N34).
+ */
+const TEMATA_DOKUMENTU = [
+    ['nasazení', 'se nasazuje', '#^docs/[^/]*nasazeni[^/]*\.md$#', 'docs/02-nasazeni.md', ['.github/workflows/deploy.yml', 'deploy/']],
+    ['ověření', 'má testy', '#^docs/[^/]*overeni[^/]*\.md$#', 'docs/04-overeni.md', ['tests/', 'phpunit.xml', 'phpunit.xml.dist']],
+];
 
 /**
  * Cesty, které skript čte z disku. Musí sedět na pushovaný commit, jinak se
@@ -423,11 +433,55 @@ if (is_file($cestaClaude) && trim((string) file_get_contents($cestaClaude)) !== 
 }
 
 // ---------------------------------------------------------------------------
+// 5. Dokumenty k tématům, která jde poznat ze souborů (N34)
+// ---------------------------------------------------------------------------
+//
+// Projekt, který se nasazuje nebo má testy, potřebuje dokument, který to
+// popisuje; jinak se to další agent dozví až z kódu. Chybějící dokument se
+// doporučí při každém pushi a podle globálních pokynů ho agent založí sám,
+// jakmile v projektu pracuje. Neblokuje: zastavilo by to všechny projekty
+// naráz a co přesně do dokumentu patří, kontrola stejně nepozná.
+
+$sledovane = souboryVGitu($koren);
+$doporuceni = [];
+foreach (TEMATA_DOKUMENTU as [$tema, $proc, $vzorDokumentu, $navrh, $spoustece]) {
+    $duvod = null;
+    foreach ($sledovane as $soubor) {
+        foreach ($spoustece as $spoustec) {
+            $sedi = str_ends_with($spoustec, '/') ? str_starts_with($soubor, $spoustec) : $soubor === $spoustec;
+            if ($sedi) {
+                $duvod = $spoustec;
+                break 2;
+            }
+        }
+    }
+    if ($duvod === null && $tema === 'ověření' && maTestovaciSkript($koren)) {
+        $duvod = 'package.json, skript test';
+    }
+    if ($duvod === null) {
+        continue;
+    }
+    $dokument = array_filter($sledovane, static fn (string $s): bool => preg_match($vzorDokumentu, $s) === 1);
+    if ($dokument === []) {
+        $doporuceni[] = sprintf(
+            'projekt %s (%s), chybí dokument o %s; založ %s (vzor sablony/docs/ v nastroje)',
+            $proc,
+            $duvod,
+            $tema,
+            volneCislo($sledovane, $navrh)
+        );
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Výsledek
 // ---------------------------------------------------------------------------
 
 foreach ($varovani as $v) {
     echo "  pozn.: $v\n";
+}
+foreach ($doporuceni as $d) {
+    echo "  doporučení: $d\n";
 }
 
 if ($chyby === []) {
@@ -449,6 +503,43 @@ echo "\n  Vědomá výjimka při pushi: git push --no-verify\n\n";
 exit(1);
 
 // ---------------------------------------------------------------------------
+
+/**
+ * Navržený název, nebo stejný s prvním volným číslem, když navržené číslo
+ * v projektu nese jiný dokument (v Igrisu je 04 koncept a otevřené otázky).
+ */
+function volneCislo(array $sledovane, string $navrh): string
+{
+    if (preg_match('#^docs/(\d{2})-(.+)$#', $navrh, $casti) !== 1) {
+        return $navrh;
+    }
+    $obsazena = [];
+    foreach ($sledovane as $soubor) {
+        if (preg_match('#^docs/(\d{2})-[^/]+\.md$#', $soubor, $shoda) === 1) {
+            $obsazena[(int) $shoda[1]] = true;
+        }
+    }
+    $cislo = (int) $casti[1];
+    while (isset($obsazena[$cislo])) {
+        $cislo++;
+    }
+
+    return sprintf('docs/%02d-%s', $cislo, $casti[2]);
+}
+
+/** Má package.json skript test, který opravdu něco pouští? */
+function maTestovaciSkript(string $koren): bool
+{
+    $cesta = $koren . '/package.json';
+    if (!is_file($cesta)) {
+        return false;
+    }
+    $data = json_decode((string) file_get_contents($cesta), true);
+    $test = is_array($data) ? (string) ($data['scripts']['test'] ?? '') : '';
+
+    // Výchozí skript z npm init jen vypíše chybu, testy to nejsou.
+    return $test !== '' && !str_contains($test, 'no test specified');
+}
 
 /** Soubory sledované gitem, cesty relativní ke kořeni repozitáře. */
 function souboryVGitu(string $koren): array

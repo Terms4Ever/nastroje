@@ -1088,3 +1088,34 @@ se jen adresa. Kontrola issues 1.10.0 ve všech třech repozitářích prošla b
 jediného upozornění a 15 běhů workflow, které úpravy vyvolaly, je zelených.
 První pokus narazil na známou past: `escapeshellarg` na Windows mění `%` na
 mezeru, takže `--format=%H` nefungovalo; spouští se proto polem bez shellu.
+
+## N34 - Dokumenty, které dávají smysl, se zakládají samy (24. 9. 2026)
+
+**Podnět.** Zadavatel: *„Proč máš jen 2 soubory, nastroje-prace jich má víc
+a dávají smysl. Chtěl bych tyto dokumentace co mají smysl dělat automaticky,
+ne že ti musím říkat."*
+
+**Nález.** Nastroje měly jen stav a deník. Do stavu (189 řádků) se přitom
+vešla i stálá pravidla: standard issues, migrací, trezor, uspořádání souborů.
+Stav se má přepisovat, pravidla ne; kdo hledal, jak funguje zavírání issue,
+musel projít živý stav. Nastroje-prace mají dokumenty podle témat (postup
+práce, předání, ověření, nový projekt) a krátký stav.
+
+**Co se změnilo.**
+
+- Dokumentace nastroje je rozdělená podle témat: 01 postup práce, 02 nasazení
+  (jak se pravidla dostanou do projektů), 04 ověření, 05 standard issues,
+  06 standard migrací, 07 trezor hesel, 08 soubory a dokumentace. Stav se
+  zkrátil na stav.
+- Globální pokyny mají mapu dokumentů s tím, kdy který vzniká, a pravidlo, že
+  je agent zakládá sám, bez vyzvání. Vzory 01, 02 a 04 jsou v `sablony/docs/`.
+- Kontrola dokumentace 1.7.0 při každém pushi doporučí dokument o nasazení,
+  když se projekt nasazuje (`deploy.yml`, `deploy/`), a o ověření, když má
+  testy (`tests/`, `phpunit.xml`, skript `test`). Obsazené číslo nahradí
+  prvním volným (v Igrisu je 04 koncept, návrh zní 15). Doporučení push
+  nezastaví: co do dokumentu patří, kontrola nepozná, a zastavit sedm
+  projektů naráz by nepomohlo.
+
+**Ověřeno.** 72 případů, pět nových na doporučení (nasazení, ověření,
+skript v `package.json`, obsazené číslo, mlčení s dokumentem); proti 1.6.1
+tři padaly. Doporučení v osmi repozitářích našla devět chybějících dokumentů.

@@ -73,6 +73,7 @@ nastroje/
 ├── sablony/issue-ukol.md        # vzor šablony issue pro projekt
 ├── sablony/agents.md            # vzor agentského souboru pro projekt
 ├── sablony/zadani-novy-projekt.md  # zadání pro přesun FTP projektu na GitHub
+├── sablony/docs/                # vzory dokumentů 01, 02 a 04 pro projekt
 ├── docs/                        # stav projektu a deník rozhodnutí
 └── .github/workflows/           # workflow, který volají ostatní projekty
 ```
@@ -174,7 +175,14 @@ před každým pushem do nastroje spolu s kontrolou kompatibility.
 | Dokument | K čemu |
 |---|---|
 | `docs/00-stav-projektu.md` | živý stav: co je hotové, co se dělá, co je dál, a které repozitáře jsou zapojené |
+| `docs/01-postup-prace.md` | jak se mění pravidlo nebo kontrola, pořadí pushů a pasti z Windows |
+| `docs/02-nasazeni.md` | jak se pravidla dostanou do projektů: sdílená workflow, nasazení webů, hooky, zapojení projektu |
 | `docs/03-rozhodovaci-dennik.md` | co bylo kdy rozhodnuto a proč. Nové rozhodnutí je nový záznam, staré se nepřepisuje |
+| `docs/04-overeni.md` | co testy kontrol dokazují a co ne, kde běží, co se přeskočí |
+| `docs/05-standard-issues.md` | tvar, zařazení, snímky a zavření issue s důkazem, kde se to vynucuje |
+| `docs/06-standard-migraci.md` | migrace, jejich nasazení a spouštěč s otisky |
+| `docs/07-trezor-hesel.md` | hesla bez chatu: příkazy pro agenta, okno pro zadavatele, co trezor nechrání |
+| `docs/08-soubory-a-dokumentace.md` | uspořádání repozitáře a které dokumenty má projekt mít |
 
 Stav vždy platný je v `docs/00-stav-projektu.md`, ne v tomhle souboru.
 
