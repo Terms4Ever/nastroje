@@ -11,10 +11,12 @@ function projektSeSadou(string $sada = 'nastroje'): string
     zapis($root, 'README.md', "# Projekt\n\n$badge\n\n## Funkce\n\nObsah projektu.\n");
     zapis($root, 'AGENTS.md', "# Pokyny\n\nSada pravidel: `$sada` (určuje `.pravidla.json`).\n"
         . "Zdroj pravidel: https://github.com/Terms4Ever/$sada.\n");
+    // Osobní sada od N36: workflow Kontroly, sada je vidět v názvu společné kontroly.
     $jobs = $sada === 'nastroje'
-        ? "  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n"
+        ? "  readme:\n    name: Pravidla nastroje\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n"
         : "  linux:\n    steps:\n      - run: php scripts/ci.php\n  windows:\n    steps:\n      - run: .\\.cache\\php\\php.exe scripts/ci.php\n";
-    zapis($root, '.github/workflows/kontrola.yml', "name: Pravidla / $sada\non: [push]\njobs:\n$jobs");
+    $nazev = $sada === 'nastroje' ? 'Kontroly' : "Pravidla / $sada";
+    zapis($root, '.github/workflows/kontrola.yml', "name: $nazev\non: [push]\njobs:\n$jobs");
     if ($sada === 'nastroje-prace') {
         zapis($root, '.prace.json', json_encode(['repository' => 'Terms4Ever/nastroje-prace']));
     }
@@ -72,11 +74,11 @@ foreach (['`%s`', '<pre>%s</pre>', '<code>%s</code>'] as $i => $mask) {
     });
 }
 foreach ([
-    "name: Pravidla / nastroje\njobs:\n  readme:\n    'if': false\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n",
-    "name: Pravidla / nastroje\njobs:\n  readme:\n    name: \"text\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n    \"\n",
-    "name: Pravidla / nastroje\nname: Jiný\njobs:\n  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n",
-    "name: Pravidla / nastroje\njobs:\n  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n    uses: nekdo/jine/.github/workflows/test.yml@main\n",
-    "name: Pravidla / nastroje\njobs:\n  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\njobs:\n  jiny:\n    runs-on: ubuntu-latest\n",
+    "name: Kontroly\njobs:\n  readme:\n    name: Pravidla nastroje\n    'if': false\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n",
+    "name: Kontroly\njobs:\n  readme:\n    name: \"text\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n    \"\n",
+    "name: Kontroly\nname: Jiný\njobs:\n  readme:\n    name: Pravidla nastroje\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n",
+    "name: Kontroly\njobs:\n  readme:\n    name: Pravidla nastroje\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n    uses: nekdo/jine/.github/workflows/test.yml@main\n",
+    "name: Kontroly\njobs:\n  readme:\n    name: Pravidla nastroje\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\njobs:\n  jiny:\n    runs-on: ubuntu-latest\n",
 ] as $i => $workflow) {
     pripad('sady: nejednoznačné YAML zapojení ' . $i . ' neprojde', function () use ($workflow): array {
         $root = projektSeSadou();
@@ -133,9 +135,55 @@ pripad('sady: run s výpisem příkazu kontrolu nespouští', function (): array
 });
 pripad('sady: text ve skaláru YAML není job', function (): array {
     $root = projektSeSadou();
-    zapis($root, '.github/workflows/kontrola.yml', "name: Pravidla / nastroje\non: [push]\njobs:\n  poznamka: |\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n");
+    zapis($root, '.github/workflows/kontrola.yml', "name: Kontroly\non: [push]\njobs:\n  poznamka: |\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n");
     return ocekavej(vysledekSady($root), 1, 'zapojení');
 });
+// --- názvy na GitHubu (N36) -------------------------------------------------
+
+/** Projekt ve tvaru před N36: workflow Pravidla / nastroje, společná kontrola bez názvu. */
+function projektSeStarymNazvem(): string
+{
+    $root = projektSeSadou();
+    zapis($root, '.github/workflows/kontrola.yml', "name: Pravidla / nastroje\non: [push]\njobs:\n"
+        . "  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n");
+    return $root;
+}
+
+pripad('sady: starý název Pravidla / nastroje projde jen během přechodu (N36)', fn() =>
+    ocekavej(vysledekSady(projektSeStarymNazvem()), 0));
+pripad('sady: společná kontrola bez názvu Pravidla nastroje neprojde (N36)', function (): array {
+    $root = projektSeSadou();
+    $path = '.github/workflows/kontrola.yml';
+    zapis($root, $path, str_replace("    name: Pravidla nastroje\n", '', (string) file_get_contents($root . '/' . $path)));
+    return ocekavej(vysledekSady($root), 1, 'Pravidla nastroje');
+});
+pripad('sady: společná kontrola pod názvem cizí sady neprojde (N36)', function (): array {
+    $root = projektSeSadou();
+    $path = '.github/workflows/kontrola.yml';
+    zapis($root, $path, str_replace('name: Pravidla nastroje', 'name: Pravidla nastroje-prace', (string) file_get_contents($root . '/' . $path)));
+    return ocekavej(vysledekSady($root), 1, 'Pravidla nastroje');
+});
+pripad('sady: nasazení volá společnou kontrolu jen pod názvem Pravidla nastroje (N36)', function (): array {
+    $root = projektSeSadou();
+    zapis($root, '.github/workflows/deploy.yml', "name: Nasazení\non: [push]\njobs:\n"
+        . "  kontroly:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n"
+        . "  deploy:\n    name: Nahrání na web (FTPS)\n    needs: kontroly\n    runs-on: ubuntu-latest\n");
+    return ocekavej(vysledekSady($root), 1, 'Pravidla nastroje');
+});
+pripad('sady: nasazení se společnou kontrolou pod správným názvem projde (N36)', function (): array {
+    $root = projektSeSadou();
+    zapis($root, '.github/workflows/deploy.yml', "name: Nasazení\non: [push]\njobs:\n"
+        . "  kontroly:\n    name: Pravidla nastroje\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n"
+        . "  deploy:\n    name: Nahrání na web (FTPS)\n    needs: kontroly\n    runs-on: ubuntu-latest\n");
+    return ocekavej(vysledekSady($root), 0);
+});
+pripad('sady: Kontroly a starý název zároveň neprojdou (N36)', function (): array {
+    $root = projektSeSadou();
+    zapis($root, '.github/workflows/stary.yml', "name: Pravidla / nastroje\non: [push]\njobs:\n"
+        . "  readme:\n    uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main\n");
+    return ocekavej(vysledekSady($root), 1, 'primární workflow');
+});
+
 pripad('sady: místní README kontrola najde chybějící manifest zapojeného projektu', function (): array {
     $root = projektSeSadou();
     unlink($root . '/.pravidla.json');

@@ -89,7 +89,8 @@ nastroje/
 ## 🏷️ Profily
 
 Každý zapojený projekt vybírá v `.pravidla.json` právě jednu sadu. Osobní
-projekty mají `nastroje`, topic `pravidla-nastroje` a workflow `Pravidla / nastroje`.
+projekty mají `nastroje`, topic `pravidla-nastroje`, workflow `Kontroly`
+a v něm společnou kontrolu pod názvem `Pravidla nastroje`.
 Pracovní projekty mají `nastroje-prace` a její vlastní postup napojení.
 Připnutá knihovna nastroje uvnitř pracovní sady není druhá primární sada.
 Rozdíl a kontrola jsou popsány v `docs/02-nasazeni.md`.
@@ -225,13 +226,14 @@ v pořádku, 1 nálezy.
 a workflow, který zavolá kontrolu odsud:
 
 ```yaml
-name: Pravidla / nastroje
+name: Kontroly
 on: [push, pull_request]
 permissions:
   contents: read
   issues: read
 jobs:
   readme:
+    name: Pravidla nastroje
     uses: Terms4Ever/nastroje/.github/workflows/readme.yml@main
 ```
 

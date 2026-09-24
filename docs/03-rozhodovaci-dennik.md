@@ -1165,3 +1165,38 @@ před a po jsou doloženy v issue.
 a steelsetu a v globálních pokynech agenta. Šablona navíc v bloku kontrol
 neměla `kontrola-pravidel.php` a počítala se čtyřmi kontrolami místo pěti.
 Srovnáno; globální pokyny dostaly i krátký popis výběru sady.
+
+## N36 - Kontroly na GitHubu mají české popisné názvy (24. 9. 2026)
+
+**Podnět.** Zadavateli se nelíbily názvy kontrol na GitHubu. Seznam u commitu
+ukazoval `Pravidla / nastroje / readme / kontrola`, `Deploy to production /
+FTP Deploy` nebo `Tvar issue / tvar / tvar`: lomítko v názvu workflow vypadalo
+jako další úroveň, ID jobů nic neříkala a míchala se čeština s angličtinou.
+
+**Rozhodnutí.** Zadavatel ze tří variant vybral tu, ve které sadu ukazuje
+název společné kontroly, ne název workflow. Mění to část N35. Pro osobní sadu:
+
+- workflow po pushi se jmenuje `Kontroly`, nasazení `Nasazení`, kontrola
+  issue dál `Tvar issue`;
+- každý job, který volá `readme.yml`, se jmenuje `Pravidla nastroje`, i uvnitř
+  nasazení;
+- sdílená kontrola má job `README, dokumentace, migrace, issues`, kontrola
+  issue `Sekce, štítky a snímky`, volající job `Kontrola`;
+- testy a nasazení česky podle toho, co dělají (`Testy aplikace`,
+  `Nahrání na web (FTPS)`).
+
+U commitu se tak ukáže `Kontroly / Pravidla nastroje / README, dokumentace,
+migrace, issues`. Soubory workflow ani ID jobů se nemění, takže `needs`
+a ruční `gh workflow run deploy.yml` fungují dál. Pracovní sada si název
+`Pravidla / nastroje-prace` nechává: zadavatel omezil změnu na osobní
+repozitáře.
+
+**Přechod.** Kontrola sady přijímá do přejmenování všech zapojených projektů
+i starý název `Pravidla / nastroje`. Nová kontrola by jinak shodila jejich CI
+dřív, než by se stihly přejmenovat, a pre-push hook nastroje by přes
+kompatibilitu nepustil ani ji. Po přejmenování projektů výjimka zmizí.
+
+**Ověření.** Šest nových případů v `tests/sady.php` proti N35 padalo
+(společná kontrola bez názvu, pod názvem cizí sady, v nasazení bez názvu
+i s ním, starý a nový název zároveň), přechodný případ se starým názvem
+prošel. Po úpravě `src/sada-pravidel.php` prošlo všech 45 případů sady.

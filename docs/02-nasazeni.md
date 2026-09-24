@@ -73,8 +73,9 @@ nebo uvozovkou; text, který ho jen zmiňuje, nezastaví.
 2. `.readme-kontrola.json` s profilem `plny` a zapnutými kontrolami, které
    projekt splní (`docs-kontrola`, případně `migrace-kontrola`, `provoz`).
 3. `kontroly.yml` a `tvar-issue.yml` opsané z vyridimestavbu, u webu
-   `deploy.yml` s jobem `kontroly`. Primární workflow má jméno
-   `Pravidla / nastroje`, soubor může mít dosavadní jméno (Igris `kontrola.yml`).
+   `deploy.yml` s jobem `kontroly`. Primární workflow se jmenuje `Kontroly`,
+   soubor může mít dosavadní jméno (Igris `kontrola.yml`). Každý job, který volá
+   `readme.yml`, se jmenuje `Pravidla nastroje`, i v nasazení (N36).
 4. GitHub topic `pravidla-nastroje`, ostatní topics zachovat. Topic pracovní sady sem nepatří.
 5. `.github/ISSUE_TEMPLATE/ukol.md` a `config.yml` z `sablony/`.
 6. Dokumenty podle [08 soubory a dokumentace](08-soubory-a-dokumentace.md).
@@ -88,7 +89,9 @@ Celé zadání pro agenta, který přebírá web z FTP, je v
 ## Jedna primární sada a její závislosti
 
 Zdroj výběru je verzovaný `.pravidla.json`, nikoli odhad podle jména projektu.
-README, začátek AGENTS, display name workflow a GitHub topic tento výběr ukazují.
+README, začátek AGENTS, název společné kontroly a GitHub topic tento výběr
+ukazují. Na GitHubu se společná kontrola jmenuje `Pravidla nastroje`, takže je
+sada vidět v seznamu kontrol u každého commitu (N36).
 Kontrola vyžaduje jejich shodu a skutečně zapojený kontrolní job.
 Osobní projekty stále volají sdílené workflow větví `@main`.
 

@@ -14,7 +14,7 @@ hlavní větev:     main
 | Nástroj | Verze | Podrobně |
 |---|---|---|
 | `kontrola-readme.php` | 2.2.0 | README a místní označení osobní sady |
-| `kontrola-pravidel.php`, `src/sada-pravidel.php` | 1 | výběr sady, README, AGENTS, workflow, online topic (N35) |
+| `kontrola-pravidel.php`, `src/sada-pravidel.php` | 1 | výběr sady, README, AGENTS, workflow, online topic (N35), názvy kontrol na GitHubu (N36) |
 | `kontrola-dokumentace.php` | 1.7.2 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
 | `kontrola-migraci.php` | 1.1.0 | [06 standard migrací](06-standard-migraci.md) |
 | `kontrola-issues.php` | 1.10.0 | [05 standard issues](05-standard-issues.md) |
@@ -52,12 +52,12 @@ vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapo
 
 ## Co se dělá
 
-Nic rozdělaného.
+Přejmenování kontrol na GitHubu (N36). Kontrola sady zatím přijímá starý
+název workflow `Pravidla / nastroje` i nový `Kontroly`; po přejmenování
+všech zapojených projektů starý přestane platit.
 
 ## Co je dál
 
-- Doplnit dokumenty, které kontrola dokumentace doporučuje, do zapojených
-  projektů (nasazení u tří webů, ověření u projektů s testy).
 - Rozšířit kontrolu na soulad odznaků se skutečnými verzemi ze
   `package.json` nebo `composer.json`. Igris to umí ve svých testech.
 - Pravidla commitů a pre-push hook žijí jen v neverzovaném `~/.git-hooks/`.

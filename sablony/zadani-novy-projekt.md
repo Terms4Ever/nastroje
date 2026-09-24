@@ -52,11 +52,14 @@ v sekci `## 📚 Dokumentace`.
 **5. Workflow** do `.github/workflows/`:
 
 - `kontroly.yml` - volá `Terms4Ever/nastroje/.github/workflows/readme.yml@main`,
-  jméno `Pravidla / nastroje`, práva `contents: read` a `issues: read`
+  jméno `Kontroly`, job se společnou kontrolou `name: Pravidla nastroje`,
+  práva `contents: read` a `issues: read` (názvy podle N36)
 - `tvar-issue.yml` - volá `issue-tvar.yml@main` nad událostí `issues` (typy
   `opened, edited, closed, reopened, labeled, unlabeled, assigned,
-  unassigned`), práva `issues: write`, jen pro autory se vztahem k repozitáři
-- `deploy.yml` - první job volá `readme.yml@main` (práva `contents: read`
+  unassigned`), práva `issues: write`, jen pro autory se vztahem k repozitáři;
+  job `name: Kontrola`
+- `deploy.yml` - jméno `Nasazení`, první job `name: Pravidla nastroje` volá
+  `readme.yml@main` (práva `contents: read`
   a `issues: read`), nasazení na něj čeká přes `needs`. Pak kontrola syntaxe
   PHP a FTPS nahrání. `concurrency` s `cancel-in-progress: false`, ať druhý
   push nepřeruší běžící přenos. Nouzové ruční spuštění s volbou `bez_kontrol`
@@ -101,8 +104,8 @@ php /c/laragon/www/nastroje/kontrola-migraci.php .   # jen s databází
 
 Po pushi:
 
-- běh **Pravidla / nastroje** na GitHubu je zelený (ověř, nepředpokládej)
-- běh **Deploy** prošel a web dál funguje: titulní stránka, formulář,
+- běh **Kontroly** na GitHubu je zelený (ověř, nepředpokládej)
+- běh **Nasazení** prošel a web dál funguje: titulní stránka, formulář,
   přihlášení do administrace
 - `curl -s -o /dev/null -w '%{http_code}' https://[adresa]/docs/00-stav-projektu.md`
   vrací 404 nebo 403, ne 200
@@ -133,6 +136,6 @@ Po pushi:
 
 - [ ] repozitář má v kořeni jen povolené soubory a v `docs/` stav i deník
 - [ ] všech pět kontrol lokálně projde
-- [ ] běhy Pravidla / nastroje i Deploy na GitHubu jsou zelené
+- [ ] běhy Kontroly i Nasazení na GitHubu jsou zelené
 - [ ] web po nasazení funguje a dokumentace z něj není čitelná
 - [ ] v deníku je záznam o přesunu: odkud, co se nepřeneslo a proč

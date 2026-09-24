@@ -16,6 +16,7 @@ on:
 
 jobs:
   kontrola:
+    name: README, dokumentace, migrace, issues
     # Verze je připnutá schválně. Obraz ubuntu-24.04 má PHP 8.3 předinstalované,
     # takže tenhle běh nepotřebuje jediný instalační krok a trvá vteřiny.
     runs-on: ubuntu-24.04

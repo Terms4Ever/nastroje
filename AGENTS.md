@@ -9,7 +9,7 @@ Použití knihovny z tohoto projektu uvnitř pracovní sady její výběr neměn
 
 Sdílené kontroly pro repozitáře Terms4Ever: README, dokumentace, migrace
 databáze a tvar issues. Pouští je pre-push hook lokálně a workflow
-`Pravidla / nastroje` na GitHubu, takže pravidla žijí na jednom místě a mění se tady.
+`Kontroly` na GitHubu, takže pravidla žijí na jednom místě a mění se tady.
 
 Obecná pravidla (commity, README, dokumentace, issues, migrace) jsou
 v `~/.claude/CLAUDE.md` a nepřepisují se sem.

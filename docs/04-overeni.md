@@ -20,7 +20,7 @@ starému kódu padat (N32).
 | issues | 6 | gh vrací chybu nebo nesmysl, selhání `gh api`, issue bez štítku |
 | spouštěč migrací | 4 | přejmenovaná migrace se nepustí znovu, změněná zastaví nasazení |
 | README, stav | 2 | neexistující cesta, verze Expo aplikace z `app.json` |
-| sady pravidel | 39 | chybějící, dvojí a neznámý výběr, rozporné README/AGENTS/workflow/topics, komentář či vypnutý job místo zapojení, chybný pracovní vstup, selhání a neplatné odpovědi API, nevykreslený odznak a nejednoznačné YAML |
+| sady pravidel | 45 | chybějící, dvojí a neznámý výběr, rozporné README/AGENTS/workflow/topics, komentář či vypnutý job místo zapojení, chybný pracovní vstup, selhání a neplatné odpovědi API, nevykreslený odznak, nejednoznačné YAML, společná kontrola bez názvu `Pravidla nastroje` i v nasazení, starý název workflow vedle nového (N36) |
 
 `gh` v testech nahrazuje atrapa, takže se nic neposílá na GitHub.
 
@@ -30,6 +30,8 @@ sada má 39 případů a všechny prošly. Nezávislé pokusy nejprve odhalily
 uvozovanou podmínku, falešný uses ve víceřádkovém YAML, duplicitní klíče
 a odznak nevykreslený uvnitř kódu. Po opravě každý z těchto pokusů selhal.
 Online příslušnost se navíc ověřuje proti skutečnému GitHubu, ne testovací atrapě.
+N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada má
+od té doby 119 případů.
 Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
 kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 

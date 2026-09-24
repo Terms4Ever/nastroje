@@ -18,6 +18,7 @@ on:
 
 jobs:
   tvar:
+    name: Sekce, štítky a snímky
     runs-on: ubuntu-24.04
     # Založení issue se štítkem a odpovědným pošle naráz tři události.
     # Platí poslední, starší běh se zruší, ať se štítek nepřehazuje.

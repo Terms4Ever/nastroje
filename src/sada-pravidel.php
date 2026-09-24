@@ -49,6 +49,8 @@ final class SadaPravidel
             throw new RuntimeException('AGENTS.md musí na začátku jednoznačně uvést vybranou sadu, .pravidla.json a její zdroj.');
         }
         $primarni = [];
+        $predN36 = [];
+        $vsechny = [];
         foreach (self::workflows($root) as $file => $workflow) {
             foreach (['name', 'jobs'] as $key) {
                 if (preg_match_all('/^' . $key . ':/m', $workflow) > 1) {
@@ -58,13 +60,28 @@ final class SadaPravidel
             if ($sada === 'nastroje-prace' && preg_match('~^\s*uses:\s*[\x27\x22]?Terms4Ever/nastroje/\.github/workflows/(?:readme|issue-tvar)\.yml@~m', $workflow)) {
                 throw new RuntimeException('Osobní workflow nastroje nesmí být zapojeno přímo do pracovní sady: ' . basename($file));
             }
-            if (preg_match('/^name:\s*(.*?)\s*$/m', $workflow, $name)
-                && self::scalar($name[1]) === 'Pravidla / ' . $sada) {
-                $primarni[] = $workflow;
+            $vsechny[$file] = $workflow;
+            if (preg_match('/^name:\s*(.*?)\s*$/m', $workflow, $name)) {
+                $nazev = self::scalar($name[1]);
+                if ($nazev === self::nazevWorkflow($sada)) {
+                    $primarni[] = $workflow;
+                } elseif ($sada === 'nastroje' && $nazev === 'Pravidla / nastroje') {
+                    $predN36[] = $workflow;
+                }
             }
         }
+        // Přechod N36: projekt, který se ještě nepřejmenoval, projde se starým
+        // názvem workflow. Výjimka zmizí, jakmile budou přejmenované všechny
+        // zapojené projekty; do té doby by nová kontrola shodila jejich CI.
+        $prechod = $primarni === [] && count($predN36) === 1;
+        if ($prechod) {
+            $primarni = $predN36;
+        } elseif ($predN36 !== []) {
+            throw new RuntimeException('Právě jeden primární workflow musí mít název ' . self::nazevWorkflow($sada)
+                . '; starý název Pravidla / nastroje vedle něj nepatří.');
+        }
         if (count($primarni) !== 1) {
-            throw new RuntimeException("Právě jeden primární workflow musí mít název Pravidla / $sada.");
+            throw new RuntimeException('Právě jeden primární workflow musí mít název ' . self::nazevWorkflow($sada) . '.');
         }
         $jobs = self::jobs($primarni[0]);
         if ($sada === 'nastroje') {
@@ -79,6 +96,9 @@ final class SadaPravidel
             }
             if (!$nalezeno) {
                 throw new RuntimeException('Chybí skutečné zapojení sdíleného readme.yml@main v primárním workflow.');
+            }
+            if (!$prechod) {
+                self::nazvySpolecneKontroly($vsechny, $sada);
             }
         } else {
             $central = !is_file($root . '/nastroje-prace.lock.json');
@@ -103,6 +123,51 @@ final class SadaPravidel
         $vybrane = array_values(array_filter($topics, static fn($t) => is_string($t) && str_starts_with($t, 'pravidla-')));
         if ($vybrane !== ['pravidla-' . $sada]) {
             throw new RuntimeException('GitHub topic musí jednoznačně odpovídat sadě: pravidla-' . $sada . '.');
+        }
+    }
+
+    /**
+     * Název workflow s kontrolami po pushi. Osobní sada má od N36 krátké
+     * Kontroly, sadu ukazuje název společné kontroly; pracovní sada si název
+     * zatím nechává.
+     */
+    public static function nazevWorkflow(string $sada): string
+    {
+        self::platnaSada($sada);
+        return $sada === 'nastroje' ? 'Kontroly' : 'Pravidla / ' . $sada;
+    }
+
+    /** Název jobu se společnou kontrolou; z něj je v seznamu kontrol na GitHubu vidět sada (N36). */
+    public static function nazevKontroly(string $sada): string
+    {
+        self::platnaSada($sada);
+        return 'Pravidla ' . $sada;
+    }
+
+    /**
+     * Každý job, který volá společnou kontrolu, nese v názvu sadu, i v nasazení.
+     * Jinak by se kontrola na GitHubu ukázala jako holé ID jobu (N36).
+     */
+    private static function nazvySpolecneKontroly(array $workflows, string $sada): void
+    {
+        foreach ($workflows as $file => $workflow) {
+            foreach (self::jobs($workflow) as $id => $job) {
+                if (!preg_match('~^    uses:\s*[\x27\x22]?Terms4Ever/nastroje/\.github/workflows/readme\.yml@~m', $job)) {
+                    continue;
+                }
+                if (preg_match_all('/^    name:/m', $job) > 1) {
+                    throw new RuntimeException('Duplicitní name v jobu ' . $id . ' ve workflow ' . basename($file));
+                }
+                $nazev = preg_match('/^    name:\s*(.*?)\s*$/m', $job, $shoda) ? self::scalar($shoda[1]) : '';
+                if ($nazev !== self::nazevKontroly($sada)) {
+                    throw new RuntimeException(sprintf(
+                        'Job %s ve workflow %s volá společnou kontrolu, musí se proto jmenovat %s.',
+                        $id,
+                        basename($file),
+                        self::nazevKontroly($sada)
+                    ));
+                }
+            }
         }
     }
 
