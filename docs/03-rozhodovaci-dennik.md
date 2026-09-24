@@ -1153,3 +1153,8 @@ před novou centrální kontrolou a ověří kompatibilitou.
 **Ověření.** Nejprve 18 červených případů bez implementace, po implementaci
 prošly. Doplněny případy CLI, chyb API, připnutého pracovního vstupu a falešného
 zapojení. Přesný výsledný rozsah testů uvádí dokument 04 a důkazy issue #3.
+
+**Doklad k issue #3.** Skutečné snímky původního a změněného
+README jsou ve složce `docs/snimky/3-sada-pravidel`. Nový odznak byl ověřen přímo
+na GitHubu. Výsledek kontrol na konkrétním commitu a čitelné srovnání
+před a po jsou doloženy v issue.

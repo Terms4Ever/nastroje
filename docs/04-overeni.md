@@ -30,6 +30,8 @@ sada má 39 případů a všechny prošly. Nezávislé pokusy nejprve odhalily
 uvozovanou podmínku, falešný uses ve víceřádkovém YAML, duplicitní klíče
 a odznak nevykreslený uvnitř kódu. Po opravě každý z těchto pokusů selhal.
 Online příslušnost se navíc ověřuje proti skutečnému GitHubu, ne testovací atrapě.
+Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
+kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 
 ```bash
 php tests/spust.php              # všechny případy
