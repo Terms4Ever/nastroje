@@ -15,7 +15,7 @@ starému kódu padat (N32).
 | zavření issue | 13 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po |
 | snímky | 9 | odkaz na větev místo commitu, snímek, který v commitu není, soubor, který není obrázek, stejný soubor před i po |
 | hook | 9 | zakládání bez štítku a odpovědného, vložené `--body`, holé zavření issue |
-| tvar issue | 7 | chybějící štítek druhu, druh proti sekci, dva druhy naráz |
+| tvar issue | 12 | chybějící štítek druhu, druh proti sekci, dva druhy naráz, zavřené issue s nezaškrtnutým bodem a jeho dvě výjimky: zavřené bez práce a bod schválně nezaškrtnutý (N37) |
 | migrace | 6 | přejmenování, změna a smazání hotové migrace, neexistující cesta |
 | issues | 6 | gh vrací chybu nebo nesmysl, selhání `gh api`, issue bez štítku |
 | spouštěč migrací | 4 | přejmenovaná migrace se nepustí znovu, změněná zastaví nasazení |
@@ -30,8 +30,9 @@ sada má 39 případů a všechny prošly. Nezávislé pokusy nejprve odhalily
 uvozovanou podmínku, falešný uses ve víceřádkovém YAML, duplicitní klíče
 a odznak nevykreslený uvnitř kódu. Po opravě každý z těchto pokusů selhal.
 Online příslušnost se navíc ověřuje proti skutečnému GitHubu, ne testovací atrapě.
-N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada má
-od té doby 119 případů.
+N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada měla
+119 případů. N37 přidal pět na zavřené issue, tři z nich proti předchozí
+verzi padaly; od té doby má sada 124 případů.
 Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
 kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 

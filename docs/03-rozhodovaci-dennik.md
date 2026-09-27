@@ -1235,3 +1235,8 @@ komentář se schválně nezaškrtnutým bodem) proti předchozí verzi padaly, 
 hlídají, že zavřené issue bez výjimky dál neprojde. Celkem 124 případů bez
 chyby, kompatibilita se všemi sedmi projekty prošla. Simulace workflow nad
 skutečným tělem a komentáři vyridimestavbu #15 vrací „Tvar issue sedí“.
+
+**Doplněno téhož dne: verze a počty.** `kontrola-issues.php` změnila chování
+(zavřené bez práce už ji neshodí), ale hlásila dál 1.10.0; z výpisu se tak
+nedalo poznat, která verze běží. Nově 1.11.0. V `04-overeni.md` zůstaly počty
+z N36 (tvar issue 7, celkem 119), správně je 12 a 124.

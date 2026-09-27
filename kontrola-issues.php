@@ -38,7 +38,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.10.0';
+const VERZE_ISSUES = '1.11.0';
 
 /**
  * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
