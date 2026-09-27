@@ -1213,3 +1213,25 @@ s vlastním hookem bez `npm install` pouštěl místo něj jen globální `pre-p
 tedy bez testů a razítek projektu. Globální `pre-push` teď u projektu
 s `tools/git-hooks/pre-push` push zastaví; ověřeno v klonu Igrisu s vypnutým
 `core.hooksPath`. Hook není v gitu, popis je v `02-nasazeni.md`.
+
+## N37 - Zavřené bez práce a schválně nezaškrtnutý bod platí ve všech třech kontrolách (27. 9. 2026)
+
+**Stav.** Zavřené issue s neodškrtnutým bodem posuzují tři místa:
+`zavrit-issue.php` při zavírání, `kontrola-issues.php` při pushi a workflow
+`issue-tvar.yml` do minuty po události. První dvě uznávaly komentář, který
+říká, že bod zůstává schválně nezaškrtnutý; workflow komentáře vůbec
+nedostal. Issue zavřené bez práce (`wontfix`) neuznávalo ani jedno z nich,
+ačkoli zavření bez práce nechá body nezaškrtnuté ze své podstaty. Přišlo se
+na to u vyridimestavbu #15: klientka rozhodla dlaždice nechat bez odkazu,
+issue prošlo nástrojem na zavření, ale workflow ho hned označil `tvar nesedí`.
+
+**Rozhodnutí.** Obě výjimky platí všude stejně a žijí na jednom místě,
+v `src/tvar-issue.php` (`jeBezPrace()`, `vedomaVyjimkaChecklistu()`), odkud
+je volají všechny tři kontroly. Workflow stáhne komentáře do souboru
+a předá je přes nový přepínač `--komentare`.
+
+**Ověření.** Pět nových případů v `tests/spust.php`; tři (wontfix, duplicate,
+komentář se schválně nezaškrtnutým bodem) proti předchozí verzi padaly, dva
+hlídají, že zavřené issue bez výjimky dál neprojde. Celkem 124 případů bez
+chyby, kompatibilita se všemi sedmi projekty prošla. Simulace workflow nad
+skutečným tělem a komentáři vyridimestavbu #15 vrací „Tvar issue sedí“.

@@ -55,7 +55,8 @@ php C:/laragon/www/nastroje/zavrit-issue.php <repozitář> <číslo> --komentar 
 ```
 
 Zavře, jen když sedí tvar a zařazení, checklist je odškrtaný (nebo komentář
-říká, proč bod zůstal schválně), ke snímku před je snímek po, všechny běhy
+říká, proč bod zůstal schválně, nebo je issue zavřené bez práce se štítkem
+`wontfix`, `duplicate` či `invalid`), ke snímku před je snímek po, všechny běhy
 commitu na výchozí větvi doběhly úspěšně a závěrečný komentář na ten commit
 odkazuje. Bez `--zavrit` jen posoudí, s ním zapíše komentář a zavře (N33).
 
@@ -64,7 +65,7 @@ odkazuje. Bez `--zavrit` jen posoudí, s ním zapíše komentář a zavře (N33)
 | Místo | Kdy | Co |
 |---|---|---|
 | `hooky/tvar-issue.ps1` | před zápisem na GitHub | tělo a komentář souborem, tvar, štítek a odpovědný při zakládání, holé zavření zastaví |
-| `issue-tvar.yml` | do minuty po události | tvar, zařazení, snímky; označí `tvar nesedí` a napíše, co chybí |
+| `issue-tvar.yml` | do minuty po události | tvar, zařazení, snímky, u zavřeného checklist se stejnými výjimkami (komentáře dostane souborem); označí `tvar nesedí` a napíše, co chybí |
 | `kontrola-issues.php` | při každém pushi | všechna issues repozitáře včetně komentářů a snímků v commitu |
 | `zavrit-issue.php` | při zavírání | důkaz ze zeleného CI |
 | `~/.git-hooks/commit-msg` | při commitu | žádné „Closes #N", issue by se zavřelo samo |

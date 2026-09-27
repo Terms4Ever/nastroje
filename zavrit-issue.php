@@ -156,9 +156,10 @@ if ($komentarSoubor === null || $komentarSoubor === '') {
 // --------------------------------------------------------------------------
 // 3. Checklist
 // --------------------------------------------------------------------------
-$vyjimka = false;
+// Zavřené bez práce (wontfix, duplicate, invalid) checklist neplní.
+$vyjimka = jeBezPrace($stitky);
 foreach ($komentare as $text) {
-    if (preg_match('/schváln[ěe][^.]{0,80}(nezaškrt|neodškrt)|(nezaškrt|neodškrt)[^.]{0,80}schváln[ěe]/iu', $text) === 1) {
+    if (vedomaVyjimkaChecklistu($text)) {
         $vyjimka = true;
     }
 }

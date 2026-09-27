@@ -11,7 +11,10 @@
  *
  * --prisne navíc zakáže syrové tělo bez jediného nadpisu. Syrový nápad smí
  * napsat zadavatel, agent ne: ten tvar zná a má ho dodat rovnou.
- * --zavrene hlídá, že zavírané issue nemá neodškrtnutý bod.
+ * --zavrene hlídá, že zavírané issue nemá neodškrtnutý bod. Neplatí pro
+ * zavřené bez práce (wontfix, duplicate, invalid) a pro bod, o kterém
+ * komentář říká, že zůstává schválně nezaškrtnutý; komentáře se předají
+ * souborem přes --komentare <soubor>, stejně jako je čte kontrola-issues.php.
  * --komentar kontroluje komentář místo těla: délku, zmínky a pomlčky.
  * --vznik <datum> říká, kdy issue vzniklo; pravidla zavedená později ho pak
  * nezastaví, jen je to vidět v hromadné kontrole. Bez něj jde o nový obsah.
@@ -32,6 +35,7 @@ $zarazeni = false;
 $vznik = null;
 $stitky = [];
 $odpovedni = [];
+$komentareText = '';
 for ($i = 1; $i < $argc; $i++) {
     $arg = $argv[$i];
     if ($arg === '--prisne') {
@@ -44,6 +48,10 @@ for ($i = 1; $i < $argc; $i++) {
     }
     if ($arg === '--komentar') {
         $komentar = true;
+        continue;
+    }
+    if ($arg === '--komentare') {
+        $komentareText = (string) @file_get_contents((string) ($argv[++$i] ?? ''));
         continue;
     }
     if ($arg === '--titulek') {
@@ -84,7 +92,7 @@ if ($komentar) {
     $zavrene = false;
     $prisne = false;
 }
-if ($zavrene) {
+if ($zavrene && !jeBezPrace($stitky) && !vedomaVyjimkaChecklistu($komentareText)) {
     $neodskrtnute = count(array_filter(checklist($telo), static fn (bool $h): bool => !$h));
     if ($neodskrtnute > 0) {
         $problemy[] = 'se zavírá, ale ' . bodu($neodskrtnute) . ' v checklistu zůstalo neodškrtnutých';

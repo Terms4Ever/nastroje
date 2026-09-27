@@ -54,6 +54,26 @@ const STITKY_DRUHU = ['bug', 'enhancement', 'documentation'];
 const STITKY_BEZ_PRACE = ['duplicate', 'wontfix', 'invalid'];
 
 /**
+ * Zavřené bez práce: nic se nedělalo, checklist se proto ani neplní.
+ * Platí pro všechny tři kontroly zavřeného issue (workflow Tvar issue,
+ * kontrola-issues.php, zavrit-issue.php), ať se pravidlo nerozejde.
+ */
+function jeBezPrace(array $stitky): bool
+{
+    return array_intersect(STITKY_BEZ_PRACE, $stitky) !== [];
+}
+
+/**
+ * Komentář říká, že bod checklistu zůstává nezaškrtnutý schválně (třeba jde
+ * ověřit jen na zařízení). Obě pořadí slov: „schválně nezaškrtnutý“
+ * i „nezaškrtnutý schválně“.
+ */
+function vedomaVyjimkaChecklistu(string $text): bool
+{
+    return preg_match('/schváln[ěe][^.]{0,80}(nezaškrt|neodškrt)|(nezaškrt|neodškrt)[^.]{0,80}schváln[ěe]/iu', $text) === 1;
+}
+
+/**
  * Od kdy snímek v issue odkazuje na otisk commitu, ne na větev (N33).
  * Odkaz na blob/main se rozbije, když se soubor přesune nebo přejmenuje,
  * a neřekne, kterou verzi snímek dokládá. Starší obsah jen upozorní.

@@ -291,6 +291,36 @@ foreach ([
     });
 }
 
+// Zavřené issue a jeho checklist (workflow Tvar issue volá --zavrene).
+// Stejná pravidla jako kontrola-issues.php a zavrit-issue.php: zavřené bez
+// práce (wontfix, duplicate, invalid) checklist neplní, a bod, u kterého
+// komentář říká, že zůstává schválně nezaškrtnutý, také ne. Dřív workflow
+// komentáře neviděl a issue zavřené jako wontfix označil „tvar nesedí“
+// (vyridimestavbu #15, 27. 9. 2026).
+$komentareSoubor = static function (string $text): string {
+    $soubor = docasna('komentare') . '/komentare.md';
+    file_put_contents($soubor, $text);
+    return $soubor;
+};
+foreach ([
+    ['zavřené s neodškrtnutým bodem neprojde', 'bug', null, 1],
+    ['zavřené jako wontfix s neodškrtnutým bodem projde', 'enhancement,wontfix', null, 0],
+    ['zavřené jako duplicate s neodškrtnutým bodem projde', 'duplicate', null, 0],
+    ['zavřené, komentář: bod schválně nezaškrtnutý, projde', 'bug', "Rolování jde ověřit jen na zařízení, bod zůstává schválně nezaškrtnutý.\n", 0],
+    ['zavřené, komentář bez vysvětlení neprojde', 'bug', "Hotovo, ověřeno na webu.\n", 1],
+] as [$nazev, $stitky, $komentare, $kod]) {
+    pripad('tvar issue: ' . $nazev, function () use ($teloChyby, $stitky, $komentare, $kod, $komentareSoubor): array {
+        $soubor = docasna('telo') . '/telo.md';
+        file_put_contents($soubor, $teloChyby);
+        $argy = [$soubor, '--zavrene', '--stitky', $stitky, '--odpovedni', 'Terms4Ever'];
+        if ($komentare !== null) {
+            array_push($argy, '--komentare', $komentareSoubor($komentare));
+        }
+
+        return ocekavej(php('kontrola-tvaru-issue.php', ...$argy), $kod, $kod === 1 ? 'neodškrtnutých' : null);
+    });
+}
+
 // --- spouštěč migrací (sablony/migrace.php) -------------------------------
 //
 // Potřebuje jednorázovou databázi: NASTROJE_TEST_MYSQL="dsn|uživatel|heslo".

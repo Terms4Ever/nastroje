@@ -134,11 +134,13 @@ foreach ($issues as $issue) {
     //    Výjimka: bod, u kterého komentář říká, že zůstává nezaškrtnutý
     //    schválně. Jinak by pravidlo nutilo buď lhát, nebo mazat bod, který
     //    do zadání patřil (steelset #8: rolování se dá ověřit až na zařízení).
-    $vedomaVyjimka = false;
+    //    Zavřené bez práce (wontfix, duplicate, invalid) checklist neplní.
+    $vedomaVyjimka = jeBezPrace(array_map(
+        static fn (array $s): string => (string) ($s['name'] ?? ''),
+        (array) ($issue['labels'] ?? [])
+    ));
     foreach ($issue['comments'] ?? [] as $komentar) {
-        $textKomentare = (string) ($komentar['body'] ?? '');
-        // Obě pořadí slov: „schválně nezaškrtnutý" i „nezaškrtnutý schválně".
-        if (preg_match('/schváln[ěe][^.]{0,80}(nezaškrt|neodškrt)|(nezaškrt|neodškrt)[^.]{0,80}schváln[ěe]/iu', $textKomentare) === 1) {
+        if (vedomaVyjimkaChecklistu((string) ($komentar['body'] ?? ''))) {
             $vedomaVyjimka = true;
         }
     }
