@@ -1240,3 +1240,28 @@ skutečným tělem a komentáři vyridimestavbu #15 vrací „Tvar issue sedí�
 (zavřené bez práce už ji neshodí), ale hlásila dál 1.10.0; z výpisu se tak
 nedalo poznat, která verze běží. Nově 1.11.0. V `04-overeni.md` zůstaly počty
 z N36 (tvar issue 7, celkem 119), správně je 12 a 124.
+
+## N38 - Zavření issue dokládají jen běhy, které o commitu něco říkají (28. 9. 2026)
+
+**Stav.** `zavrit-issue.php` bral jako důkaz všechny check-runy ověřovaného
+commitu a každý, který neskončil úspěšně, zavření zablokoval. Běhy workflow
+Tvar issue ale GitHub věší na commit, který je v tu chvíli hlavou výchozí
+větve, a jejich skupina ruší starší běh téhož issue. V Igrisu 27. 9. vlastník
+na issue #2 odškrtl dva body a zavřel ho, dva běhy skončily `cancelled`
+a nástroj pak odmítl zavřít #3 kvůli běhům, které s jeho commitem nesouvisely
+(Igris R247). Obešlo se to ručním `gh run rerun` každého běhu. Nástroj navíc
+četl jen prvních sto běhů bez stránkování.
+
+**Rozhodnutí.** Důkazem jsou běhy GitHub Actions k otisku z výchozí větve,
+přes všechny stránky, bez běhů spuštěných událostí `issues` a `issue_comment`.
+Běh z jiné větve se stejným otiskem se nepočítá taky: zrušené běhy
+z přejmenování větví 25. 9. (dočasná `main-tmp`) by jinak blokovaly šest
+commitů. Když po vynechání žádný běh nezbude, důkaz chybí jako dřív.
+
+**Ověření.** Pět nových případů v `tests/spust.php`, čtyři proti předchozí
+verzi padaly (zrušená kontrola tvaru jiného issue, commit jen s kontrolami
+tvaru, zrušený běh na jiné větvi, neúspěch na druhé stránce), pátý hlídá, že
+červený push vedle zelené kontroly tvaru dál neprojde. Naostro bez
+`--zavrit`: stará verze odmítla onlinefakturuj #42 (zrušená kontrola tvaru na
+hlavě `6453382`) a trenwise #1 (zrušený běh na `main-tmp`), nová proti běhům
+obou commitů nic nemá.

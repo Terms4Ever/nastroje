@@ -60,6 +60,11 @@ Zavře, jen když sedí tvar a zařazení, checklist je odškrtaný (nebo koment
 commitu na výchozí větvi doběhly úspěšně a závěrečný komentář na ten commit
 odkazuje. Bez `--zavrit` jen posoudí, s ním zapíše komentář a zavře (N33).
 
+Za běhy commitu se berou běhy GitHub Actions z výchozí větve, všechny stránky.
+Běhy spuštěné událostí issue (workflow Tvar issue) se nepočítají: GitHub je
+věší na commit, který je zrovna hlavou výchozí větve, takže o zavíraném commitu
+nic neříkají, a zrušený běh jiného issue dřív zavření zablokoval (N38).
+
 ## Kde se to vynucuje
 
 | Místo | Kdy | Co |

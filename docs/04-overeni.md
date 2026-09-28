@@ -12,7 +12,7 @@ starému kódu padat (N32).
 | Oblast | Případů | Co shodí |
 |---|---|---|
 | dokumentace | 18 | chybějící `docs/`, úprava `AGENTS.md` není kód, právě založený dokument umlčí doporučení, neexistující cesta, dávka s kódem bez dokumentu, obrázek nebo smazání místo dokumentu, neznámý základ rozsahu, doporučení k nasazení a testům |
-| zavření issue | 13 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po |
+| zavření issue | 18 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po; zrušená kontrola tvaru jiného issue ani běh na jiné větvi neblokují, neúspěch na druhé stránce běhů ano (N38) |
 | snímky | 9 | odkaz na větev místo commitu, snímek, který v commitu není, soubor, který není obrázek, stejný soubor před i po |
 | hook | 9 | zakládání bez štítku a odpovědného, vložené `--body`, holé zavření issue |
 | tvar issue | 12 | chybějící štítek druhu, druh proti sekci, dva druhy naráz, zavřené issue s nezaškrtnutým bodem a jeho dvě výjimky: zavřené bez práce a bod schválně nezaškrtnutý (N37) |
@@ -32,7 +32,8 @@ a odznak nevykreslený uvnitř kódu. Po opravě každý z těchto pokusů selha
 Online příslušnost se navíc ověřuje proti skutečnému GitHubu, ne testovací atrapě.
 N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada měla
 119 případů. N37 přidal pět na zavřené issue, tři z nich proti předchozí
-verzi padaly; od té doby má sada 124 případů.
+verzi padaly; sada měla 124 případů. N38 přidal pět na běhy u zavírání issue,
+čtyři proti předchozí verzi padaly; od té doby má sada 129 případů.
 Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
 kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 

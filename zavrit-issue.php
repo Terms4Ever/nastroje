@@ -11,8 +11,9 @@
  *   - checklist je celý odškrtaný, nebo komentář říká, proč bod zůstal schválně,
  *   - ke snímku před existuje snímek po (výjimka: štítek "bez snímku po")
  *     a snímky odkazují na otisk commitu,
- *   - ověřovaný commit je na výchozí větvi a všechny jeho běhy na GitHubu
- *     doběhly úspěšně (kontroly, testy, nasazení),
+ *   - ověřovaný commit je na výchozí větvi a všechny jeho běhy z výchozí větve
+ *     doběhly úspěšně (kontroly, testy, nasazení); běhy spuštěné událostí issue
+ *     se nepočítají, o commitu nic neříkají (N38),
  *   - závěrečný komentář splní pravidla komentáře a odkazuje na ten commit.
  *
  * Bez --zavrit nic nemění, jen řekne, jestli by šlo zavřít. Zavírá se proto,
@@ -26,6 +27,12 @@ require_once __DIR__ . '/src/tvar-issue.php';
 
 const STITEK_BEZ_SNIMKU_PO = 'bez snímku po';
 const USPESNE_ZAVERY = ['success', 'skipped', 'neutral'];
+
+/**
+ * Události, jejichž běhy o ověřovaném commitu nic neříkají. Workflow Tvar
+ * issue GitHub pověsí na commit, který je zrovna hlavou výchozí větve (N38).
+ */
+const UDALOSTI_BEZ_DUKAZU = ['issues', 'issue_comment'];
 
 $koren = null;
 $cislo = null;
@@ -196,13 +203,23 @@ foreach (problemySnimkuVTextu($telo) as $problem) {
 // --------------------------------------------------------------------------
 // 5. Důkaz z GitHubu: všechny běhy ověřovaného commitu doběhly úspěšně
 // --------------------------------------------------------------------------
-$behy = gh(['api', "repos/$slug/commits/$otisk/check-runs?per_page=100"]);
-if (!is_array($behy) || !isset($behy['check_runs'])) {
+// Počítají se jen běhy z výchozí větve, které nespustila událost issue.
+// Kontrolu tvaru issue GitHub pověsí na commit, který je zrovna hlavou
+// výchozí větve, a zrušený běh jiného issue dřív zavření zablokoval
+// (Igris #3, 27. 9. 2026). Běh na jiné větvi se stejným otiskem, třeba
+// dočasné při přejmenování větve, o výchozí větvi nic neříká (N38).
+$vsechnyBehy = behyCommitu($slug, $otisk);
+$behy = $vsechnyBehy === null ? null : array_values(array_filter(
+    $vsechnyBehy,
+    static fn (array $beh): bool => !in_array((string) ($beh['event'] ?? ''), UDALOSTI_BEZ_DUKAZU, true)
+        && (string) ($beh['head_branch'] ?? '') === $vychozi
+));
+if ($behy === null) {
     $problemy[] = "běhy commitu $kratky se nepodařilo načíst; bez nich není důkaz";
-} elseif ($behy['check_runs'] === []) {
+} elseif ($behy === []) {
     $problemy[] = "commit $kratky nemá na GitHubu žádný běh kontrol; není čím dokázat, že prošel";
 } else {
-    foreach ($behy['check_runs'] as $beh) {
+    foreach ($behy as $beh) {
         $nazev = (string) ($beh['name'] ?? '?');
         if (($beh['status'] ?? '') !== 'completed') {
             $problemy[] = "běh \"$nazev\" u commitu $kratky ještě běží; počkej, až doběhne";
@@ -271,6 +288,30 @@ function spust(array $prikaz): array
     @unlink($chyba);
 
     return ['kod' => $kod, 'ven' => $ven, 'chyba' => $chybovy];
+}
+
+/**
+ * Všechny běhy GitHub Actions k otisku, přes všechny stránky. Dřív se četla
+ * jen první stovka a běh z druhé stránky se nenačetl; úpravy issues přidávají
+ * na hlavu výchozí větve další běhy, takže stovka rychle dojde (N38).
+ * Null, když se kterákoli stránka nepodaří načíst: bez všech běhů není důkaz.
+ */
+function behyCommitu(string $slug, string $otisk): ?array
+{
+    $behy = [];
+    for ($stranka = 1; $stranka <= 50; $stranka++) {
+        $data = gh(['api', "repos/$slug/actions/runs?head_sha=$otisk&per_page=100&page=$stranka"]);
+        if (!is_array($data) || !isset($data['total_count'], $data['workflow_runs']) || !is_array($data['workflow_runs'])) {
+            return null;
+        }
+        $behy = array_merge($behy, $data['workflow_runs']);
+        if ($data['workflow_runs'] === [] || count($behy) >= (int) $data['total_count']) {
+            return $behy;
+        }
+    }
+
+    // Přes pět tisíc běhů u jednoho commitu: radši nahlas než s neúplným výčtem.
+    return null;
 }
 
 /** Výstup gh jako JSON, nebo null, když gh selže nebo vrátí něco jiného. */

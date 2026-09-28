@@ -516,9 +516,50 @@ pripad('zavření: běh, který ještě běží, neprojde', function () use ($ho
 });
 
 pripad('zavření: commit bez jediného běhu neprojde', function () use ($hotovyChecklist): array {
-    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => ['total_count' => 0, 'check_runs' => []]]);
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => []]);
 
     return ocekavej($vysledek, 1, 'žádný běh');
+});
+
+// Běhy spuštěné událostí issue (workflow Tvar issue) věší GitHub na commit,
+// který je zrovna hlavou main, a o zavíraném commitu nic neříkají. Zrušený
+// běh kontroly tvaru jiného issue dřív zavření zablokoval (Igris #3,
+// 27. 9. 2026). Stejně běh na jiné větvi se stejným otiskem (N38).
+pripad('zavření: zrušená kontrola tvaru jiného issue zavření neblokuje (N38)', function () use ($hotovyChecklist): array {
+    $behy = array_merge(behy('completed', 'success'), [beh('Tvar issue', 'issues', 'completed', 'cancelled')]);
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => $behy]);
+
+    return ocekavej($vysledek, 0, 'lze zavřít');
+});
+
+pripad('zavření: červený push vedle zelené kontroly tvaru issue neprojde (N38)', function () use ($hotovyChecklist): array {
+    $behy = array_merge(behy('completed', 'failure'), [beh('Tvar issue', 'issues', 'completed', 'success')]);
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => $behy]);
+
+    return ocekavej($vysledek, 1, 'skončil failure');
+});
+
+pripad('zavření: commit jen s kontrolami tvaru issue neprojde (N38)', function () use ($hotovyChecklist): array {
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => [beh('Tvar issue', 'issues', 'completed', 'success')]]);
+
+    return ocekavej($vysledek, 1, 'žádný běh');
+});
+
+pripad('zavření: zrušený běh na jiné větvi zavření neblokuje (N38)', function () use ($hotovyChecklist): array {
+    $behy = array_merge(behy('completed', 'success'), [beh('Kontroly', 'push', 'completed', 'cancelled', 'main-tmp')]);
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => $behy]);
+
+    return ocekavej($vysledek, 0, 'lze zavřít');
+});
+
+pripad('zavření: neúspěšný běh na druhé stránce neprojde (N38)', function () use ($hotovyChecklist): array {
+    $behy = array_merge(
+        array_fill(0, 100, beh('Kontroly', 'push', 'completed', 'success')),
+        [beh('Nasazení', 'push', 'completed', 'failure')]
+    );
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], ['behy' => $behy]);
+
+    return ocekavej($vysledek, 1, 'skončil failure');
 });
 
 pripad('zavření: komentář bez odkazu na commit neprojde', function () use ($hotovyChecklist): array {
@@ -885,13 +926,22 @@ function obrazek(string $otisk, string $druh): string
     );
 }
 
-/** Běhy commitu v odpovědi GitHubu: kontrola a nasazení. */
+/**
+ * Běhy commitu, jak je vrací GitHub v actions/runs: kontroly a nasazení
+ * spuštěné pushem na main. Atrapa z nich skládá i odpověď check-runs.
+ */
 function behy(string $stav, ?string $zaver): array
 {
-    return ['total_count' => 2, 'check_runs' => [
-        ['name' => 'readme / kontrola', 'status' => 'completed', 'conclusion' => 'success'],
-        ['name' => 'FTP Deploy', 'status' => $stav, 'conclusion' => $zaver],
-    ]];
+    return [
+        beh('Kontroly', 'push', 'completed', 'success'),
+        beh('Nasazení', 'push', $stav, $zaver),
+    ];
+}
+
+/** Jeden běh workflow: název, událost, která ho spustila, stav a větev. */
+function beh(string $nazev, string $udalost, string $stav, ?string $zaver, string $vetev = 'main'): array
+{
+    return ['name' => $nazev, 'event' => $udalost, 'head_branch' => $vetev, 'status' => $stav, 'conclusion' => $zaver];
 }
 
 /**
@@ -938,8 +988,21 @@ function zavreni(
         }
         $cesta = $a[1] ?? '';
         if (($a[0] ?? '') === 'api') {
+            // Obě cesty k běhům skládá atrapa ze stejného seznamu a stránkuje
+            // jako GitHub. check-runs vrací i běhy spuštěné událostí issue, tak
+            // jak to GitHub dělá u hlavy main (N38).
+            $dotaz = [];
+            parse_str((string) (explode('?', $cesta, 2)[1] ?? ''), $dotaz);
+            $vsechny = (array) $scenar['behy'];
+            $naStranku = max(1, (int) ($dotaz['per_page'] ?? 30));
+            $vyrez = array_slice($vsechny, (max(1, (int) ($dotaz['page'] ?? 1)) - 1) * $naStranku, $naStranku);
             if (str_contains($cesta, '/check-runs')) {
-                echo json_encode($scenar['behy']);
+                echo json_encode(['total_count' => count($vsechny), 'check_runs' => array_map(
+                    static fn (array $b): array => ['name' => $b['name'], 'status' => $b['status'], 'conclusion' => $b['conclusion']],
+                    $vyrez
+                )]);
+            } elseif (str_contains($cesta, '/actions/runs')) {
+                echo json_encode(['total_count' => count($vsechny), 'workflow_runs' => $vyrez]);
             } elseif (str_contains($cesta, '/compare/')) {
                 echo json_encode(['status' => $scenar['srovnani'] ?? 'identical']);
             } elseif (preg_match('#^repos/[^/]+/[^/]+/commits/#', $cesta)) {
