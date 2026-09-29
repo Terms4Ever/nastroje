@@ -31,8 +31,11 @@ zelená (N32). Kontrola dokumentace od 1.7.0 doporučí dokument k nasazení
 nebo testům, když ho projekt nemá (N34). Od N39 (29. 9. 2026) stojí snímky
 v issues v tabulce `| Co | Před | Po |`, nástroj na zavírání hlídá průběžné
 odškrtání checklistu a commit, který pracuje na zavřeném issue, kontrolu při
-pushi zastaví. Starší obsah jen upozorní; šablony issue v projektech mají
-sekci Snímky ještě ve starém znění, platí `sablony/issue-ukol.md`.
+pushi zastaví. Starší obsah jen upozorní. Šablony issue ve všech projektech
+kromě Igrisu mají sekci Snímky podle `sablony/issue-ukol.md` a starší snímky
+v jejich issues stojí v tabulce, i ty, které dřív ležely jen v komentáři.
+Igris má šablonu zamčenou otiskem ve vlastních testech (R245), změní ji jeho
+agent.
 
 ## Zapojené repozitáře
 
