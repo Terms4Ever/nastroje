@@ -75,5 +75,11 @@ Nic rozdělaného.
   [01 postup práce](01-postup-prace.md).
 - **Kontrola na GitHubu push nezastaví**, větve nemají ochranu (N16). Na
   kontroly ale čeká nasazení tří webů (N32), viz [02 nasazení](02-nasazeni.md).
+- **Rozdělaná změna platí hned i v jiných relacích.** Hook `tvar-issue.ps1`,
+  `zavrit-issue.php` i pre-push hook se pouštějí z disku, ne z GitHubu.
+  29. 9. 2026 narazil agent zavírající onlinefakturuj #48 na ještě
+  necommitnuté pravidlo N39; díky tomu se našla chyba v `sjednotRadky()`,
+  ale jinak by ho zastavila polovičatá změna. Změnu pravidla proto dotáhnout
+  do commitu hned, nebo ji rozdělat v samostatném klonu.
 - **Hooky v `~/.git-hooks/` nejsou v gitu.** Co se v nich změní, zmizí při
   přeinstalaci počítače; popis je v [02 nasazení](02-nasazeni.md).
