@@ -11,6 +11,10 @@
  *   - checklist je celý odškrtaný, nebo komentář říká, proč bod zůstal schválně,
  *   - ke snímku před existuje snímek po (výjimka: štítek "bez snímku po")
  *     a snímky odkazují na otisk commitu,
+ *   - snímky stojí v tabulce | Co | Před | Po |, každý řádek se snímkem před
+ *     má i snímek po a závěrečný komentář žádný snímek nevkládá (N39),
+ *   - checklist se odškrtával průběžně: vedou-li k issue aspoň dva commity
+ *     "(#N)" s odstupem, první křížek přibyl dřív než poslední commit (N39),
  *   - ověřovaný commit je na výchozí větvi a všechny jeho běhy z výchozí větve
  *     doběhly úspěšně (kontroly, testy, nasazení); běhy spuštěné událostí issue
  *     se nepočítají, o commitu nic neříkají (N38),
@@ -152,6 +156,9 @@ if ($komentarSoubor === null || $komentarSoubor === '') {
     foreach (problemySnimkuVTextu($komentar) as $problem) {
         $problemy[] = "závěrečný komentář: $problem";
     }
+    foreach (problemySnimkuVKomentari($komentar) as $problem) {
+        $problemy[] = "závěrečný komentář $problem";
+    }
     preg_match_all('/\b[0-9a-f]{7,40}\b/i', $komentar, $nalezy);
     $odkazuje = array_filter($nalezy[0], static fn (string $h): bool => str_starts_with($otisk, strtolower($h)));
     if ($odkazuje === []) {
@@ -173,6 +180,49 @@ foreach ($komentare as $text) {
 $neodskrtnute = count(array_filter(checklist($telo), static fn (bool $hotovo): bool => !$hotovo));
 if ($neodskrtnute > 0 && !$vyjimka) {
     $problemy[] = bodu($neodskrtnute) . ' v checklistu zůstalo neodškrtnutých; buď je dodělej, nebo v komentáři napiš, proč zůstávají schválně';
+}
+
+// --------------------------------------------------------------------------
+// 3b. Průběžné odškrtání (N39)
+// --------------------------------------------------------------------------
+// Vedou-li k issue aspoň dva commity "(#N)" s odstupem, musí první křížek
+// přibýt dřív než poslední commit. U onlinefakturuj se od 21. 9. u 22 z 24
+// issues odškrtl celý checklist jedinou úpravou pár sekund před zavřením,
+// i když práce šla ve dvou commitech s hodinovým odstupem (#29).
+$praceNaIssue = commityIssue($koren, $otisk, $cislo);
+if (count($praceNaIssue) >= 2) {
+    $prvniCommit = $praceNaIssue[0]['cas'];
+    $posledniCommit = $praceNaIssue[count($praceNaIssue) - 1]['cas'];
+    $vysvetleno = false;
+    foreach ($komentare as $text) {
+        if (vedomaVyjimkaOdskrtani($text)) {
+            $vysvetleno = true;
+        }
+    }
+    if ($posledniCommit - $prvniCommit > MIN_ODSTUP_COMMITU && !$vysvetleno) {
+        $verze = verzeTela($slug, $cislo);
+        if ($verze === null) {
+            $problemy[] = 'historii úprav issue se nepodařilo načíst (gh api graphql); bez ní nejde ověřit, že se checklist odškrtával průběžně';
+        } else {
+            $verze[] = ['cas' => time(), 'text' => $telo];
+            $prvniKrizek = null;
+            foreach ($verze as $jedna) {
+                if (in_array(true, checklist($jedna['text']), true)) {
+                    $prvniKrizek = $jedna['cas'];
+                    break;
+                }
+            }
+            if ($prvniKrizek !== null && $prvniKrizek > $posledniCommit) {
+                $problemy[] = sprintf(
+                    'k issue vedou %d commity (%s až %s UTC), ale první křížek v checklistu přibyl až po posledním; body se odškrtávají průběžně, hned po commitu, který je splnil'
+                    . ' (když body opravdu splnil až poslední commit, napiš do komentáře, že je splnil „až poslední commit“)',
+                    count($praceNaIssue),
+                    gmdate('j. n. H:i', $prvniCommit),
+                    gmdate('j. n. H:i', $posledniCommit)
+                );
+            }
+        }
+    }
 }
 
 // --------------------------------------------------------------------------
@@ -198,6 +248,11 @@ foreach (problemySnimkuVTextu($telo) as $problem) {
     if ($vznik >= OD_SNIMKU_S_OTISKEM) {
         $problemy[] = $problem;
     }
+}
+// Snímky v tabulce | Co | Před | Po | (N39). Platí při každém zavření, i u
+// staršího issue: zavírá se teď a snímek po k tomu přibývá teď.
+foreach (problemyTabulkySnimku($telo, !in_array(STITEK_BEZ_SNIMKU_PO, $stitky, true)) as $problem) {
+    $problemy[] = $problem;
 }
 
 // --------------------------------------------------------------------------
@@ -312,6 +367,74 @@ function behyCommitu(string $slug, string $otisk): ?array
 
     // Přes pět tisíc běhů u jednoho commitu: radši nahlas než s neúplným výčtem.
     return null;
+}
+
+/**
+ * Commity, které pracují na issue ("(#N)" v předmětu), od nejstaršího.
+ * Bere se historie ověřovaného commitu, ne pracovní strom.
+ *
+ * @return list<array{cas: int, predmet: string}>
+ */
+function commityIssue(string $koren, string $otisk, int $cislo): array
+{
+    // Pole místo řetězce, bez shellu: escapeshellarg na Windows zahodí
+    // procenta a z formátu --format=%ct by zbyla mezera.
+    $proces = proc_open(
+        ['git', '-C', $koren, 'log', '--format=%ct%x09%s', $otisk],
+        [1 => ['pipe', 'w'], 2 => ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'w']],
+        $roury
+    );
+    if (!is_resource($proces)) {
+        return [];
+    }
+    $vystup = (string) stream_get_contents($roury[1]);
+    fclose($roury[1]);
+    if (proc_close($proces) !== 0) {
+        return [];
+    }
+    $commity = [];
+    foreach (preg_split('/\R/', trim($vystup)) ?: [] as $radek) {
+        $casti = explode("\t", $radek, 2);
+        if (count($casti) === 2 && in_array($cislo, praceNaIssues($casti[1]), true)) {
+            $commity[] = ['cas' => (int) $casti[0], 'predmet' => $casti[1]];
+        }
+    }
+    usort($commity, static fn (array $a, array $b): int => $a['cas'] <=> $b['cas']);
+
+    return $commity;
+}
+
+/**
+ * Verze těla issue v čase z GitHubu (userContentEdits), od nejstarší.
+ * Dotaz jde souborem: escapeshellarg na Windows zahodí vykřičník ze String!.
+ * Null, když historii nejde načíst.
+ *
+ * @return list<array{cas: int, text: string}>|null
+ */
+function verzeTela(string $slug, int $cislo): ?array
+{
+    [$vlastnik, $nazev] = explode('/', $slug, 2);
+    $dotaz = tempnam(sys_get_temp_dir(), 'dotaz');
+    file_put_contents($dotaz, 'query($vlastnik: String!, $nazev: String!, $cislo: Int!) {'
+        . ' repository(owner: $vlastnik, name: $nazev) { issue(number: $cislo) {'
+        . ' userContentEdits(first: 100) { nodes { editedAt diff } } } } }');
+    $data = gh(['api', 'graphql', '-F', 'query=@' . $dotaz, '-f', 'vlastnik=' . $vlastnik, '-f', 'nazev=' . $nazev, '-F', 'cislo=' . $cislo]);
+    @unlink($dotaz);
+
+    $uzly = $data['data']['repository']['issue']['userContentEdits']['nodes'] ?? null;
+    if (!is_array($uzly)) {
+        return null;
+    }
+    $verze = [];
+    foreach ($uzly as $uzel) {
+        $cas = strtotime((string) ($uzel['editedAt'] ?? ''));
+        if ($cas !== false && isset($uzel['diff'])) {
+            $verze[] = ['cas' => $cas, 'text' => (string) $uzel['diff']];
+        }
+    }
+    usort($verze, static fn (array $a, array $b): int => $a['cas'] <=> $b['cas']);
+
+    return $verze;
 }
 
 /** Výstup gh jako JSON, nebo null, když gh selže nebo vrátí něco jiného. */

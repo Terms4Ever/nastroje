@@ -48,6 +48,26 @@ upozorní; všech 39 starších odkazů bylo převedeno.
 Kde je snímek před, musí být i po. Když ho nemá kdo pořídit (stav jde vidět
 jen na zařízení), dostane issue štítek `bez snímku po`.
 
+**Od 29. 9. 2026 stojí snímky v tabulce** (N39). Pod sebou nešlo poznat, co
+je před a co po: popis obrázku GitHub neukazuje, takže onlinefakturuj #37
+a #44 měly pod sebou šest obrázků bez jediného viditelného slova. Sekce
+`## Snímky` má tabulku se záhlavím `| Co | Před | Po |`, každý řádek je jeden
+pár: v prvním sloupci slovy, co ukazuje, vlevo stav před, vpravo stav po.
+Buňka, pro kterou snímek není, zůstane prázdná (nová obrazovka nemá před).
+
+```text
+| Co | Před | Po |
+|---|---|---|
+| Seznam dobropisů | ![před: bez PDF](.../pred-seznam.png?raw=1) | ![po: s PDF a ISDOC](.../po-seznam.png?raw=1) |
+| PDF dobropisu |  | ![po: PDF s odkazem na fakturu](.../po-pdf.png?raw=1) |
+```
+
+Ve sloupci Před smí být jen `pred-*.png`, ve sloupci Po jen `po-*.png`,
+v buňce nejvýš jeden snímek. Snímek mimo tabulku neprojde a komentář snímky
+nevkládá: pár by se rozpadl mezi tělo a komentáře. U zavřeného issue má každý
+řádek se snímkem před i snímek po, pokud issue nenese `bez snímku po`.
+Tabulka se vyplňuje průběžně: před při založení, po při zavření.
+
 ## Zavření s důkazem
 
 ```bash
@@ -65,14 +85,31 @@ Běhy spuštěné událostí issue (workflow Tvar issue) se nepočítají: GitHu
 věší na commit, který je zrovna hlavou výchozí větve, takže o zavíraném commitu
 nic neříkají, a zrušený běh jiného issue dřív zavření zablokoval (N38).
 
+**Checklist se odškrtává průběžně** (N39). Vedou-li k issue aspoň dva commity
+s číslem issue v závorce, třeba `(#12)`, s odstupem přes pět minut, musí první
+křížek přibýt dřív než poslední commit. Nástroj to ověří z historie úprav těla
+na GitHubu. U onlinefakturuj se od 21. 9. u 22 z 24 issues odškrtl celý
+checklist jedinou úpravou pár sekund před zavřením, i když práce šla ve dvou
+commitech s hodinovým odstupem. Když body opravdu splnil až poslední commit
+(předchozí jen připravil test), řekne to komentář slovy „až poslední commit".
+
+## Práce po zavření
+
+Commit s číslem issue v závorce, třeba `Faktura hlídá index (#40)`, na issue
+pracuje. Přijde-li po jeho zavření, důkaz při zavření ho nepokryl: na
+onlinefakturuj #40 přišel unikátní index v databázi čtyři hodiny po zavření.
+Od 29. 9. 2026 takový commit zastaví kontrolu při pushi (N39). Práce patří
+do znovu otevřeného issue (po novém zavření platí nové datum), nebo do
+nového. Zmínka bez závorky („deník u #40 říká pravdu") práci nehlásí.
+
 ## Kde se to vynucuje
 
 | Místo | Kdy | Co |
 |---|---|---|
 | `hooky/tvar-issue.ps1` | před zápisem na GitHub | tělo a komentář souborem, tvar, štítek a odpovědný při zakládání, holé zavření zastaví |
-| `issue-tvar.yml` | do minuty po události | tvar, zařazení, snímky, u zavřeného checklist se stejnými výjimkami (komentáře dostane souborem); označí `tvar nesedí` a napíše, co chybí |
-| `kontrola-issues.php` | při každém pushi | všechna issues repozitáře včetně komentářů a snímků v commitu |
-| `zavrit-issue.php` | při zavírání | důkaz ze zeleného CI |
+| `issue-tvar.yml` | do minuty po události | tvar, zařazení, snímky včetně tabulky, u zavřeného checklist se stejnými výjimkami (komentáře dostane souborem); označí `tvar nesedí` a napíše, co chybí |
+| `kontrola-issues.php` | při každém pushi | všechna issues repozitáře včetně komentářů, snímků v commitu a tabulky snímků; commit, který pracuje na zavřeném issue |
+| `zavrit-issue.php` | při zavírání | důkaz ze zeleného CI, tabulka snímků s párem v každém řádku, průběžné odškrtání |
 | `~/.git-hooks/commit-msg` | při commitu | žádné „Closes #N", issue by se zavřelo samo |
 
 Issues starší než den zavedení pravidla jen upozorní; každé pravidlo má

@@ -23,6 +23,11 @@
  *      text napíše znovu
  *  10. snímek odkazuje na otisk commitu, ne na větev; v tom commitu leží,
  *      je to obrázek a před a po nejsou tentýž soubor (od 23. 9. 2026, N33)
+ *  11. snímky stojí v tabulce | Co | Před | Po | v sekci Snímky, komentář
+ *      žádný nevkládá a u zavřeného má každý řádek se snímkem před i po
+ *      (od 29. 9. 2026, N39)
+ *  12. žádný commit nepracuje na issue, které už je zavřené: "(#12)"
+ *      v předmětu po zavření #12 (od 29. 9. 2026, N39)
  *
  * Starší issues se berou mírněji: přísné jsou od data, kdy standard vznikl
  * (přepínač --od, výchozí 2026-09-21, tedy den po zavedení standardu).
@@ -38,7 +43,7 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/src/tvar-issue.php';
 
-const VERZE_ISSUES = '1.11.0';
+const VERZE_ISSUES = '1.12.0';
 
 /**
  * Štítek, kterým se issue vymaňuje z pravidla o snímku "po". Je pro případy,
@@ -266,6 +271,28 @@ foreach ($issues as $issue) {
         $pridej("#$cislo $problem");
     }
 
+    // 11. Snímky v tabulce | Co | Před | Po | (N39). Pod sebou nešlo poznat,
+    //     co je před a co po; komentář snímek nevkládá, pár by se rozpadl.
+    //     U zavřeného issue má každý řádek se snímkem před i snímek po.
+    $parovat = strtoupper($stav) === 'CLOSED' && !in_array(STITEK_BEZ_PO, $stitky, true);
+    foreach ($syrove ? [] : problemyTabulkySnimku($telo, $parovat) as $problem) {
+        if ($vznik >= OD_TABULKY_SNIMKU) {
+            $chyby[] = "#$cislo $problem";
+        } else {
+            $varovani[] = "#$cislo $problem";
+        }
+    }
+    foreach ($issue['comments'] ?? [] as $poradi => $komentar) {
+        foreach (problemySnimkuVKomentari((string) ($komentar['body'] ?? '')) as $problem) {
+            $text = "#$cislo komentář " . ($poradi + 1) . " $problem";
+            if (substr((string) ($komentar['createdAt'] ?? ''), 0, 10) >= OD_TABULKY_SNIMKU) {
+                $chyby[] = $text;
+            } else {
+                $varovani[] = $text;
+            }
+        }
+    }
+
     // 7. Když je vidět stav "před", musí být vidět i "po". Jinak zůstane
     //    v issue jen fotka rozbitého stavu a nikdo nepozná, co se změnilo.
     if (strtoupper($stav) === 'CLOSED' && !in_array(STITEK_BEZ_SNIMKU, $stitky, true)) {
@@ -288,6 +315,43 @@ foreach ($issues as $issue) {
 // 7. Razítko aplikace u autora
 foreach (razitkaAplikace($slug, $chyby) as $popis) {
     $chyby[] = $popis;
+}
+
+// 12. Práce po zavření (N39). Commit s "(#12)" v předmětu pracuje na #12;
+//     přijde-li po jeho zavření, důkaz při zavření ho nepokryl. Na
+//     onlinefakturuj #40 takhle přišel unikátní index čtyři hodiny po
+//     zavření. Patří do znovu otevřeného nebo nového issue.
+$zavrena = [];
+foreach ($issues as $issue) {
+    if (strtoupper((string) ($issue['state'] ?? '')) === 'CLOSED' && (string) ($issue['closedAt'] ?? '') !== '') {
+        $zavrena[(int) ($issue['number'] ?? 0)] = (string) $issue['closedAt'];
+    }
+}
+if ($zavrena !== []) {
+    $commity = commityRepozitare($koren);
+    if ($commity === null) {
+        $chyby[] = 'historii commitů se nepodařilo přečíst, práci po zavření issue nejde ověřit';
+    }
+    foreach ($commity ?? [] as $commit) {
+        foreach (praceNaIssues($commit['predmet']) as $cislo) {
+            $zavreno = strtotime($zavrena[$cislo] ?? '');
+            if ($zavreno === false || $commit['cas'] <= $zavreno) {
+                continue;
+            }
+            $text = sprintf(
+                'commit %s „%s“ pracuje na #%d, které je od %s zavřené; práce po zavření patří do znovu otevřeného nebo nového issue',
+                $commit['otisk'],
+                $commit['predmet'],
+                $cislo,
+                gmdate('j. n. Y', $zavreno)
+            );
+            if (gmdate('Y-m-d', $commit['cas']) >= OD_PRACE_PO_ZAVRENI) {
+                $chyby[] = $text;
+            } else {
+                $varovani[] = $text;
+            }
+        }
+    }
 }
 
 // Snímky, ke kterým se nehlásí žádné issue
@@ -439,7 +503,7 @@ function nactiIssues(string $slug, bool $jenOtevrene, ?string &$chyba = null): ?
 {
     $stav = $jenOtevrene ? 'open' : 'all';
     $prikaz = sprintf(
-        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,comments,labels,assignees',
+        'gh issue list --repo %s --state %s --limit 200 --json number,title,body,state,createdAt,closedAt,comments,labels,assignees',
         escapeshellarg($slug),
         $stav
     );
@@ -536,6 +600,39 @@ function git(string $koren, string $prikaz): ?string
     }
 
     return trim($vystup[0]);
+}
+
+/**
+ * Commity od HEAD dolů: krátký otisk, čas commitu a předmět. Null, když git
+ * historii nevydá; to se hlásí, kontrola bez historie neprojde tiše.
+ *
+ * @return list<array{otisk: string, cas: int, predmet: string}>|null
+ */
+function commityRepozitare(string $koren): ?array
+{
+    $proces = proc_open(
+        ['git', '-C', proGit($koren), 'log', '--format=%h%x09%ct%x09%s', 'HEAD'],
+        [1 => ['pipe', 'w'], 2 => ['file', PHP_OS_FAMILY === 'Windows' ? 'NUL' : '/dev/null', 'w']],
+        $roury
+    );
+    if (!is_resource($proces)) {
+        return null;
+    }
+    $vystup = (string) stream_get_contents($roury[1]);
+    fclose($roury[1]);
+    if (proc_close($proces) !== 0) {
+        return null;
+    }
+
+    $commity = [];
+    foreach (preg_split('/\R/', trim($vystup)) ?: [] as $radek) {
+        $casti = explode("\t", $radek, 3);
+        if (count($casti) === 3) {
+            $commity[] = ['otisk' => $casti[0], 'cas' => (int) $casti[1], 'predmet' => $casti[2]];
+        }
+    }
+
+    return $commity;
 }
 
 /**

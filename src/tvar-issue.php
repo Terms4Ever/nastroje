@@ -4,7 +4,7 @@
  * (kontrola-issues.php), kontrola jednoho těla před založením
  * (kontrola-tvaru-issue.php) i workflow reagující na událost issues.
  *
- * Pravidla jsou v docs/03-rozhodovaci-dennik.md pod N19 a N20.
+ * Pravidla jsou v docs/03-rozhodovaci-dennik.md pod N19, N20, N33 a N39.
  */
 declare(strict_types=1);
 
@@ -146,14 +146,12 @@ function jeSyroveIssue(string $telo): bool
 
 /**
  * Konce řádků na jeden tvar. Tělo z webového formuláře má CRLF, tělo ze
- * souboru LF; bez tohohle by `` zůstal v nadpisu a každá sekce by vypadala
+ * souboru LF; bez tohohle by `\r` zůstal v nadpisu a každá sekce by vypadala
  * jako sekce navíc.
  */
 function sjednotRadky(string $text): string
 {
-    return str_replace(["
-", ""], "
-", $text);
+    return str_replace(["\r\n", "\r"], "\n", $text);
 }
 
 /** Nadpisy druhé úrovně v pořadí, jak jsou v těle. */
@@ -400,4 +398,228 @@ function jeObrazek(string $obsah): bool
     return str_starts_with($obsah, "\x89PNG\r\n\x1a\n")
         || str_starts_with($obsah, "\xff\xd8\xff")
         || (substr($obsah, 0, 4) === 'RIFF' && substr($obsah, 8, 4) === 'WEBP');
+}
+
+// --------------------------------------------------------------------------
+// N39: snímky v tabulce, průběžné odškrtání, práce po zavření
+// --------------------------------------------------------------------------
+
+/**
+ * Od kdy snímky v issue stojí v tabulce | Co | Před | Po | (N39). Pod sebou
+ * nešlo poznat, co je před a co po: popis obrázku GitHub neukazuje, takže
+ * onlinefakturuj #37 a #44 měly pod sebou šest obrázků bez jediného
+ * viditelného slova. Starší obsah jen upozorní.
+ */
+const OD_TABULKY_SNIMKU = '2026-09-29';
+
+/** Záhlaví tabulky snímků: co řádek ukazuje, stav před a stav po. */
+const ZAHLAVI_SNIMKU = ['Co', 'Před', 'Po'];
+
+/** Tabulka do hlášek, ať je hned vidět, jak má vypadat. */
+const VZOR_TABULKY_SNIMKU = '| Co | Před | Po |';
+
+/** Štítek, který issue vymaní z pravidla o snímku po: nemá ho kdo pořídit. */
+const STITEK_BEZ_PO = 'bez snímku po';
+
+/**
+ * Od kdy commit, který pracuje na zavřeném issue, zastaví kontrolu (N39).
+ * Na onlinefakturuj #40 přišel unikátní index čtyři hodiny po zavření
+ * a důkaz při zavření ho nepokryl. Starší commity jen upozorní.
+ */
+const OD_PRACE_PO_ZAVRENI = '2026-09-29';
+
+/**
+ * Commity bližší než pět minut jsou jeden krok práce (kód a hned zápis do
+ * deníku), mezi nimi se odškrtávat nemá kdy.
+ */
+const MIN_ODSTUP_COMMITU = 300;
+
+/** Snímek z docs/snimky vložený jako obrázek, jakoukoli adresou. */
+const VZOR_VLOZENEHO_SNIMKU = '#!\[[^\]]*\]\(([^)\s]*docs/snimky/[^)\s]*)\)#';
+
+/**
+ * Vložené snímky v textu jako cesty od docs/snimky, bez ?raw=1.
+ *
+ * @return list<string>
+ */
+function vlozeneSnimky(string $text): array
+{
+    preg_match_all(VZOR_VLOZENEHO_SNIMKU, sjednotRadky($text), $shody);
+
+    return array_map(static function (string $adresa): string {
+        $cesta = substr($adresa, (int) strpos($adresa, 'docs/snimky/'));
+
+        return rawurldecode((string) preg_replace('/[?#].*$/', '', $cesta));
+    }, $shody[1] ?? []);
+}
+
+/** Stav na snímku podle názvu souboru: pred, po, nebo null. */
+function druhSnimku(string $cesta): ?string
+{
+    return preg_match('#/(pred|po)-[^/]+$#', $cesta, $shoda) === 1 ? $shoda[1] : null;
+}
+
+/** Buňky řádku markdownové tabulky, oříznuté. */
+function bunkyTabulky(string $radek): array
+{
+    $radek = trim($radek);
+    if (str_starts_with($radek, '|')) {
+        $radek = substr($radek, 1);
+    }
+    if (str_ends_with($radek, '|')) {
+        $radek = substr($radek, 0, -1);
+    }
+
+    return array_map('trim', explode('|', $radek));
+}
+
+/** Oddělovač pod záhlavím tabulky: |---|:---:|---| */
+function jeOddelovacTabulky(array $bunky): bool
+{
+    foreach ($bunky as $bunka) {
+        if (preg_match('/^:?-{3,}:?$/', $bunka) !== 1) {
+            return false;
+        }
+    }
+
+    return $bunky !== [];
+}
+
+/**
+ * Snímky v těle stojí v tabulce | Co | Před | Po | v sekci Snímky (N39).
+ * Řádek je jeden pár: v prvním sloupci, co ukazuje, vlevo stav před, vpravo
+ * stav po. Buňka bez snímku zůstane prázdná. $parovat hlídá zavírané issue:
+ * každý řádek se snímkem před má i snímek po.
+ *
+ * @return string[]
+ */
+function problemyTabulkySnimku(string $telo, bool $parovat = false): array
+{
+    if (vlozeneSnimky($telo) === []) {
+        return [];
+    }
+
+    $problemy = [];
+    $mimo = [];
+    $sekce = '';
+    $vTabulce = false;
+    foreach (explode("\n", sjednotRadky($telo)) as $radek) {
+        if (preg_match('/^##[ \t]+(\S.*?)[ \t]*$/', $radek, $shoda) === 1) {
+            $sekce = '## ' . $shoda[1];
+            $vTabulce = false;
+            continue;
+        }
+        if (!str_starts_with(trim($radek), '|')) {
+            $vTabulce = false;
+            array_push($mimo, ...vlozeneSnimky($radek));
+            continue;
+        }
+
+        $bunky = bunkyTabulky($radek);
+        if ($bunky === ZAHLAVI_SNIMKU) {
+            $vTabulce = $sekce === '## Snímky';
+            continue;
+        }
+        if (jeOddelovacTabulky($bunky)) {
+            continue;
+        }
+        if (!$vTabulce) {
+            array_push($mimo, ...vlozeneSnimky($radek));
+            continue;
+        }
+        if (count($bunky) !== 3) {
+            $problemy[] = 'řádek tabulky snímků má ' . count($bunky) . ' sloupce, patří tam tři: ' . VZOR_TABULKY_SNIMKU;
+            continue;
+        }
+
+        [$co, $vlevo, $vpravo] = $bunky;
+        $popis = $co === '' ? '(bez popisu)' : $co;
+        if ($co === '' || vlozeneSnimky($co) !== []) {
+            $problemy[] = 'řádek tabulky snímků nemá v prvním sloupci (Co) slovy, co ukazuje';
+        }
+        $pred = vlozeneSnimky($vlevo);
+        $po = vlozeneSnimky($vpravo);
+        foreach ($pred as $cesta) {
+            if (druhSnimku($cesta) !== 'pred') {
+                $problemy[] = sprintf('snímek %s je ve sloupci Před, patří tam jen pred-*.png', basename($cesta));
+            }
+        }
+        foreach ($po as $cesta) {
+            if (druhSnimku($cesta) !== 'po') {
+                $problemy[] = sprintf('snímek %s je ve sloupci Po, patří tam jen po-*.png', basename($cesta));
+            }
+        }
+        if (count($pred) > 1 || count($po) > 1) {
+            $problemy[] = sprintf('řádek „%s“ má v jedné buňce víc snímků; každý pár patří na vlastní řádek', $popis);
+        }
+        if ($pred === [] && $po === []) {
+            $problemy[] = sprintf('řádek „%s“ nemá žádný snímek', $popis);
+        }
+        if ($parovat && $pred !== [] && $po === []) {
+            $problemy[] = sprintf(
+                'řádek „%s“ má snímek před, ale ne po; bez něj není vidět, co se změnilo (když ho nemá kdo pořídit, dej issue štítek "%s")',
+                $popis,
+                STITEK_BEZ_PO
+            );
+        }
+    }
+
+    if ($mimo !== []) {
+        $problemy[] = sprintf(
+            'snímky stojí mimo tabulku (%s); v sekci Snímky patří do tabulky %s, každý pár na jeden řádek: popis, před vlevo, po vpravo',
+            implode(', ', array_map('basename', $mimo)),
+            VZOR_TABULKY_SNIMKU
+        );
+    }
+
+    return $problemy;
+}
+
+/**
+ * Komentář snímek nevkládá. Snímky mají jedno místo, tabulku v těle issue;
+ * rozdělené mezi tělo a komentáře se pár před a po nedá porovnat (N39).
+ *
+ * @return string[]
+ */
+function problemySnimkuVKomentari(string $text): array
+{
+    $snimky = vlozeneSnimky($text);
+    if ($snimky === []) {
+        return [];
+    }
+
+    return [sprintf(
+        'vkládá snímek (%s); snímky patří do tabulky %s v sekci Snímky těla issue, komentář na ni jen odkáže',
+        implode(', ', array_map('basename', $snimky)),
+        VZOR_TABULKY_SNIMKU
+    )];
+}
+
+/**
+ * Issues, na kterých commit pracuje: číslo v závorce v předmětu, "(#12)" nebo
+ * "(#12, #13)". Zmínka bez závorky ("deník u #12") práci nehlásí (N39).
+ *
+ * @return list<int>
+ */
+function praceNaIssues(string $predmet): array
+{
+    preg_match_all('/\(([^()]*#\d+[^()]*)\)/', $predmet, $zavorky);
+    $cisla = [];
+    foreach ($zavorky[1] ?? [] as $obsah) {
+        preg_match_all('/#(\d+)\b/', $obsah, $shody);
+        foreach ($shody[1] as $cislo) {
+            $cisla[] = (int) $cislo;
+        }
+    }
+
+    return array_values(array_unique($cisla));
+}
+
+/**
+ * Komentář vysvětluje, že body checklistu splnil až poslední commit
+ * a předchozí jen připravil (třeba test). Pak se na konci odškrtává právem.
+ */
+function vedomaVyjimkaOdskrtani(string $text): bool
+{
+    return preg_match('/až\s+poslední\s+commit/iu', $text) === 1;
 }

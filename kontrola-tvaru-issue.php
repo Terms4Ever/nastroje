@@ -18,6 +18,9 @@
  * --komentar kontroluje komentář místo těla: délku, zmínky a pomlčky.
  * --vznik <datum> říká, kdy issue vzniklo; pravidla zavedená později ho pak
  * nezastaví, jen je to vidět v hromadné kontrole. Bez něj jde o nový obsah.
+ * Snímky stojí v tabulce | Co | Před | Po | v sekci Snímky a komentář žádný
+ * snímek nevkládá (N39); u --zavrene má každý řádek se snímkem před i po,
+ * pokud issue nenese štítek "bez snímku po".
  * --stitky a --odpovedni (čárkou oddělené seznamy) navíc ověří zařazení:
  * štítek druhu a odpovědného. Ty nejsou v těle, proto se předávají zvlášť;
  * prázdná hodnota znamená, že issue žádné nemá.
@@ -114,6 +117,13 @@ if ($vznik === null || $vznik >= OD_SNIMKU_S_OTISKEM) {
 }
 if ($zarazeni && !$komentar) {
     $problemy = array_merge($problemy, problemyZarazeni($stitky, $odpovedni, $telo));
+}
+// Snímky v tabulce | Co | Před | Po |, u zavíraného issue každý řádek
+// s před i po (N39). Komentář snímky nevkládá, patří do tabulky v těle.
+if ($komentar) {
+    $problemy = array_merge($problemy, problemySnimkuVKomentari($telo));
+} elseif ($vznik === null || $vznik >= OD_TABULKY_SNIMKU) {
+    $problemy = array_merge($problemy, problemyTabulkySnimku($telo, $zavrene && !in_array(STITEK_BEZ_PO, $stitky, true)));
 }
 
 if ($problemy === []) {

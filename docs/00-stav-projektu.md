@@ -17,7 +17,7 @@ hlavní větev:     main
 | `kontrola-pravidel.php`, `src/sada-pravidel.php` | 1 | výběr sady, README, AGENTS, workflow, online topic (N35), názvy kontrol na GitHubu (N36) |
 | `kontrola-dokumentace.php` | 1.7.2 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
 | `kontrola-migraci.php` | 1.1.0 | [06 standard migrací](06-standard-migraci.md) |
-| `kontrola-issues.php` | 1.11.0 | [05 standard issues](05-standard-issues.md) |
+| `kontrola-issues.php` | 1.12.0 | [05 standard issues](05-standard-issues.md) |
 | `kontrola-tvaru-issue.php`, `hooky/tvar-issue.ps1` | - | [05 standard issues](05-standard-issues.md) |
 | `zavrit-issue.php` | - | [05 standard issues](05-standard-issues.md) |
 | `stav-projektu.php`, `prehled-migraci.php` | - | generátory bloků |
@@ -28,7 +28,11 @@ hlavní větev:     main
 Kontroly končí chybou i tehdy, když nemohly proběhnout (chybí `docs/`,
 neexistuje cesta, gh nepřečte issues, neznámý základ rozsahu); dřív to byla
 zelená (N32). Kontrola dokumentace od 1.7.0 doporučí dokument k nasazení
-nebo testům, když ho projekt nemá (N34).
+nebo testům, když ho projekt nemá (N34). Od N39 (29. 9. 2026) stojí snímky
+v issues v tabulce `| Co | Před | Po |`, nástroj na zavírání hlídá průběžné
+odškrtání checklistu a commit, který pracuje na zavřeném issue, kontrolu při
+pushi zastaví. Starší obsah jen upozorní; šablony issue v projektech mají
+sekci Snímky ještě ve starém znění, platí `sablony/issue-ukol.md`.
 
 ## Zapojené repozitáře
 

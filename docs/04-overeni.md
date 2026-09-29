@@ -12,12 +12,13 @@ starému kódu padat (N32).
 | Oblast | Případů | Co shodí |
 |---|---|---|
 | dokumentace | 18 | chybějící `docs/`, úprava `AGENTS.md` není kód, právě založený dokument umlčí doporučení, neexistující cesta, dávka s kódem bez dokumentu, obrázek nebo smazání místo dokumentu, neznámý základ rozsahu, doporučení k nasazení a testům |
-| zavření issue | 18 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po; zrušená kontrola tvaru jiného issue ani běh na jiné větvi neblokují, neúspěch na druhé stránce běhů ano (N38) |
+| zavření issue | 29 | neodškrtnutý bod, červený nebo běžící běh CI, commit bez běhů, komentář bez odkazu na commit, snímek před bez po; zrušená kontrola tvaru jiného issue ani běh na jiné větvi neblokují, neúspěch na druhé stránce běhů ano (N38); snímky mimo tabulku, řádek s před bez po, snímek v závěrečném komentáři, křížky až po posledním ze dvou commitů a nenačtená historie úprav; tělo s konci řádků CRLF projde (N39) |
 | snímky | 9 | odkaz na větev místo commitu, snímek, který v commitu není, soubor, který není obrázek, stejný soubor před i po |
+| snímky v tabulce | 10 | snímky pod sebou, záhlaví bez sloupce Co, před ve sloupci Po, řádek bez popisu, zavřený řádek bez po, snímek v komentáři; staré issue, štítek `bez snímku po` a tělo s konci řádků CRLF projdou (N39) |
 | hook | 9 | zakládání bez štítku a odpovědného, vložené `--body`, holé zavření issue |
 | tvar issue | 12 | chybějící štítek druhu, druh proti sekci, dva druhy naráz, zavřené issue s nezaškrtnutým bodem a jeho dvě výjimky: zavřené bez práce a bod schválně nezaškrtnutý (N37) |
 | migrace | 6 | přejmenování, změna a smazání hotové migrace, neexistující cesta |
-| issues | 6 | gh vrací chybu nebo nesmysl, selhání `gh api`, issue bez štítku |
+| issues | 13 | gh vrací chybu nebo nesmysl, selhání `gh api`, issue bez štítku; nové issue a komentář se snímky mimo tabulku, commit `(#N)` po zavření issue (N39) |
 | spouštěč migrací | 4 | přejmenovaná migrace se nepustí znovu, změněná zastaví nasazení |
 | README, stav | 2 | neexistující cesta, verze Expo aplikace z `app.json` |
 | sady pravidel | 45 | chybějící, dvojí a neznámý výběr, rozporné README/AGENTS/workflow/topics, komentář či vypnutý job místo zapojení, chybný pracovní vstup, selhání a neplatné odpovědi API, nevykreslený odznak, nejednoznačné YAML, společná kontrola bez názvu `Pravidla nastroje` i v nasazení, starý název workflow vedle nového (N36) |
@@ -33,7 +34,9 @@ Online příslušnost se navíc ověřuje proti skutečnému GitHubu, ne testova
 N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada měla
 119 případů. N37 přidal pět na zavřené issue, tři z nich proti předchozí
 verzi padaly; sada měla 124 případů. N38 přidal pět na běhy u zavírání issue,
-čtyři proti předchozí verzi padaly; od té doby má sada 129 případů.
+čtyři proti předchozí verzi padaly; sada měla 129 případů. N39 přidal 28 na
+tabulku snímků, průběžné odškrtání, práci po zavření a konce řádků CRLF,
+17 z nich proti předchozí verzi padalo; od té doby má sada 157 případů.
 Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
 kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 

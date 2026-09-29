@@ -32,7 +32,9 @@ Kontrola hlídá šest věcí:
   40 řádků, odškrtaný checklist u zavřeného issue, komentáře do pěti řádků
   a žádná zmínka o nástroji, kterým se psaly. Syrový nápad zadavatele (tělo bez
   nadpisů) chyba není, jen čeká na přepsání. Snímky odkazují na otisk commitu
-  a issue se zavírá přes `zavrit-issue.php`, který chce zelené CI.
+  a stojí v tabulce `| Co | Před | Po |`, checklist se odškrtává průběžně,
+  commit po zavření issue neprojde a issue se zavírá přes `zavrit-issue.php`,
+  který chce zelené CI.
 
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.

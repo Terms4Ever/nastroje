@@ -524,7 +524,7 @@ a zakládání přes `gh api` skončí kódem 2. Na GitHubu: špatné issue dost
 štítek zmizel.
 
 **Oprava po prvním ostrém běhu.** Tělo napsané ve webovém formuláři má konce
-řádků CRLF. Kontrola nechávala `` na konci nadpisu, takže `## Problém`
+řádků CRLF. Kontrola nechávala `\r` na konci nadpisu, takže `## Problém`
 neodpovídalo povolené sekci a každé takové issue hlásilo „sekci navíc" u všech
 sekcí. Konce řádků se teď srovnají na jeden tvar (`sjednotRadky`). Našlo se to
 při přepisování starých issues: dvě issues zadavatele z webu vypadala jako
@@ -1265,3 +1265,66 @@ tvaru, zrušený běh na jiné větvi, neúspěch na druhé stránce), pátý hl
 `--zavrit`: stará verze odmítla onlinefakturuj #42 (zrušená kontrola tvaru na
 hlavě `6453382`) a trenwise #1 (zrušený běh na `main-tmp`), nová proti běhům
 obou commitů nic nemá.
+
+## N39 - Snímky v tabulce, checklist průběžně, žádná práce po zavření (29. 9. 2026)
+
+**Stav.** Zadavatel: *„Zkontroluj teď onlinefakturuj zapisování issues.
+příjde mi, že občas nedrží dobře pravidla"*. Kontrola issues hlásila všech 45
+issues v pořádku. Audit se proto díval na to, co kontrola nevidí:
+
+- Všech 19 issues se snímky je mělo pod sebou. Co je před a co po, říkal jen
+  popis obrázku, který GitHub neukazuje; #37 a #44 měly pod sebou šest
+  obrázků bez jediného viditelného slova.
+- U 22 z 24 issues zavřených od 21. 9. se celý checklist odškrtl jedinou
+  úpravou 2 až 60 sekund před zavřením, i když práce šla ve dvou commitech
+  s odstupem (#29 v 10:13 a 11:36). Postupně se odškrtávalo jen #31.
+- Na #40 přišel unikátní index v databázi čtyři hodiny po zavření
+  (`a4306a3`), na #33 štítek Admin dvě minuty po zavření (`de9bf56`).
+  Důkaz při zavření je nepokryl a issue se znovu neotevřelo.
+
+Zadavatel pak: *„a issues oprav + se mi nelíbí, že tam agent nedělá správně
+to před a po obrázky, ať to píše nějak ať to jde dobře poznat"*.
+
+**Rozhodnutí.**
+
+- Snímky stojí v tabulce `| Co | Před | Po |` v sekci Snímky, řádek je jeden
+  pár a první sloupec slovy říká, co ukazuje. Pred-* jen vlevo, po-* jen
+  vpravo, v buňce nejvýš jeden snímek, snímek mimo tabulku ani v komentáři
+  neprojde. U zavřeného issue má každý řádek se snímkem před i po, pokud
+  issue nenese `bez snímku po`. Hlídá to hook, workflow Tvar issue, kontrola
+  při pushi i nástroj na zavírání; nástroj i u staršího issue, protože snímek
+  po přibývá teď.
+- Checklist se odškrtává průběžně: vedou-li k issue aspoň dva commity `(#N)`
+  s odstupem přes pět minut, první křížek musí přibýt dřív než poslední
+  commit. `zavrit-issue.php` to čte z historie úprav těla (GraphQL
+  `userContentEdits`); dotaz jde souborem, protože escapeshellarg na Windows
+  zahodí vykřičník ze `String!`. Když body splnil až poslední commit, řekne
+  to komentář slovy „až poslední commit".
+- Commit s `(#N)` v předmětu na issue pracuje; přijde-li po jeho zavření,
+  kontrola při pushi neprojde. Práce patří do znovu otevřeného nebo nového
+  issue, zmínka bez závorky práci nehlásí.
+
+Starší obsah a commity před 29. 9. jen upozorní. Snímky 19 issues
+v onlinefakturuj se převedly do tabulky, jako se u N33 převedly odkazy.
+
+**Ověření.** 28 nových případů v `tests/spust.php`; 17 proti předchozí verzi
+padalo, 11 hlídá, co projít má (tabulka, staré issue, zmínka bez závorky,
+jediný commit, dva commity do pěti minut, křížek po prvním commitu,
+vysvětlení). Dva případy odškrtání napoprvé neprošly ani s novým kódem:
+`git log --format=%ct` přes shell na Windows ztratil procenta, takže nástroj
+žádný commit neviděl. `git` se teď volá polem bez shellu.
+
+Agent zavírající onlinefakturuj #48 narazil ještě před commitem pravidla
+(nástroje se pouštějí z disku) na hlášku „snímky stojí mimo tabulku", i když
+tabulka seděla. Tělo mělo konce řádků CRLF a `sjednotRadky()` měla od
+commitu `0c38f29` (21. 9.) v kódu místo `\r\n` doslovné znaky LF a CR:
+z CRLF dělala dva konce řádků a prázdný řádek za záhlavím tabulku ukončil.
+Funkce má teď escape sekvence, dva nové případy (CRLF v kontrole těla
+i při zavírání) proti staré verzi padaly. Doslovný CR ležel i v komentáři
+téže funkce a v deníku u záznamu o CRLF (`95e705e`); git kvůli němu bral oba
+soubory jako binární a změny v nich neukazoval. Oba jsou teď čistý text.
+
+Sada má 157 případů, kompatibilita prošla všemi osmi projekty. Kontrola
+1.12.0 na onlinefakturuj nejdřív ukázala 19 upozornění na snímky mimo
+tabulku a tři na starší commity po zavření (#40, #33, #12). Po převodu snímků
+zůstala jen ta tři upozornění na commity.

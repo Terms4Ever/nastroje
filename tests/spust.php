@@ -395,9 +395,11 @@ pripad('spouštěč: zamčené kopie jako na produkci nic nehlásí', function (
 // odkazuje na otisk commitu; starší issues jen upozorní.
 
 $otiskPriklad = str_repeat('a1b2c3d4', 5);
+// Snímek stojí v tabulce | Co | Před | Po | (N39), ať tělo neshodí jiné
+// pravidlo než to, které se tu zkouší.
 $teloSeSnimkem = static fn (string $vetev): string => "## Problém\n\nTlačítko Uložit nic neudělá.\n\n"
-    . "## Hotovo, když\n\n- [ ] tlačítko uloží\n\n## Snímky\n\n"
-    . "![Tlačítko, před](https://github.com/Terms4Ever/x/blob/$vetev/docs/snimky/1-ulozit/pred-tlacitko.png?raw=1)\n";
+    . "## Hotovo, když\n\n- [ ] tlačítko uloží\n\n## Snímky\n\n| Co | Před | Po |\n|---|---|---|\n"
+    . "| Tlačítko Uložit | ![Tlačítko, před](https://github.com/Terms4Ever/x/blob/$vetev/docs/snimky/1-ulozit/pred-tlacitko.png?raw=1) |  |\n";
 
 pripad('snímky: odkaz na větev main v novém těle neprojde', function () use ($teloSeSnimkem): array {
     $soubor = docasna('telo') . '/telo.md';
@@ -602,6 +604,204 @@ pripad('zavření: commit mimo výchozí větev neprojde', function () use ($hot
     return ocekavej($vysledek, 1, 'není');
 });
 
+// --- snímky v tabulce, průběžné odškrtání, commit po zavření (N39) -------
+//
+// Snímky pod sebou nešly poznat: popis obrázku GitHub neukazuje, takže nebylo
+// vidět, co je před a co po (onlinefakturuj #37 a #44 měly pod sebou šest
+// obrázků). Checklist se u 22 z 24 issues odškrtl celý až pár sekund před
+// zavřením, a na #40 a #33 se pracovalo i po zavření (audit 29. 9. 2026).
+
+$teloSnimky = static fn (string $snimky, string $zaskrtnuti = 'x'): string => "## Problém\n\nTlačítko Uložit nic neudělá.\n\n"
+    . "## Hotovo, když\n\n- [$zaskrtnuti] tlačítko uloží\n\n## Snímky\n\n$snimky";
+$tabulka = static function (string $otisk, array $radky): string {
+    $text = "| Co | Před | Po |\n|---|---|---|\n";
+    foreach ($radky as [$co, $vlevo, $vpravo]) {
+        $bunka = static fn (?string $druh): string => $druh === null ? '' : obrazek($otisk, $druh);
+        $text .= "| $co | " . $bunka($vlevo) . ' | ' . $bunka($vpravo) . " |\n";
+    }
+
+    return $text;
+};
+$pod = static fn (string $otisk): string => obrazek($otisk, 'pred') . "\n" . obrazek($otisk, 'po') . "\n";
+$teloDoSouboru = static function (string $telo): string {
+    $soubor = docasna('telo') . '/telo.md';
+    file_put_contents($soubor, $telo);
+
+    return $soubor;
+};
+
+foreach ([
+    ['snímky v tabulce Co | Před | Po projdou', [['Tlačítko Uložit', 'pred', 'po']], [], 0, null],
+    ['snímek před ve sloupci Po neprojde', [['Tlačítko Uložit', 'po', 'pred']], [], 1, 'sloupci Po'],
+    ['řádek bez popisu v prvním sloupci neprojde', [['', 'pred', 'po']], [], 1, 'prvním sloupci'],
+    ['zavřené: řádek s před bez po neprojde', [['Tlačítko Uložit', 'pred', null]], ['--zavrene'], 1, 'ne po'],
+    ['zavřené se štítkem bez snímku po projde', [['Tlačítko Uložit', 'pred', null]],
+        ['--zavrene', '--stitky', 'bug,bez snímku po', '--odpovedni', 'Terms4Ever'], 0, null],
+] as [$nazev, $radky, $argy, $kod, $text]) {
+    pripad('snímky v tabulce: ' . $nazev . ' (N39)', function () use ($radky, $argy, $kod, $text, $teloSnimky, $tabulka, $otiskPriklad, $teloDoSouboru): array {
+        $soubor = $teloDoSouboru($teloSnimky($tabulka($otiskPriklad, $radky)));
+
+        return ocekavej(php('kontrola-tvaru-issue.php', $soubor, ...$argy), $kod, $text);
+    });
+}
+
+// Tělo zapsané na Windows má konce řádků CRLF. sjednotRadky() místo "\r\n"
+// nesla v kódu doslovné znaky LF a CR, z CRLF tak dělala dva konce řádků
+// a mezi řádky tabulky vznikl prázdný řádek; tabulka pak „končila" hned za
+// záhlavím. Zavření onlinefakturuj #48 to 29. 9. 2026 odmítlo.
+pripad('snímky v tabulce: tělo s konci řádků CRLF projde jako s LF (N39)', function () use ($teloSnimky, $tabulka, $otiskPriklad, $teloDoSouboru): array {
+    $telo = str_replace("\n", "\r\n", $teloSnimky($tabulka($otiskPriklad, [['Tlačítko Uložit', 'pred', 'po']])));
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $teloDoSouboru($telo), '--zavrene'), 0);
+});
+
+pripad('zavření: tělo s konci řádků CRLF a tabulkou projde (N39)', function () use ($teloSnimky, $tabulka, $otiskPriklad): array {
+    $telo = str_replace("\n", "\r\n", $teloSnimky($tabulka($otiskPriklad, [['Tlačítko Uložit', 'pred', 'po']])));
+    [$vysledek] = zavreni(['body' => $telo]);
+
+    return ocekavej($vysledek, 0, 'lze zavřít');
+});
+
+pripad('snímky v tabulce: snímky pod sebou bez tabulky neprojdou (N39)', function () use ($teloSnimky, $pod, $otiskPriklad, $teloDoSouboru): array {
+    return ocekavej(php('kontrola-tvaru-issue.php', $teloDoSouboru($teloSnimky($pod($otiskPriklad)))), 1, '| Co | Před | Po |');
+});
+
+pripad('snímky v tabulce: záhlaví bez sloupce Co neprojde (N39)', function () use ($teloSnimky, $otiskPriklad, $teloDoSouboru): array {
+    $snimky = "| Před | Po |\n|---|---|\n| " . obrazek($otiskPriklad, 'pred') . ' | ' . obrazek($otiskPriklad, 'po') . " |\n";
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $teloDoSouboru($teloSnimky($snimky))), 1, '| Co | Před | Po |');
+});
+
+pripad('snímky v tabulce: staré issue se snímky pod sebou projde (N39)', function () use ($teloSnimky, $pod, $otiskPriklad, $teloDoSouboru): array {
+    return ocekavej(php('kontrola-tvaru-issue.php', $teloDoSouboru($teloSnimky($pod($otiskPriklad))), '--vznik', '2026-09-28T10:00:00Z'), 0);
+});
+
+pripad('snímky v tabulce: komentář se snímkem neprojde (N39)', function () use ($otiskPriklad): array {
+    $soubor = docasna('komentar') . '/komentar.md';
+    file_put_contents($soubor, "Opraveno v app/kod.php, ověřeno testem.\n\n" . obrazek($otiskPriklad, 'po') . "\n");
+
+    return ocekavej(php('kontrola-tvaru-issue.php', $soubor, '--komentar'), 1, 'tabulk');
+});
+
+pripad('issues: nové issue se snímky pod sebou neprojde (N39)', function () use ($teloSnimky, $pod): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $nove = issue(['createdAt' => '2026-09-29T10:00:00Z', 'body' => $teloSnimky($pod($otisk), ' ')]);
+
+    return ocekavej(issuesSAtrapou('ok', [$nove], $repo), 1, '| Co | Před | Po |');
+});
+
+pripad('issues: nové issue se snímky v tabulce projde (N39)', function () use ($teloSnimky, $tabulka): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $nove = issue(['createdAt' => '2026-09-29T10:00:00Z', 'body' => $teloSnimky($tabulka($otisk, [['Tlačítko Uložit', 'pred', 'po']]), ' ')]);
+
+    return ocekavej(issuesSAtrapou('ok', [$nove], $repo), 0, 'v pořádku');
+});
+
+pripad('issues: staré issue se snímky pod sebou jen upozorní (N39)', function () use ($teloSnimky, $pod): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $stare = issue(['createdAt' => '2026-09-25T10:00:00Z', 'body' => $teloSnimky($pod($otisk), ' ')]);
+
+    return ocekavej(issuesSAtrapou('ok', [$stare], $repo), 0, 'upozornění');
+});
+
+pripad('issues: nový komentář se snímkem neprojde (N39)', function (): array {
+    [$repo, $otisk] = projektSeSnimky();
+    $komentar = ['body' => "Opraveno.\n\n" . obrazek($otisk, 'po') . "\n", 'createdAt' => '2026-09-29T12:00:00Z'];
+
+    return ocekavej(issuesSAtrapou('ok', [issue(['createdAt' => '2026-09-29T10:00:00Z', 'comments' => [$komentar]])], $repo), 1, 'tabulk');
+});
+
+$zavreneIssue = static fn (string $zavreno): array => issue([
+    'state' => 'CLOSED',
+    'closedAt' => $zavreno,
+    'body' => "## Problém\n\nTlačítko Uložit nic neudělá.\n\n## Hotovo, když\n\n- [x] tlačítko uloží\n",
+]);
+foreach ([
+    ['commit (#1) po zavření issue neprojde', 'Tlačítko ukládá i koncept (#1)', '2026-09-28T10:00:00Z', 1, 'zavřené'],
+    ['commit (#1) před zavřením projde', 'Tlačítko ukládá i koncept (#1)', '2099-01-01T00:00:00Z', 0, 'v pořádku'],
+    ['zmínka o issue bez závorky po zavření projde', 'Deník u #1 říká pravdu', '2026-09-28T10:00:00Z', 0, 'v pořádku'],
+] as [$nazev, $zprava, $zavreno, $kod, $text]) {
+    pripad('issues: ' . $nazev . ' (N39)', function () use ($zprava, $zavreno, $kod, $text, $zavreneIssue): array {
+        $repo = novyProjekt();
+        git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+        pripis($repo, 'app/kod.php', "// koncept\n");
+        commit($repo, $zprava);
+
+        return ocekavej(issuesSAtrapou('ok', [$zavreneIssue($zavreno)], $repo), $kod, $text);
+    });
+}
+
+pripad('zavření: snímky pod sebou neprojdou (N39)', function () use ($teloSnimky, $pod, $otiskPriklad): array {
+    [$vysledek] = zavreni(['body' => $teloSnimky($pod($otiskPriklad))]);
+
+    return ocekavej($vysledek, 1, '| Co | Před | Po |');
+});
+
+pripad('zavření: snímky v tabulce projdou (N39)', function () use ($teloSnimky, $tabulka, $otiskPriklad): array {
+    [$vysledek] = zavreni(['body' => $teloSnimky($tabulka($otiskPriklad, [['Tlačítko Uložit', 'pred', 'po']]))]);
+
+    return ocekavej($vysledek, 0, 'lze zavřít');
+});
+
+pripad('zavření: řádek s před bez po neprojde (N39)', function () use ($teloSnimky, $tabulka, $otiskPriklad): array {
+    [$vysledek] = zavreni(['body' => $teloSnimky($tabulka($otiskPriklad, [['Tlačítko Uložit', 'pred', null]]))]);
+
+    return ocekavej($vysledek, 1, 'ne po');
+});
+
+pripad('zavření: závěrečný komentář se snímkem neprojde (N39)', function () use ($hotovyChecklist, $otiskPriklad): array {
+    $repo = novyProjekt();
+    git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    $hlava = git($repo, 'rev-parse', 'HEAD');
+    [$vysledek] = zavreni(['body' => $hotovyChecklist], [], [], null,
+        'Opraveno v app/kod.php, commit ' . substr($hlava, 0, 7) . ".\n\n" . obrazek($otiskPriklad, 'po'), $repo);
+
+    return ocekavej($vysledek, 1, 'tabulk');
+});
+
+// Průběžné odškrtání: když k issue vedou aspoň dva commity (#1) s odstupem,
+// musí první křížek přibýt dřív než poslední commit. Historii těla dává
+// GitHub v userContentEdits; atrapa ji vrací ze scénáře „upravy“.
+$nezaskrtnute = "## Problém\n\nTlačítko Uložit nic neudělá.\n\n## Hotovo, když\n\n- [ ] tlačítko uloží\n- [ ] koncept se uloží\n";
+$jedenKrizek = str_replace('- [ ] tlačítko', '- [x] tlačítko', $nezaskrtnute);
+$vsechnyKrizky = str_replace('- [ ]', '- [x]', $nezaskrtnute);
+$sCommity = static function (array $commity): string {
+    $repo = novyProjekt();
+    git($repo, 'remote', 'add', 'origin', 'https://github.com/Terms4Ever/zkusebni.git');
+    foreach ($commity as [$zprava, $datum]) {
+        commitSDatem($repo, $zprava, $datum);
+    }
+
+    return $repo;
+};
+$dvaCommity = [['Tlačítko ukládá (#1)', '2026-09-29T08:00:00+02:00'], ['Koncept se ukládá (#1)', '2026-09-29T09:00:00+02:00']];
+
+foreach ([
+    ['dva commity s odstupem a křížky až na konci neprojde', $dvaCommity,
+        [['2026-09-29T05:50:00Z', $nezaskrtnute], ['2026-09-29T07:05:00Z', $vsechnyKrizky]], null, [], 1, 'průběžně'],
+    ['křížek po prvním commitu projde', $dvaCommity,
+        [['2026-09-29T05:50:00Z', $nezaskrtnute], ['2026-09-29T06:10:00Z', $jedenKrizek], ['2026-09-29T07:05:00Z', $vsechnyKrizky]], null, [], 0, 'lze zavřít'],
+    ['jediný commit a křížky na konci projde', [['Tlačítko ukládá (#1)', '2026-09-29T08:00:00+02:00']],
+        [['2026-09-29T05:50:00Z', $nezaskrtnute], ['2026-09-29T07:05:00Z', $vsechnyKrizky]], null, [], 0, 'lze zavřít'],
+    ['dva commity do pěti minut projdou', [['Tlačítko ukládá (#1)', '2026-09-29T08:00:00+02:00'], ['Deník (#1)', '2026-09-29T08:03:00+02:00']],
+        [['2026-09-29T05:50:00Z', $nezaskrtnute], ['2026-09-29T07:05:00Z', $vsechnyKrizky]], null, [], 0, 'lze zavřít'],
+    ['vysvětlení, že body splnil až poslední commit, projde', $dvaCommity,
+        [['2026-09-29T05:50:00Z', $nezaskrtnute], ['2026-09-29T07:05:00Z', $vsechnyKrizky]],
+        'Body splnil až poslední commit, první jen připravil test.', [], 0, 'lze zavřít'],
+    ['historii úprav nejde načíst, neprojde', $dvaCommity, [], null, ['api graphql'], 1, 'historii úprav'],
+] as [$nazev, $commity, $upravy, $dodatek, $selhat, $kod, $text]) {
+    pripad('zavření: ' . $nazev . ' (N39)', function () use ($commity, $upravy, $dodatek, $selhat, $kod, $text, $sCommity, $vsechnyKrizky): array {
+        $repo = $sCommity($commity);
+        $scenar = ['upravy' => array_map(static fn (array $u): array => ['editedAt' => $u[0], 'diff' => $u[1]], $upravy)];
+        if ($selhat !== []) {
+            $scenar['selhat'] = $selhat;
+        }
+        [$vysledek] = zavreni(['body' => $vsechnyKrizky], $scenar, [], $dodatek, null, $repo);
+
+        return ocekavej($vysledek, $kod, $text);
+    });
+}
+
 // --- README a generátor stavu ---------------------------------------------
 
 pripad('readme: neexistující cesta neprojde', function (): array {
@@ -772,6 +972,30 @@ function commit(string $repo, string $zprava): void
 {
     git($repo, 'add', '-A');
     git($repo, 'commit', '--no-verify', '-q', '-m', $zprava);
+}
+
+/**
+ * Commit s daným časem (autor i commiter), aby šlo poskládat historii issue:
+ * dva commity s odstupem, mezi nimi úprava těla s křížkem (N39).
+ */
+function commitSDatem(string $repo, string $zprava, string $datum): void
+{
+    static $bezHooku = null;
+    $bezHooku ??= docasna('bez-hooku-datum');
+
+    pripis($repo, 'app/kod.php', '// ' . $zprava . "\n");
+    git($repo, 'add', '-A');
+    $vysledek = spust([
+        'git', '-C', $repo,
+        '-c', 'user.name=Test',
+        '-c', 'user.email=test@example.invalid',
+        '-c', 'core.hooksPath=' . $bezHooku,
+        '-c', 'commit.gpgsign=false',
+        'commit', '--no-verify', '-q', '-m', $zprava,
+    ], ['GIT_AUTHOR_DATE' => $datum, 'GIT_COMMITTER_DATE' => $datum]);
+    if ($vysledek['kod'] !== 0) {
+        throw new RuntimeException('commit s datem selhal: ' . trim($vysledek['vystup']));
+    }
 }
 
 function zapis(string $repo, string $cesta, string $obsah): void
@@ -987,6 +1211,11 @@ function zavreni(
             exit(0);
         }
         $cesta = $a[1] ?? '';
+        if (($a[0] ?? '') === 'api' && $cesta === 'graphql') {
+            // Historie těla issue, jak ji vrací GitHub v userContentEdits (N39).
+            echo json_encode(['data' => ['repository' => ['issue' => ['userContentEdits' => ['nodes' => (array) ($scenar['upravy'] ?? [])]]]]]);
+            exit(0);
+        }
         if (($a[0] ?? '') === 'api') {
             // Obě cesty k běhům skládá atrapa ze stejného seznamu a stránkuje
             // jako GitHub. check-runs vrací i běhy spuštěné událostí issue, tak
