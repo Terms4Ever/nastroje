@@ -22,8 +22,10 @@ předinstalované, takže kontrola na GitHubu nepotřebuje instalační krok.
 - `kontrola-readme.php`, `kontrola-dokumentace.php`, `kontrola-migraci.php`,
   `kontrola-issues.php` - samostatné kontroly, každá vrací kód 1 při nálezu
 - `kontrola-tvaru-issue.php` - jedno tělo issue, volá ji hook i workflow
-- `zavrit-issue.php` - zavření issue s důkazem; jediný nástroj, který na GitHub
-  zapisuje, a to jen s přepínačem `--zavrit`
+- `zavrit-issue.php` - zavření issue s důkazem; do issue zapisuje jen
+  s přepínačem `--zavrit`
+- `monitoring/` - samostatné měření pouze čtyř webů z N40; výsledky zapisuje
+  jen s `--zapsat`, workflow je potom commituje pouze do nastroje
 - `src/tvar-issue.php` - pravidla tvaru issue na jednom místě
 - `hooky/tvar-issue.ps1` - hook Claude Code, zastaví špatné issue před založením
 - `stav-projektu.php`, `prehled-migraci.php` - generátory bloků do dokumentů
@@ -83,3 +85,13 @@ padá a po ní projde.
 zadavatele, ne agenta; zapisuje se do `docs/03-rozhodovaci-dennik.md` pod
 značkou N a do stavu projektu. Hotová práce se hlásí s důkazem: výstup
 kontroly, ne tvrzení, že prošla.
+
+## Rozsah monitoringu
+
+N40 a `docs/09-monitoring-webu.md` povolují pouze kořenové HTTPS stránky
+zvedavka.cz, onlinefakturuj.cz, vyridimestavbu.cz a tomas.saroun.me.
+Žádný jiný projekt se nezapojuje automaticky. Další web nebo cesta vyžaduje
+souhlas vlastníka a odpovídající změnu dokumentace, konfigurace i testů.
+Monitoring nesmí měnit weby, nasazovat, přihlašovat se, odesílat formuláře
+ani volat jejich cron. Denní měření patří do historie a generovaného přehledu,
+nikoli do nových issues nebo rozhodnutí. Sdílené kontroly kvůli němu neoslabuj.

@@ -1328,3 +1328,36 @@ Sada má 157 případů, kompatibilita prošla všemi osmi projekty. Kontrola
 1.12.0 na onlinefakturuj nejdřív ukázala 19 upozornění na snímky mimo
 tabulku a tři na starší commity po zavření (#40, #33, #12). Po převodu snímků
 zůstala jen ta tři upozornění na commity.
+
+## N40 - Denní měření pouze čtyř schválených webů (7. 10. 2026)
+
+**Pokyn vlastníka.** Monitoring patří přímo do nastroje, bez nového
+repozitáře. Rozsah musí být výslovně zapsaný a práce respektovat zdejší
+pravidla. Úkol: [issue #4](https://github.com/Terms4Ever/nastroje/issues/4).
+
+**Rozhodnutí.** Pouze veřejné úvodní HTTPS stránky zvedavka.cz,
+onlinefakturuj.cz, vyridimestavbu.cz a tomas.saroun.me. Žádné přihlášení,
+formuláře, platby, cron aplikací, nasazení ani změny v jejich repozitářích.
+Rozšíření seznamu schvaluje vlastník. Výsledky v nastroje jsou veřejné.
+
+**Technická volba.** PHP 8.3, samostatný workflow v 10:17 Europe/Prague
+a záložní v 16:17. Nejvýš jeden skutečný záznam denně; druhý běh při
+existujícím platném záznamu weby nevolá. Zápis jen s --zapsat. Denní commit
+obsahuje měření a odpovídající přehled v dokumentaci, nikoli umělou změnu
+rozhodovacího deníku. Použije účet vlastníka a skutečný čas, v popisu jasně
+uvede automatické měření. Žádné zpětné datování.
+
+**Dopad.** Sdílená workflow a pravidla ostatních projektů se nemění.
+Vestavěný token smí zapisovat pouze do tohoto repozitáře a jeho push
+nespouští další workflow. Kód monitoringu se testuje v existujících testech.
+Úspěch měření úvodní stránky nedokazuje funkčnost databáze nebo plateb.
+GitHub negarantuje přesný čas ani nepřerušenou řadu contributions.
+
+**Ověření.** 29 nových případů prošlo, prvních 26 před implementací padalo.
+Samostatný pokus s HTTP 503 vydávaným za zelený výsledek prokázal další díru
+ve validaci historie a po doplnění kontroly už neprojde. Skutečné měření
+bez zápisu ověřilo čtyři HTTP 200, očekávaný obsah a platnost certifikátů.
+Kompatibilita všech osmi aplikačních projektů prošla. Celá místní sada má
+186 případů, žádná chyba, čtyři databázové případy přeskočeny bez MySQL.
+Skutečný GitHub zápis ještě čeká na publikaci, podrobně dokument 04.
+Záloha před změnou: C:/vyvoj-zalohy/2026-10-07-nastroje-monitoring/pred-upravami.bundle.

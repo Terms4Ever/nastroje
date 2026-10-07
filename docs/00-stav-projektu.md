@@ -24,6 +24,7 @@ hlavní větev:     main
 | `sablony/migrace.php` | - | [06 standard migrací](06-standard-migraci.md) |
 | `hooky/tajemstvi.ps1`, `hooky/trezor-spravce.ps1` | - | [07 trezor hesel](07-trezor-hesel.md) |
 | `tests/spust.php`, `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
+| `monitoring/kontrola.php` | 1 | pouze čtyři schválené weby, [09 monitoring](09-monitoring-webu.md), N40 |
 
 Kontroly končí chybou i tehdy, když nemohly proběhnout (chybí `docs/`,
 neexistuje cesta, gh nepřečte issues, neznámý základ rozsahu); dřív to byla
@@ -44,6 +45,7 @@ agent.
 | `onlinefakturuj.cz` | ano | testy v CI (14 z 15), migrace |
 | `vyridimestavbu.cz` | ano | migrace |
 | `tomas.saroun.me` | ano | statický web |
+| `zvedavka.cz` | ne | server stahuje main sám; do monitoringu patří jen úvodní stránka |
 | `steelset` | - | mobilní aplikace, Jest testy v CI |
 | `LabProtocol` | - | mobilní aplikace |
 | `trenwise.cz` | - | vývoj pozastaven, FTP zatím není |
@@ -54,12 +56,15 @@ agent.
 nevolá, má je připnuté zámkem na konkrétní commit.
 
 Tabulka je přehled. Výběr pravidel vždy určuje `.pravidla.json` v konkrétním
-projektu. Těchto osm projektů vybírá `nastroje`, samostatné nastroje-prace
+projektu. Těchto devět projektů vybírá `nastroje`, samostatné nastroje-prace
 vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapojují.
 
 ## Co se dělá
 
-Nic rozdělaného.
+Issue #4: samostatný denní monitoring čtyř schválených webů (N40).
+29 nových testů a kompatibilita všech osmi aplikačních projektů prošly.
+Celá místní sada: 186 případů, žádná chyba, čtyři databázové případy přeskočeny.
+Čeká skutečný běh na GitHubu. Sdílené kontroly se nemění.
 
 ## Co je dál
 

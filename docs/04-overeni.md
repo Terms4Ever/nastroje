@@ -68,6 +68,27 @@ společné kontroly volá (celou historii, snímky se ověřují v commitu), a p
 na něj kontroly z pracovního stromu. Dokazuje, že změna pravidla žádný projekt
 neshodí. Běží v pre-push hooku nastroje, trvá kolem minuty.
 
+## Monitoring čtyř webů (N40)
+
+Samostatná sada `tests/monitoring.php` je součástí `tests/spust.php`.
+Má 29 případů bez skutečné sítě: povolený rozsah i jeho porušení,
+výpadek, přesměrování, obsah, neplatné TLS, expirace a chybějící certifikát,
+pomalá a velká odpověď, zápis jen na požádání, opakovaný den, nový den,
+poškozený nebo rozporný záznam, zimní i letní hranice dne a obnova přehledu
+po přerušeném zápisu. Prvních 26 případů před implementací neprošlo;
+případ falešně zeleného záznamu nejprve prokázal chybějící kontrolu souladu.
+
+Místní skutečné měření 7. 10. 2026 ověřilo všechny čtyři HTTPS adresy:
+HTTP 200, očekávaný text i získání platnosti certifikátu přes ověřené TLS.
+Tento první pokus nic nezapisoval. Certifikáty končily 1. 1. 2027 (Zvědavka),
+11. 12. 2026 (OnlineFakturuj a Vyřídímestavbu) a 17. 11. 2026 (osobní web).
+
+Celá místní Windows sada: 186 případů, 0 neprošlo, 4 databázové případy
+přeskočeny bez MySQL. Kompatibilita z aktuálních vzdálených klonů prošla
+všemi osmi aplikačními projekty, pracovní sada se správně nezapojila.
+Skutečný běh GitHub Actions, zápis a opakované spuštění zatím čekají na publikaci.
+Unit testy síťové chyby simulují, nevyvolávají výpadek produkčních webů.
+
 ## Co ověřeno není
 
 - **Věcná správnost textu.** Kontrola pozná, že dávka s kódem upravila

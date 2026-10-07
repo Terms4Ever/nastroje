@@ -1,0 +1,89 @@
+name: Monitoring čtyř webů
+
+on:
+  schedule:
+    - cron: '17 10 * * *'
+      timezone: Europe/Prague
+    - cron: '17 16 * * *'
+      timezone: Europe/Prague
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: monitoring-ctyr-webu
+  cancel-in-progress: false
+
+jobs:
+  mereni:
+    name: Změřit a uložit denní přehled
+    if: github.repository == 'Terms4Ever/nastroje' && github.ref == 'refs/heads/main'
+    runs-on: ubuntu-24.04
+    timeout-minutes: 8
+    permissions:
+      contents: write
+    env:
+      TZ: Europe/Prague
+    steps:
+      - name: Stáhnout aktuální main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Ověřit nástroj bez sítě
+        run: |
+          php -r 'exit(extension_loaded("curl") && extension_loaded("openssl") ? 0 : 1);'
+          php tests/spust.php monitoring
+
+      - name: Změřit jen chybějící den
+        id: mereni
+        shell: bash
+        run: |
+          set +e
+          php monitoring/kontrola.php --zapsat --pokud-chybi
+          KOD=$?
+          set -e
+          if [ "$KOD" != 0 ] && [ "$KOD" != 2 ]; then exit "$KOD"; fi
+          echo "kod=$KOD" >> "$GITHUB_OUTPUT"
+
+      - name: Zapsat pouze měření a jeho dokumentaci
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          git add -- monitoring/vysledky docs/09-monitoring-webu.md
+          if git diff --cached --quiet; then
+            echo "Dnes už je změřeno, další commit nevzniká."
+            exit 0
+          fi
+          # Zápis do jiných cest je chyba, nikdy se nesmí přibalit k měření.
+          git diff --cached --name-only | while IFS= read -r CESTA; do
+            if [[ "$CESTA" != docs/09-monitoring-webu.md ]] && [[ ! "$CESTA" =~ ^monitoring/vysledky/[0-9]{4}-[0-9]{2}/[0-9]{4}-[0-9]{2}-[0-9]{2}\.json$ ]]; then
+              echo "::error::Nepovolená cesta pro automatický zápis."
+              exit 1
+            fi
+          done
+          git config user.name 'Tomáš Šaroun'
+          git config user.email '74513653+Terms4Ever@users.noreply.github.com'
+          git commit -m "Automatické měření čtyř webů $(date +%F)"
+          gh auth setup-git
+          # Žádný force push. Souběžný lidský commit se zachová; konflikt běh zastaví.
+          git pull --rebase origin main
+          git push origin HEAD:main
+
+      - name: Zveřejnit přehled běhu
+        if: always()
+        shell: bash
+        run: |
+          if [ -f docs/09-monitoring-webu.md ]; then
+            sed -n '/<!-- monitoring:zacatek -->/,/<!-- monitoring:konec -->/p' docs/09-monitoring-webu.md >> "$GITHUB_STEP_SUMMARY"
+          fi
+
+      - name: Nález na webu oznámit až po uložení důkazu
+        if: steps.mereni.outputs.kod == '2'
+        run: |
+          echo '::error::Měření zachytilo chybu nebo upozornění. Podrobnosti jsou v uloženém přehledu.'
+          exit 1

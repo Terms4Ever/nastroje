@@ -4,6 +4,12 @@ Nastroje se nikam nenahrávají. Pravidla se k projektům dostávají čtyřmi
 cestami a každá hlídá něco jiného: GitHub po pushi, pre-push hook před ním,
 hook Claude Code ještě před zápisem na GitHub a nasazení webů na konci.
 
+Samostatný workflow `monitoring.yml` od N40 měří pouze čtyři weby vyjmenované
+v [09 monitoring webů](09-monitoring-webu.md). Spouští se jen v nastroje,
+nevolá se z jiných projektů a nic na jejich serverech nemění. Vlastní job
+má právo zapsat denní výsledky do tohoto repozitáře, sdíleným kontrolám
+žádné další právo nepřidává.
+
 ## 1. Sdílená workflow na GitHubu
 
 Projekty je volají větví `@main`, takže změna pravidla platí hned všude.

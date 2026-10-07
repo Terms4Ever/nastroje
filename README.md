@@ -39,6 +39,11 @@ Kontrola hlídá šest věcí:
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.
 
+Samostatný [monitoring čtyř webů](docs/09-monitoring-webu.md) denně měří jejich
+dostupnost, odezvu, obsah a HTTPS certifikát. Platí jen pro zvedavka.cz,
+onlinefakturuj.cz, vyridimestavbu.cz a tomas.saroun.me; zapojení společných
+pravidel jej ostatním projektům nezapíná.
+
 ---
 
 ## 🛠️ Tech Stack
@@ -74,6 +79,8 @@ nastroje/
 ├── hooky/test-trezor.ps1        # proklikání okna přes UI Automation
 ├── tests/spust.php              # regresní testy kontrol, každá díra má případ
 ├── tests/kompatibilita.php      # nové kontroly proti všem projektům před pushem
+├── tests/monitoring.php         # výpadky, rozsah, historie a opakovaný denní běh
+├── monitoring/                 # PHP měření a historie pouze čtyř schválených webů
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací
 ├── sablony/readme-plny.md       # vzor k opsání
@@ -198,6 +205,7 @@ před každým pushem do nastroje spolu s kontrolou kompatibility.
 | `docs/06-standard-migraci.md` | migrace, jejich nasazení a spouštěč s otisky |
 | `docs/07-trezor-hesel.md` | hesla bez chatu: příkazy pro agenta, okno pro zadavatele, co trezor nechrání |
 | `docs/08-soubory-a-dokumentace.md` | uspořádání repozitáře a které dokumenty má projekt mít |
+| `docs/09-monitoring-webu.md` | přesný rozsah čtyř webů, časy měření, aktuální výsledky a omezení |
 
 Stav vždy platný je v `docs/00-stav-projektu.md`, ne v tomhle souboru.
 
