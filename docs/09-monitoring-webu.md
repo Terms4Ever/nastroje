@@ -20,7 +20,18 @@ seznamu ve funkce.php a testů. Samotné zapojení pravidel monitoring nezapín�
 ## Poslední měření
 
 <!-- monitoring:zacatek -->
-Zatím bez uloženého měření. První ověřený běh tento blok doplní.
+
+**Poslední měření:** 2026-10-07T09:39:01+02:00 (Europe/Prague).
+
+| Web | HTTP | Odezva | Certifikát do (UTC) | Výsledek |
+|---|---|---|---|---|
+| [zvedavka.cz](https://zvedavka.cz/) | 200 | 591 ms | 2027-01-01 | V pořádku |
+| [onlinefakturuj.cz](https://onlinefakturuj.cz/) | 200 | 854 ms | 2026-12-11 | V pořádku |
+| [vyridimestavbu.cz](https://vyridimestavbu.cz/) | 200 | 846 ms | 2026-12-11 | V pořádku |
+| [tomas.saroun.me](https://tomas.saroun.me/) | 200 | 659 ms | 2026-11-17 | V pořádku |
+
+[Denní záznam](../monitoring/vysledky/2026-10/2026-10-07.json). Jednorázové měření, nikoli celodenní dostupnost.
+
 <!-- monitoring:konec -->
 
 ## Provoz
