@@ -7,8 +7,13 @@ hook Claude Code ještě před zápisem na GitHub a nasazení webů na konci.
 Samostatný workflow `monitoring.yml` od N40 měří pouze čtyři weby vyjmenované
 v [09 monitoring webů](09-monitoring-webu.md). Spouští se jen v nastroje,
 nevolá se z jiných projektů a nic na jejich serverech nemění. Vlastní job
-má právo zapsat denní výsledky do tohoto repozitáře, sdíleným kontrolám
+má právo zapsat hodinové výsledky do tohoto repozitáře, sdíleným kontrolám
 žádné další právo nepřidává.
+
+Od N41 běží vždy v 17. minutě hodiny, jen pokud je nastroje veřejné.
+Standardní ubuntu-24.04 v tomto veřejném repozitáři nečerpá minuty pro
+soukromé projekty. Neúspěch oznamuje GitHub e-mailem podle nastavení účtu
+vlastníka; postup i oddělenou ruční zkoušku popisuje dokument 09.
 
 ## 1. Sdílená workflow na GitHubu
 

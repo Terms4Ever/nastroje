@@ -125,14 +125,36 @@ function vyhodnot(array $web, array $odpoved, DateTimeImmutable $ted): array
     ];
 }
 
-function overZaznam(array $data, string $den): void
+/** UTC rozliší i dvě podzimní 02:00; český čas zůstává uvnitř záznamu. */
+function hodina(DateTimeImmutable $cas): string
+{
+    return $cas->setTimezone(new DateTimeZone('UTC'))->format('Y-m-d\TH\Z');
+}
+
+function cestaZaznamu(array $data): string
+{
+    $nazev = $data['schema'] === 1 ? $data['datum'] : hodina(new DateTimeImmutable($data['mereno']));
+    return '/monitoring/vysledky/' . substr($nazev, 0, 7) . '/' . $nazev . '.json';
+}
+
+function kodZaznamu(array $data): int
+{
+    return count(array_filter($data['weby'], static fn ($w) => $w['stav'] !== 'v_poradku')) > 0 ? 2 : 0;
+}
+
+function overZaznam(array $data, string $den, ?string $hodina = null): void
 {
     $weby = $data['weby'] ?? null;
-    if (array_keys($data) !== ['schema', 'datum', 'mereno', 'weby'] || $data['schema'] !== 1
+    if (array_keys($data) !== ['schema', 'datum', 'mereno', 'weby'] || !in_array($data['schema'], [1, 2], true)
         || $data['datum'] !== $den || !is_string($data['mereno'])
         || !preg_match('/^' . preg_quote($den, '/') . 'T\d{2}:\d{2}:\d{2}\+0[12]:00$/', $data['mereno'])
         || !is_array($weby) || count($weby) !== 4 || !array_is_list($weby)) {
-        throw new RuntimeException('Neplatný denní záznam.');
+        throw new RuntimeException('Neplatný záznam měření.');
+    }
+    $cas = DateTimeImmutable::createFromFormat('!Y-m-d\TH:i:sP', $data['mereno']);
+    if ($cas === false || $cas->setTimezone(new DateTimeZone('Europe/Prague'))->format(DATE_ATOM) !== $data['mereno']
+        || ($hodina !== null && ($data['schema'] !== 2 || hodina($cas) !== $hodina))) {
+        throw new RuntimeException('Záznam má neplatný čas nebo patří do jiné hodiny.');
     }
     $urls = [];
     foreach ($weby as $web) {
@@ -146,7 +168,7 @@ function overZaznam(array $data, string $den): void
             || !($web['certifikat_do'] === null || (is_string($web['certifikat_do']) && preg_match('/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/', $web['certifikat_do'])))
             || !is_array($web['problemy']) || !array_is_list($web['problemy'])
             || array_diff($web['problemy'], array_keys(POPISY)) !== []) {
-            throw new RuntimeException('Neplatný web v denním záznamu.');
+            throw new RuntimeException('Neplatný web v záznamu měření.');
         }
         $chyby = array_diff($web['problemy'], ['certifikat_brzy', 'odezva']);
         $stav = $chyby !== [] ? 'chyba' : ($web['problemy'] !== [] ? 'varovani' : 'v_poradku');
@@ -155,11 +177,11 @@ function overZaznam(array $data, string $den): void
             || ((!$web['obsah_ocekavany']) !== in_array('obsah', $web['problemy'], true))
             || (($web['certifikat_do'] === null) !== in_array('certifikat', $web['problemy'], true))
             || (($web['certifikat_do'] === null) !== ($web['dni_do_konce'] === null))) {
-            throw new RuntimeException('Denní záznam si odporuje.');
+            throw new RuntimeException('Záznam měření si odporuje.');
         }
         $urls[] = $web['url'];
     }
-    if (count(array_unique($urls)) !== 4) { throw new RuntimeException('Duplicitní web v denním záznamu.'); }
+    if (count(array_unique($urls)) !== 4) { throw new RuntimeException('Duplicitní web v záznamu měření.'); }
 }
 
 function prehled(array $data): string
@@ -174,9 +196,9 @@ function prehled(array $data): string
             . ($web['certifikat_do'] === null ? 'Nezjištěno' : substr($web['certifikat_do'], 0, 10))
             . " | $stav" . ($popis === '' ? '' : ': ' . $popis) . ' |';
     }
-    $den = $data['datum'];
     $radky[] = '';
-    $radky[] = '[Denní záznam](../monitoring/vysledky/' . substr($den, 0, 7) . '/' . $den . '.json). Jednorázové měření, nikoli celodenní dostupnost.';
+    $nazev = $data['schema'] === 1 ? 'Původní denní záznam' : 'Hodinový záznam';
+    $radky[] = '[' . $nazev . '](..' . cestaZaznamu($data) . '). Jednorázové měření, nikoli nepřetržitá dostupnost.';
     $radky[] = '';
     $radky[] = KONEC;
     return implode("\n", $radky);
@@ -211,7 +233,8 @@ function proved(string $root, bool $zapsat, bool $pokudChybi, callable $mereni, 
     $weby = nactiWeby($root . '/monitoring/weby.json');
     $ted = $ted->setTimezone(new DateTimeZone('Europe/Prague'));
     $den = $ted->format('Y-m-d');
-    $cesta = $root . '/monitoring/vysledky/' . substr($den, 0, 7) . '/' . $den . '.json';
+    $data = ['schema' => 2, 'datum' => $den, 'mereno' => $ted->format(DATE_ATOM), 'weby' => []];
+    $cesta = $root . cestaZaznamu($data);
     $zamek = null;
     if ($zapsat) {
         $zamek = fopen(sys_get_temp_dir() . '/nastroje-monitoring-' . hash('sha256', (string) realpath($root)) . '.lock', 'c');
@@ -220,19 +243,17 @@ function proved(string $root, bool $zapsat, bool $pokudChybi, callable $mereni, 
     try {
         if (is_file($cesta) && ($pokudChybi || $zapsat)) {
             $data = nactiJson($cesta);
-            overZaznam($data, $den);
+            overZaznam($data, $den, hodina($ted));
             if ($zapsat) { zapisAtomicky($root . DOKUMENT, dokument($root, $data)); }
-            return ['kod' => 0, 'preskoceno' => true, 'zaznam' => $data];
+            return ['kod' => kodZaznamu($data), 'preskoceno' => true, 'zaznam' => $data];
         }
-        $data = ['schema' => 1, 'datum' => $den, 'mereno' => $ted->format(DATE_ATOM), 'weby' => []];
         foreach ($weby as $web) { $data['weby'][] = vyhodnot($web, $mereni($web), $ted); }
-        overZaznam($data, $den);
+        overZaznam($data, $den, hodina($ted));
         if ($zapsat) {
             $doc = dokument($root, $data); // Ověřit před prvním zápisem, poloviční opravu lze bezpečně zopakovat.
             zapisAtomicky($cesta, json_encode($data, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR) . "\n");
             zapisAtomicky($root . DOKUMENT, $doc);
         }
-        $chyba = count(array_filter($data['weby'], static fn ($w) => $w['stav'] !== 'v_poradku')) > 0;
-        return ['kod' => $chyba ? 2 : 0, 'preskoceno' => false, 'zaznam' => $data];
+        return ['kod' => kodZaznamu($data), 'preskoceno' => false, 'zaznam' => $data];
     } finally { if (is_resource($zamek)) { flock($zamek, LOCK_UN); fclose($zamek); } }
 }

@@ -105,6 +105,24 @@ GitHub přijal plán 10:17 a 16:17 s Europe/Prague; první skutečná událost s
 ještě nenastala. Ruční zkoušky ověřily stejný workflow, nikoli včasnost plánovače.
 Unit testy síťové chyby simulují, nevyvolávají výpadek produkčních webů.
 
+## Hodinový monitoring a upozornění (N41)
+
+Sada monitoringu má 36 případů. Nové scénáře ověřují další hodinu téhož
+dne, zachování neúspěchu při opakování, jarní i podzimní změnu času,
+soužití s původní denní historií, chybnou hodinu pod správným názvem,
+neplatný čas a přelom měsíce mezi UTC a Prahou. Devět případů proti
+původní verzi neprošlo; po změně prošlo všech 36. Syntaxe tří změněných
+PHP souborů je v pořádku. Celá místní sada: 193 případů, žádná chyba,
+čtyři databázové případy přeskočeny bez MySQL. Kompatibilita všech osmi
+aplikačních projektů prošla, pracovní sada se správně přeskočila. README,
+dokumentace, online výběr pravidel a issues prošly původními kontrolami.
+
+Nastavení účtu GitHubu bylo 7. 10. 2026 ověřeno v prohlížeči: e-mailová
+oznámení Actions jsou zapnutá pouze pro neúspěšné běhy. Volby se neměnily.
+Plán XX:17 a test_upozorneni zatím čekají na nasazení a skutečné spuštění.
+Zkouška úmyslně neúspěšného workflow může ověřit cestu k oznámení;
+samotné doručení do poštovní schránky musí potvrdit příjemce.
+
 ## Co ověřeno není
 
 - **Věcná správnost textu.** Kontrola pozná, že dávka s kódem upravila

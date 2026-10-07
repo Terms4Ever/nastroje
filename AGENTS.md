@@ -93,5 +93,5 @@ zvedavka.cz, onlinefakturuj.cz, vyridimestavbu.cz a tomas.saroun.me.
 Žádný jiný projekt se nezapojuje automaticky. Další web nebo cesta vyžaduje
 souhlas vlastníka a odpovídající změnu dokumentace, konfigurace i testů.
 Monitoring nesmí měnit weby, nasazovat, přihlašovat se, odesílat formuláře
-ani volat jejich cron. Denní měření patří do historie a generovaného přehledu,
+ani volat jejich cron. Hodinové měření (N41) patří do historie a generovaného přehledu,
 nikoli do nových issues nebo rozhodnutí. Sdílené kontroly kvůli němu neoslabuj.

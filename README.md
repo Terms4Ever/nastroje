@@ -39,7 +39,7 @@ Kontrola hlídá šest věcí:
 Druhá a třetí půlka jsou ty cennější. Rozbitá kostra je nepříjemná,
 dokumentace, která lže nebo zůstala pozadu, stojí čas.
 
-Samostatný [monitoring čtyř webů](docs/09-monitoring-webu.md) denně měří jejich
+Samostatný [monitoring čtyř webů](docs/09-monitoring-webu.md) každou hodinu měří jejich
 dostupnost, odezvu, obsah a HTTPS certifikát. Platí jen pro zvedavka.cz,
 onlinefakturuj.cz, vyridimestavbu.cz a tomas.saroun.me; zapojení společných
 pravidel jej ostatním projektům nezapíná.
@@ -79,7 +79,7 @@ nastroje/
 ├── hooky/test-trezor.ps1        # proklikání okna přes UI Automation
 ├── tests/spust.php              # regresní testy kontrol, každá díra má případ
 ├── tests/kompatibilita.php      # nové kontroly proti všem projektům před pushem
-├── tests/monitoring.php         # výpadky, rozsah, historie a opakovaný denní běh
+├── tests/monitoring.php         # výpadky, rozsah, historie a opakovaný hodinový běh
 ├── monitoring/                 # PHP měření a historie pouze čtyř schválených webů
 ├── stav-projektu.php            # generátor bloku se skutečnými čísly
 ├── prehled-migraci.php          # generátor přehledu migrací

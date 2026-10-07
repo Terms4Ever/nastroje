@@ -77,15 +77,15 @@ pripad('monitoring: bez --zapsat nezaloží historii ani neupraví dokument', fu
     return [$v['kod'] === 0 && !is_dir($root . '/monitoring/vysledky') && file_get_contents($root . '/docs/09-monitoring-webu.md') === $pred, 'Čtení změnilo soubory.'];
 });
 
-pripad('monitoring: opakovaný běh dnes neměří ani nepřepisuje historii', function (): array {
+pripad('monitoring: opakovaný běh téže hodiny neměří ani nepřepisuje historii', function (): array {
     monitoringNacti();
     $root = monitoringRepo();
     $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
     \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), $ted);
-    $soubor = $root . '/monitoring/vysledky/2026-10/2026-10-07.json';
+    $soubor = $root . '/monitoring/vysledky/2026-10/2026-10-07T08Z.json';
     $pred = file_get_contents($soubor);
     $doc = file_get_contents($root . '/docs/09-monitoring-webu.md');
-    $v = \MonitoringWebu\proved($root, true, true, fn () => throw new RuntimeException('Druhý síťový požadavek'), $ted->modify('+6 hours'));
+    $v = \MonitoringWebu\proved($root, true, true, fn () => throw new RuntimeException('Druhý síťový požadavek'), $ted->modify('+20 minutes'));
     return [$v['preskoceno'] && file_get_contents($soubor) === $pred && file_get_contents($root . '/docs/09-monitoring-webu.md') === $doc && str_contains($doc, 'Pravidla zůstanou.'), 'Duplicitní běh změnil záznam nebo pravidla.'];
 });
 
@@ -95,15 +95,15 @@ pripad('monitoring: výpadek se uloží a vrátí chybu, další den má vlastn�
     $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
     $v = \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(['http' => 503]), $ted);
     \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), $ted->modify('+1 day'));
-    $data = json_decode(file_get_contents($root . '/monitoring/vysledky/2026-10/2026-10-07.json'), true);
+    $data = json_decode(file_get_contents($root . '/monitoring/vysledky/2026-10/2026-10-07T08Z.json'), true);
     return [$v['kod'] === 2 && count(glob($root . '/monitoring/vysledky/2026-10/*.json')) === 2 && $data['weby'][0]['stav'] === 'chyba', 'Výpadek zmizel nebo nevznikl nový den.'];
 });
 
-pripad('monitoring: poškozený dnešní soubor není důvod tiše přeskočit', function (): array {
+pripad('monitoring: poškozený hodinový soubor není důvod tiše přeskočit', function (): array {
     monitoringNacti();
     $root = monitoringRepo();
     mkdir($root . '/monitoring/vysledky/2026-10', 0777, true);
-    file_put_contents($root . '/monitoring/vysledky/2026-10/2026-10-07.json', '{}');
+    file_put_contents($root . '/monitoring/vysledky/2026-10/2026-10-07T08Z.json', '{}');
     try { \MonitoringWebu\proved($root, true, true, fn () => throw new RuntimeException('síť'), new DateTimeImmutable('2026-10-07T10:17:00+02:00')); }
     catch (RuntimeException $e) { return [str_contains($e->getMessage(), 'záznam'), $e->getMessage()]; }
     return [false, 'Poškozená historie prošla.'];
@@ -156,4 +156,84 @@ pripad('monitoring: obnovení přehledu po přerušeném zápisu neměří znovu
     file_put_contents($root . '/docs/09-monitoring-webu.md', $pred);
     \MonitoringWebu\proved($root, true, true, fn () => throw new RuntimeException('síť'), $ted);
     return [file_get_contents($root . '/docs/09-monitoring-webu.md') === $po, 'Přerušený zápis nebyl opraven.'];
+});
+
+pripad('monitoring: další hodina téhož dne skutečně změří a zachová předchozí výpadek', function (): array {
+    monitoringNacti();
+    $root = monitoringRepo();
+    $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
+    \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(['http' => 503]), $ted);
+    $volani = 0;
+    $v = \MonitoringWebu\proved($root, true, true, function () use (&$volani) { $volani++; return monitoringOdpoved(); }, $ted->modify('+1 hour'));
+    $pred = json_decode((string) @file_get_contents($root . '/monitoring/vysledky/2026-10/2026-10-07T08Z.json'), true);
+    $doc = file_get_contents($root . '/docs/09-monitoring-webu.md');
+    return [$volani === 4 && !$v['preskoceno'] && $v['kod'] === 0 && ($pred['weby'][0]['http'] ?? null) === 503
+        && count(glob($root . '/monitoring/vysledky/2026-10/*.json')) === 2
+        && str_contains($doc, '2026-10-07T09Z.json'), 'Nová hodina se přeskočila, změnila historii nebo odkazuje na jiný záznam.'];
+});
+
+pripad('monitoring: opakování chybové hodiny zachová neúspěch pro upozornění', function (): array {
+    monitoringNacti();
+    $root = monitoringRepo();
+    $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
+    \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(['http' => 503]), $ted);
+    $v = \MonitoringWebu\proved($root, true, true, fn () => throw new RuntimeException('síť'), $ted->modify('+10 minutes'));
+    return [$v['preskoceno'] && $v['kod'] === 2, 'Opakování změnilo výpadek na zelený běh.'];
+});
+
+pripad('monitoring: podzimní opakovaná hodina a jarní změna času se neslijí', function (): array {
+    monitoringNacti();
+    foreach ([['2026-10-25T00:17:00Z', '2026-10-25T01:17:00Z'], ['2026-03-29T00:17:00Z', '2026-03-29T01:17:00Z']] as [$prvni, $druhy]) {
+        $root = monitoringRepo();
+        $a = \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), new DateTimeImmutable($prvni));
+        $b = \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), new DateTimeImmutable($druhy));
+        if ($b['preskoceno'] || $a['zaznam']['mereno'] === $b['zaznam']['mereno']
+            || count(glob($root . '/monitoring/vysledky/*/*.json')) !== 2) { return [false, 'Změna času slila dvě měření.']; }
+    }
+    return [true, ''];
+});
+
+pripad('monitoring: starý denní záznam zůstane čitelný a neblokuje hodinové měření', function (): array {
+    monitoringNacti();
+    $root = monitoringRepo();
+    $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
+    $v = \MonitoringWebu\proved($root, false, false, fn () => monitoringOdpoved(), $ted);
+    $data = $v['zaznam'];
+    $data['schema'] = 1;
+    \MonitoringWebu\overZaznam($data, '2026-10-07');
+    mkdir($root . '/monitoring/vysledky/2026-10', 0777, true);
+    $cesta = $root . '/monitoring/vysledky/2026-10/2026-10-07.json';
+    $puvodni = json_encode($data);
+    file_put_contents($cesta, $puvodni);
+    $v = \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), $ted);
+    return [!$v['preskoceno'] && $v['zaznam']['schema'] === 2 && file_get_contents($cesta) === $puvodni
+        && str_contains(\MonitoringWebu\prehled($data), '2026-10-07.json'), 'Denní historie se změnila nebo přeskočila hodinový běh.'];
+});
+
+pripad('monitoring: cizí hodina pod dnešním názvem se odmítne', function (): array {
+    monitoringNacti();
+    $root = monitoringRepo();
+    $ted = new DateTimeImmutable('2026-10-07T10:17:00+02:00');
+    $v = \MonitoringWebu\proved($root, false, false, fn () => monitoringOdpoved(), $ted->modify('-1 hour'));
+    mkdir($root . '/monitoring/vysledky/2026-10', 0777, true);
+    file_put_contents($root . '/monitoring/vysledky/2026-10/2026-10-07T08Z.json', json_encode($v['zaznam']));
+    try { \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), $ted); }
+    catch (RuntimeException) { return [true, '']; }
+    return [false, 'Záznam z jiné hodiny byl přijat nebo přepsán.'];
+});
+
+pripad('monitoring: nesmyslný čas v záznamu se odmítne', function (): array {
+    monitoringNacti();
+    $v = \MonitoringWebu\proved(monitoringRepo(), false, false, fn () => monitoringOdpoved(), new DateTimeImmutable('2026-10-07T10:17:00+02:00'));
+    $v['zaznam']['mereno'] = '2026-10-07T99:17:00+02:00';
+    try { \MonitoringWebu\overZaznam($v['zaznam'], '2026-10-07'); } catch (RuntimeException) { return [true, '']; }
+    return [false, 'Neplatná hodina prošla.'];
+});
+
+pripad('monitoring: přelom měsíce ukládá podle UTC a zobrazuje český čas', function (): array {
+    monitoringNacti();
+    $root = monitoringRepo();
+    $v = \MonitoringWebu\proved($root, true, true, fn () => monitoringOdpoved(), new DateTimeImmutable('2026-10-31T23:17:00Z'));
+    return [$v['zaznam']['datum'] === '2026-11-01' && is_file($root . '/monitoring/vysledky/2026-10/2026-10-31T23Z.json')
+        && str_contains(file_get_contents($root . '/docs/09-monitoring-webu.md'), '2026-10/2026-10-31T23Z.json'), 'Cesta neodpovídá UTC hodině.'];
 });

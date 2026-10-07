@@ -1366,3 +1366,35 @@ Skutečné snímky README před a po a nového přehledu jsou v issue #4.
 Pravidelné spuštění časovačem teprve nastane; ověřené jsou přijetí plánu
 GitHubem a dvě ruční spuštění stejného workflow. Podrobně dokument 04.
 Záloha před změnou: C:/vyvoj-zalohy/2026-10-07-nastroje-monitoring/pred-upravami.bundle.
+
+## N41 - Hodinové měření a e-mail při problému (7. 10. 2026)
+
+**Pokyn vlastníka.** Kontrolovat weby každou hodinu a při problému poslat
+e-mail, pokud to nespotřebuje minuty jeho GitHub Actions pro soukromé
+repozitáře. [Issue #5](https://github.com/Terms4Ever/nastroje/issues/5).
+
+**Rozhodnutí.** Rozsah čtyř úvodních stránek z N40 zůstává. Nový plán je
+XX:17 Europe/Prague. Standardní runner ve veřejném nastroje má bezplatné
+minuty; job se při změně viditelnosti na soukromou nespustí.
+
+**Důvod.** Denní záznam dosud přeskakoval další měření téhož dne. Hodinová
+historie umožní pravidelně sledovat dostupnost i během nepřítomnosti.
+Výsledky používají UTC hodinu v názvu a český čas uvnitř. Tím se neslijí
+dvě hodiny při návratu z letního času. Staré denní soubory se nemění.
+
+**Technická volba.** E-mail odešle GitHub při neúspěchu. Uživatelské volby
+Email a Failed workflows only už jsou zapnuté; účet se nepřenastavuje.
+Ruční volba test_upozorneni ověří tuto cestu úmyslným, jasně označeným
+neúspěchem bez volání webů a bez ukládání falešných výsledků. Opakování
+chybové hodiny zachová návratový kód 2, aby starý nález nezměnilo na úspěch.
+
+**Dopad.** Obvykle 24 skutečných záznamů a commitů za den; opakování téže
+hodiny bez dalšího commitu. Trvající problém může znamenat další e-maily.
+Zpoždění nebo vynechání plánovače GitHubu se zpětně nedoplňuje. Ostatní
+projekty, sdílené kontroly, workflow a pravidla zůstávají beze změny.
+
+**Ověření před nasazením.** 36 testů monitoringu prošlo. Devět případů
+proti původní verzi padalo, včetně přeskočení další hodiny, chybného
+zeleného opakování, změny času a nesmyslného času v historii. Skutečné
+běhy, CI a meze e-mailového ověření budou doloženy v dokumentu 04.
+Záloha: C:/vyvoj-zalohy/2026-10-07-monitoring-hodina/pred-upravami.bundle.

@@ -24,7 +24,7 @@ hlavní větev:     main
 | `sablony/migrace.php` | - | [06 standard migrací](06-standard-migraci.md) |
 | `hooky/tajemstvi.ps1`, `hooky/trezor-spravce.ps1` | - | [07 trezor hesel](07-trezor-hesel.md) |
 | `tests/spust.php`, `tests/kompatibilita.php` | - | [04 ověření](04-overeni.md) |
-| `monitoring/kontrola.php` | 1 | pouze čtyři schválené weby, [09 monitoring](09-monitoring-webu.md), N40 |
+| `monitoring/kontrola.php` | 2 | hodinová historie pouze čtyř webů, [09 monitoring](09-monitoring-webu.md), N40 a N41 |
 
 Kontroly končí chybou i tehdy, když nemohly proběhnout (chybí `docs/`,
 neexistuje cesta, gh nepřečte issues, neznámý základ rozsahu); dřív to byla
@@ -61,10 +61,10 @@ vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapo
 
 ## Co se dělá
 
-Monitoring čtyř webů je nasazený a ověřený (N40, issue #4).
-První GitHub běh 7. 10. 2026 uložil všechny čtyři výsledky v pořádku;
-opakovaný běh nic neměřil ani necommitoval. CI prošlo na Linuxu i Windows,
-kompatibilita všech osmi aplikačních projektů také. Podrobnosti v dokumentu 04.
+Denní monitoring (N40, issue #4) se podle pokynu vlastníka mění na hodinový
+(N41, issue #5). Místních 36 testů monitoringu prošlo; nasazení, skutečný
+běh a zkouška upozornění zatím čekají. Nastavení GitHubu už má e-maily
+jen pro neúspěšné Actions. Podrobnosti a meze ověření v dokumentu 04.
 
 ## Co je dál
 
