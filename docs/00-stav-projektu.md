@@ -61,10 +61,10 @@ vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapo
 
 ## Co se dělá
 
-Issue #4: samostatný denní monitoring čtyř schválených webů (N40).
-29 nových testů a kompatibilita všech osmi aplikačních projektů prošly.
-Celá místní sada: 186 případů, žádná chyba, čtyři databázové případy přeskočeny.
-Čeká skutečný běh na GitHubu. Sdílené kontroly se nemění.
+Monitoring čtyř webů je nasazený a ověřený (N40, issue #4).
+První GitHub běh 7. 10. 2026 uložil všechny čtyři výsledky v pořádku;
+opakovaný běh nic neměřil ani necommitoval. CI prošlo na Linuxu i Windows,
+kompatibilita všech osmi aplikačních projektů také. Podrobnosti v dokumentu 04.
 
 ## Co je dál
 

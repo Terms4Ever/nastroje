@@ -86,7 +86,23 @@ Tento první pokus nic nezapisoval. Certifikáty končily 1. 1. 2027 (Zvědavka)
 Celá místní Windows sada: 186 případů, 0 neprošlo, 4 databázové případy
 přeskočeny bez MySQL. Kompatibilita z aktuálních vzdálených klonů prošla
 všemi osmi aplikačními projekty, pracovní sada se správně nezapojila.
-Skutečný běh GitHub Actions, zápis a opakované spuštění zatím čekají na publikaci.
+CI [37588555514](https://github.com/Terms4Ever/nastroje/actions/runs/37588555514)
+prošlo na Linuxu i Windows. Linux: 186 případů, 0 chyb, 10 případů jen pro
+Windows přeskočeno; čtyři MySQL případy prošly. Windows: 186 případů,
+0 chyb, čtyři databázové případy přeskočeny.
+
+Skutečné [první spuštění](https://github.com/Terms4Ever/nastroje/actions/runs/37588619681)
+uložilo měření v 9:39 českého času. Všechny čtyři weby: HTTP 200, očekávaný
+obsah i certifikát v pořádku. Commit
+[a1ad9c4](https://github.com/Terms4Ever/nastroje/commit/a1ad9c41fd328a7394e8b547e69e16136f5f2d9b)
+GitHub přiřadil k Terms4Ever. Změnil pouze denní JSON a přehled v dokumentu 09.
+Automatický push nespustil další push workflow.
+
+[Druhé spuštění](https://github.com/Terms4Ever/nastroje/actions/runs/37588753273)
+také prošlo, vypsalo přeskočení síťového měření a žádný nový commit.
+Hlava main zůstala a1ad9c4 a existuje jediný denní záznam pro 7. 10. 2026.
+GitHub přijal plán 10:17 a 16:17 s Europe/Prague; první skutečná událost schedule
+ještě nenastala. Ruční zkoušky ověřily stejný workflow, nikoli včasnost plánovače.
 Unit testy síťové chyby simulují, nevyvolávají výpadek produkčních webů.
 
 ## Co ověřeno není

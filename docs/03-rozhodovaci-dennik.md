@@ -1359,5 +1359,10 @@ ve validaci historie a po doplnění kontroly už neprojde. Skutečné měření
 bez zápisu ověřilo čtyři HTTP 200, očekávaný obsah a platnost certifikátů.
 Kompatibilita všech osmi aplikačních projektů prošla. Celá místní sada má
 186 případů, žádná chyba, čtyři databázové případy přeskočeny bez MySQL.
-Skutečný GitHub zápis ještě čeká na publikaci, podrobně dokument 04.
+CI prošlo na Linuxu (včetně MySQL) i Windows. První skutečný workflow běh
+37588619681 uložil denní měření commitem a1ad9c4 pod účtem Terms4Ever;
+opakovaný běh 37588753273 weby nevolal a nezměnil hlavu větve ani historii.
+Skutečné snímky README před a po a nového přehledu jsou v issue #4.
+Pravidelné spuštění časovačem teprve nastane; ověřené jsou přijetí plánu
+GitHubem a dvě ruční spuštění stejného workflow. Podrobně dokument 04.
 Záloha před změnou: C:/vyvoj-zalohy/2026-10-07-nastroje-monitoring/pred-upravami.bundle.
