@@ -117,11 +117,34 @@ PHP souborů je v pořádku. Celá místní sada: 193 případů, žádná chyba
 aplikačních projektů prošla, pracovní sada se správně přeskočila. README,
 dokumentace, online výběr pravidel a issues prošly původními kontrolami.
 
+CI [37592723184](https://github.com/Terms4Ever/nastroje/actions/runs/37592723184)
+prošlo na Linuxu i Windows včetně společných pravidel. Linux: 193 případů,
+žádná chyba, 10 případů pouze pro Windows přeskočeno; databázové případy
+prošly. Windows: 193 případů, žádná chyba, čtyři databázové přeskočeny.
+
 Nastavení účtu GitHubu bylo 7. 10. 2026 ověřeno v prohlížeči: e-mailová
 oznámení Actions jsou zapnutá pouze pro neúspěšné běhy. Volby se neměnily.
-Plán XX:17 a test_upozorneni zatím čekají na nasazení a skutečné spuštění.
-Zkouška úmyslně neúspěšného workflow může ověřit cestu k oznámení;
-samotné doručení do poštovní schránky musí potvrdit příjemce.
+[Zkouška upozornění 37592723299](https://github.com/Terms4Ever/nastroje/actions/runs/37592723299)
+pod účtem Terms4Ever selhala úmyslně v označeném kroku. Měření i commit
+byly přeskočeny, main zůstal c552f45. **Vlastník potvrdil doručení tohoto
+zkušebního e-mailu.** Červený testovací běh nedokládá výpadek webů.
+
+[První hodinové měření 37592832410](https://github.com/Terms4Ever/nastroje/actions/runs/37592832410)
+v 10:18 českého času prošlo. Všechny čtyři adresy měly HTTP 200, očekávaný
+obsah i certifikát v pořádku. Commit
+[e79ee9a](https://github.com/Terms4Ever/nastroje/commit/e79ee9aab177a9d11afcdcf4ff8d8bc68f00350c)
+patří Terms4Ever a změnil pouze hodinový JSON 2026-10-07T08Z a přehled
+v dokumentu 09. Původní denní JSON zůstal beze změny. Automatický push
+nespustil další push workflow.
+
+[Opakování 37593038846](https://github.com/Terms4Ever/nastroje/actions/runs/37593038846)
+ve stejné hodině prošlo bez nového měření a commitu; main zůstal e79ee9a.
+Workflow je aktivní s plánem XX:17, podmínkou veřejného repozitáře a
+standardním ubuntu-24.04. Při ověření byl repozitář veřejný. Přepnutím
+na soukromý se pojistka živě nezkoušela, aby se neměnilo nastavení projektu.
+Ověřena jsou ruční spuštění stejného workflow a přijetí plánu GitHubem;
+první skutečná událost schedule zatím nebyla pozorována. Plánovač může
+běh opozdit nebo vynechat, nepřetržitou dostupnost tato měření nedokazují.
 
 ## Co ověřeno není
 

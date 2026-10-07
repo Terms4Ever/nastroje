@@ -61,10 +61,11 @@ vybírají pracovní sadu. Soukromé pracovní aplikace se v tomto úkolu nezapo
 
 ## Co se dělá
 
-Denní monitoring (N40, issue #4) se podle pokynu vlastníka mění na hodinový
-(N41, issue #5). Místních 36 testů monitoringu prošlo; nasazení, skutečný
-běh a zkouška upozornění zatím čekají. Nastavení GitHubu už má e-maily
-jen pro neúspěšné Actions. Podrobnosti a meze ověření v dokumentu 04.
+Hodinový monitoring je aktivní (N41, issue #5), plán XX:17 Europe/Prague.
+Skutečné měření i opakování stejné hodiny prošly; čtyři weby jsou v pořádku.
+Vlastník potvrdil doručení zkušebního e-mailu. CI na Linuxu i Windows a
+kompatibilita všech osmi aplikačních projektů prošly. Doklady a meze
+ověření jsou v dokumentu 04, provoz a přesný rozsah v dokumentu 09.
 
 ## Co je dál
 

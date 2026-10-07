@@ -1398,3 +1398,10 @@ proti původní verzi padalo, včetně přeskočení další hodiny, chybného
 zeleného opakování, změny času a nesmyslného času v historii. Skutečné
 běhy, CI a meze e-mailového ověření budou doloženy v dokumentu 04.
 Záloha: C:/vyvoj-zalohy/2026-10-07-monitoring-hodina/pred-upravami.bundle.
+
+**Nasazení a ověření.** Celá sada 193 případů i kompatibilita všech osmi
+projektů prošly; CI je zelené na Linuxu i Windows. Běh 37592723299 ověřil
+oznámení bez zásahu do měření a vlastník potvrdil doručení e-mailu.
+První hodinový záznam vznikl v běhu 37592832410, opakování 37593038846
+historii nezměnilo. Aktivní plán zatím nebyl pozorován jako skutečná
+událost schedule; ruční běhy ověřily workflow. Doklady v dokumentu 04.
