@@ -1,0 +1,47 @@
+{
+    "schema": 2,
+    "datum": "2026-10-10",
+    "mereno": "2026-10-10T11:29:28+02:00",
+    "weby": [
+        {
+            "url": "https://zvedavka.cz/",
+            "stav": "v_poradku",
+            "http": 200,
+            "doba_ms": 568,
+            "obsah_ocekavany": true,
+            "certifikat_do": "2027-01-01T16:55:20Z",
+            "dni_do_konce": 83,
+            "problemy": []
+        },
+        {
+            "url": "https://onlinefakturuj.cz/",
+            "stav": "v_poradku",
+            "http": 200,
+            "doba_ms": 872,
+            "obsah_ocekavany": true,
+            "certifikat_do": "2026-12-11T08:26:57Z",
+            "dni_do_konce": 61,
+            "problemy": []
+        },
+        {
+            "url": "https://vyridimestavbu.cz/",
+            "stav": "v_poradku",
+            "http": 200,
+            "doba_ms": 817,
+            "obsah_ocekavany": true,
+            "certifikat_do": "2026-12-11T09:29:35Z",
+            "dni_do_konce": 62,
+            "problemy": []
+        },
+        {
+            "url": "https://tomas.saroun.me/",
+            "stav": "v_poradku",
+            "http": 200,
+            "doba_ms": 1002,
+            "obsah_ocekavany": true,
+            "certifikat_do": "2026-11-17T23:07:58Z",
+            "dni_do_konce": 38,
+            "problemy": []
+        }
+    ]
+}
