@@ -23,7 +23,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_MIGRACI = '1.1.0';
+const VERZE_MIGRACI = '1.2.0';
 
 /** Cesty, které skript čte z disku. Musí sedět na pushovaný commit. */
 const CTENE_CESTY_MIGRACI = [
@@ -43,6 +43,12 @@ const SOUBORY_SPOUSTECE = [
     'Migrace.php',
     'migrace-endpoint.php',
 ];
+
+/**
+ * Složka testů kdekoli v cestě (tests/, test/). Test si smí založit vlastní
+ * databázi, třeba SQLite v paměti; schéma produkce tím nemění (N42).
+ */
+const SLOZKA_TESTU = '#(^|/)tests?/#';
 
 /** Příkazy, které mění schéma. Když je dávka má mimo migrace, chybí migrace. */
 const PRIKAZY_SCHEMATU = [
@@ -410,7 +416,8 @@ function zmenySchematu(string $koren, string $rozsah): array
     foreach ($vystup as $radek) {
         if (str_starts_with($radek, '+++ b/')) {
             $soubor = substr($radek, 6);
-            $preskocit = in_array(basename($soubor), SOUBORY_SPOUSTECE, true);
+            $preskocit = in_array(basename($soubor), SOUBORY_SPOUSTECE, true)
+                || preg_match(SLOZKA_TESTU, $soubor) === 1;
             continue;
         }
         if ($preskocit) {

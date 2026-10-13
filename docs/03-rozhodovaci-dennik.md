@@ -1405,3 +1405,23 @@ oznámení bez zásahu do měření a vlastník potvrdil doručení e-mailu.
 První hodinový záznam vznikl v běhu 37592832410, opakování 37593038846
 historii nezměnilo. Aktivní plán zatím nebyl pozorován jako skutečná
 událost schedule; ruční běhy ověřily workflow. Doklady v dokumentu 04.
+
+## N42 - Test s vlastní databází migraci nepotřebuje (13. 10. 2026)
+
+**Stav.** onlinefakturuj #51 dostal test změny tarifu, který si zakládá
+SQLite v paměti (`tests/zmena-tarifu.php`), aby běžel i na CI bez databáze.
+Pre-push hook ho zastavil: kontrola migrací brala každé `CREATE TABLE` mimo
+`db/migrace/` jako změnu schématu bez migrace. Výjimku měly jen soubory
+spouštěče. Že dávka se schématem mimo migrace neprojde, přitom nehlídal
+žádný regresní případ.
+
+**Rozhodnutí.** Kontrola migrací 1.2.0 přeskočí soubory ve složce testů
+kdekoli v cestě (`tests/`, `test/`). Test schéma produkce nemění, jeho
+tabulky žijí jen po dobu běhu. Složka, která se tak jen jmenuje
+(`contests/`), výjimku nemá. Obejít kontrolu rozdělením řetězce v testu by
+šlo, ale kontrola by pak lhala o tom, co hlídá.
+
+**Ověření.** Tři nové případy v `tests/spust.php`: tabulka v kódu bez
+migrace neprojde, test s vlastní databází projde, `contests/` výjimku nemá.
+Proti verzi 1.1.0 padal druhý, první a třetí hlídají, že výjimka není
+širší, než má být.

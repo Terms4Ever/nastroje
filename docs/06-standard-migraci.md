@@ -54,8 +54,8 @@ Kopie leží v `app/migrace.php` (vyridimestavbu) a `src/Migrace.php`
 
 | Místo | Co |
 |---|---|
-| `kontrola-migraci.php` | tvar souborů, přehled, a s rozsahem commitů: žádná změna, smazání ani přejmenování hotové migrace, dávka se změnou schématu mimo migrace musí migraci přidat |
+| `kontrola-migraci.php` | tvar souborů, přehled, a s rozsahem commitů: žádná změna, smazání ani přejmenování hotové migrace, dávka se změnou schématu mimo migrace musí migraci přidat; složka testů (`tests/`, `test/`) se nepočítá, test si smí založit vlastní databázi v paměti (N42) |
 | spouštěč na produkci | přejmenovaná nebo změněná hotová migrace nasazení zastaví |
-| `tests/spust.php` | 6 případů kontroly a 4 případy spouštěče nad skutečnou databází |
+| `tests/spust.php` | 9 případů kontroly a 4 případy spouštěče nad skutečnou databází |
 
 Kontrola se zapíná v `.readme-kontrola.json` klíčem `"migrace-kontrola": true`.

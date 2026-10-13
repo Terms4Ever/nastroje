@@ -16,7 +16,7 @@ hlavní větev:     main
 | `kontrola-readme.php` | 2.2.0 | README a místní označení osobní sady |
 | `kontrola-pravidel.php`, `src/sada-pravidel.php` | 1 | výběr sady, README, AGENTS, workflow, online topic (N35), názvy kontrol na GitHubu (N36) |
 | `kontrola-dokumentace.php` | 1.7.2 | [08 soubory a dokumentace](08-soubory-a-dokumentace.md) |
-| `kontrola-migraci.php` | 1.1.0 | [06 standard migrací](06-standard-migraci.md) |
+| `kontrola-migraci.php` | 1.2.0 | [06 standard migrací](06-standard-migraci.md) |
 | `kontrola-issues.php` | 1.12.0 | [05 standard issues](05-standard-issues.md) |
 | `kontrola-tvaru-issue.php`, `hooky/tvar-issue.ps1` | - | [05 standard issues](05-standard-issues.md) |
 | `zavrit-issue.php` | - | [05 standard issues](05-standard-issues.md) |

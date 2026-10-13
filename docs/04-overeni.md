@@ -36,7 +36,9 @@ N36 přidal šest případů na názvy na GitHubu; proti N35 padaly a sada měla
 verzi padaly; sada měla 124 případů. N38 přidal pět na běhy u zavírání issue,
 čtyři proti předchozí verzi padaly; sada měla 129 případů. N39 přidal 28 na
 tabulku snímků, průběžné odškrtání, práci po zavření a konce řádků CRLF,
-17 z nich proti předchozí verzi padalo; od té doby má sada 157 případů.
+17 z nich proti předchozí verzi padalo; sada měla 157 případů. N42 přidal tři
+na změnu schématu mimo migrace (dřív ji nehlídal žádný případ), jeden proti
+předchozí verzi padal; s monitoringem (N40, N41) má sada 196 případů.
 Před publikací N35 prošlo všech sedm aplikačních repozitářů úplnou kontrolou
 kompatibility z aktuálních vzdálených klonů, včetně skutečných GitHub topics.
 

@@ -239,6 +239,35 @@ pripad('migrace: nová migrace projde', function (): array {
     return ocekavej(php('kontrola-migraci.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 0, 'v pořádku');
 });
 
+pripad('migrace: tabulka založená v kódu bez migrace neprojde', function (): array {
+    $repo = projektSMigraci();
+    $zaklad = git($repo, 'rev-parse', 'HEAD');
+    zapis($repo, 'src/Sklad.php', "<?php\n\$pdo->exec('CREATE TABLE sklad (id INT)');\n");
+    commit($repo, 'Tabulka v kódu');
+
+    return ocekavej(php('kontrola-migraci.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 1, 'nepřidává migraci');
+});
+
+pripad('migrace: test s vlastní databází v paměti migraci nepotřebuje (N42)', function (): array {
+    // onlinefakturuj #51: test si zakládá SQLite v paměti, schéma produkce nemění.
+    $repo = projektSMigraci();
+    $zaklad = git($repo, 'rev-parse', 'HEAD');
+    zapis($repo, 'tests/zmena-tarifu.php', "<?php\n\$pdo->exec('CREATE TABLE plans (id INTEGER PRIMARY KEY)');\n");
+    zapis($repo, 'app/tests/unit/SkladTest.php', "<?php\n\$pdo->exec('CREATE TABLE sklad (id INT)');\n");
+    commit($repo, 'Test s vlastní databází');
+
+    return ocekavej(php('kontrola-migraci.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 0, 'v pořádku');
+});
+
+pripad('migrace: složka, která se jen jmenuje jako testy, výjimku nemá', function (): array {
+    $repo = projektSMigraci();
+    $zaklad = git($repo, 'rev-parse', 'HEAD');
+    zapis($repo, 'src/contests/Soutez.php', "<?php\n\$pdo->exec('CREATE TABLE soutez (id INT)');\n");
+    commit($repo, 'Tabulka ve složce contests');
+
+    return ocekavej(php('kontrola-migraci.php', $repo, $zaklad, git($repo, 'rev-parse', 'HEAD')), 1, 'nepřidává migraci');
+});
+
 pripad('migrace: neexistující cesta neprojde', function (): array {
     return ocekavej(php('kontrola-migraci.php', neexistujici()), 1, 'neexistuje');
 });
