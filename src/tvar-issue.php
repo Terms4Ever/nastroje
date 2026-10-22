@@ -4,7 +4,7 @@
  * (kontrola-issues.php), kontrola jednoho těla před založením
  * (kontrola-tvaru-issue.php) i workflow reagující na událost issues.
  *
- * Pravidla jsou v docs/03-rozhodovaci-dennik.md pod N19, N20, N33 a N39.
+ * Pravidla jsou v docs/03-rozhodovaci-denik.md pod N19, N20, N33 a N39.
  */
 declare(strict_types=1);
 

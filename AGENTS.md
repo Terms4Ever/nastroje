@@ -82,7 +82,7 @@ padá a po ní projde.
 ## Jak se domlouváme
 
 Česky, krátké pomlčky. Nové pravidlo nebo jeho zpřísnění je rozhodnutí
-zadavatele, ne agenta; zapisuje se do `docs/03-rozhodovaci-dennik.md` pod
+zadavatele, ne agenta; zapisuje se do `docs/03-rozhodovaci-denik.md` pod
 značkou N a do stavu projektu. Hotová práce se hlásí s důkazem: výstup
 kontroly, ne tvrzení, že prošla.
 

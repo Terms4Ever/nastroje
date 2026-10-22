@@ -22,7 +22,7 @@
  */
 declare(strict_types=1);
 
-const VERZE_DOKUMENTACE = '1.7.2';
+const VERZE_DOKUMENTACE = '1.7.3';
 
 /** Jediné dokumenty, které smí ležet v kořeni. Zbytek patří do docs/. */
 const SOUBORY_V_KORENI = ['README.md', 'AGENTS.md', 'CLAUDE.md', 'LICENSE.md', 'CHANGELOG.md'];
@@ -47,7 +47,7 @@ const ZAKAZANE_NAZVY_VZDY = [
 ];
 
 /** Dokumenty, které musí mít každý projekt. */
-const POVINNE_DOKUMENTY = ['docs/00-stav-projektu.md', 'docs/03-rozhodovaci-dennik.md'];
+const POVINNE_DOKUMENTY = ['docs/00-stav-projektu.md', 'docs/03-rozhodovaci-denik.md'];
 
 /**
  * Témata, která jde poznat ze souborů, a dokument, který je má popsat:
@@ -177,7 +177,7 @@ if (($nastaveni['docs-kontrola'] ?? false) !== true) {
 $slozka = $koren . '/docs';
 if (!is_dir($slozka)) {
     fwrite(STDERR, "\n  Kontrola dokumentace je zapnutá, ale složka docs/ chybí.\n"
-        . "  Založ docs/00-stav-projektu.md a docs/03-rozhodovaci-dennik.md, nebo kontrolu vypni.\n\n");
+        . "  Založ docs/00-stav-projektu.md a docs/03-rozhodovaci-denik.md, nebo kontrolu vypni.\n\n");
     exit(1);
 }
 
@@ -333,7 +333,7 @@ if ($nastaveni['docs-vymahat-aktualizaci'] && $zaklad !== null && $cil !== null)
                     'dávka mění %d souborů s kódem, ale žádný dokument v docs/ nepřibyl'
                     . ' ani se nezměnil (obrázky, přílohy a mazání se nepočítají).'
                     . ' Zapiš, co se změnilo, do docs/00-stav-projektu.md,'
-                    . ' a proč, do docs/03-rozhodovaci-dennik.md',
+                    . ' a proč, do docs/03-rozhodovaci-denik.md',
                     count($kod)
                 );
             }
@@ -405,6 +405,12 @@ foreach (souboryVGitu($koren) as $cesta) {
 
 foreach (POVINNE_DOKUMENTY as $povinny) {
     if (!is_file($koren . '/' . $povinny)) {
+        // Starší klony musí projít i během přejmenování v ostatních projektech.
+        if ($povinny === 'docs/03-rozhodovaci-denik.md'
+            && is_file($koren . '/docs/03-rozhodovaci-dennik.md')) {
+            $varovani[] = 'docs/03-rozhodovaci-dennik.md přejmenuj na docs/03-rozhodovaci-denik.md';
+            continue;
+        }
         $chyby[] = sprintf('chybí %s, ten má mít každý projekt', $povinny);
     }
 }

@@ -28,7 +28,7 @@ vlastního dokumentu.
 | `00-stav-projektu.md` | vždy | živý stav: co je hotové, co se dělá, co je dál, na co si dát pozor; přepisuje se |
 | `01-postup-prace.md` | projekt má vlastní postup nad rámec globálních pokynů (hooky, skripty, pasti) | jak se v projektu pracuje a čeho se vyvarovat |
 | `02-nasazeni.md` | projekt se někam nasazuje (web, obchod s aplikacemi, cizí server) | kam, čím, jaká tajemství, co se nenahrává, jak ověřit výsledek, nouzová cesta |
-| `03-rozhodovaci-dennik.md` | vždy | co bylo kdy rozhodnuto a proč; nový záznam, starý se nepřepisuje |
+| `03-rozhodovaci-denik.md` | vždy | co bylo kdy rozhodnuto a proč; nový záznam, starý se nepřepisuje |
 | `04-overeni.md` | projekt má testy nebo kontroly | co testy dokazují a co ne, kde běží, co se přeskočí a proč |
 | `05` a výš | téma, které se v kódu nepozná na první pohled: standard, integrace, schéma databáze, bezpečnost | jak to funguje a proč |
 
@@ -40,7 +40,7 @@ Vzory pro 01, 02 a 04 jsou v `sablony/docs/`.
 
 | Pravidlo | Chyba nebo doporučení |
 |---|---|
-| `00-stav-projektu.md` a `03-rozhodovaci-dennik.md` existují | chyba |
+| `00-stav-projektu.md` a `03-rozhodovaci-denik.md` existují | chyba |
 | generovaný blok ve stavu odpovídá skutečnosti | chyba |
 | dávka, která sáhla na kód, přidala nebo upravila dokument `.md` v `docs/` | chyba |
 | jen krátké pomlčky | chyba nebo upozornění podle `docs-pomlcky` |
@@ -55,3 +55,7 @@ Dokument podle pokynů založí agent, který v projektu pracuje.
 Kontrola pozná, že dávka s kódem upravila dokument, ne že dokument popisuje,
 co se změnilo. Levná obejití (obrázek do `docs/snimky/`, smazání souboru)
 zavírá, věcnou správnost nezaručí.
+
+Od verze 1.7.3 je správný název rozhodovacího deníku s jedním n (N43).
+Starší název se dvěma n kontrola přijme s upozorněním kvůli starším
+klonům; nové projekty a šablony používají jen správnou cestu.

@@ -36,6 +36,26 @@ $vysledky = [];
 
 // --- kontrola dokumentace -------------------------------------------------
 
+pripad('dokumentace: správný název rozhodovacího deníku projde (N43)', function (): array {
+    $repo = novyProjekt();
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'v pořádku');
+});
+
+pripad('dokumentace: starý název deníku projde s upozorněním (N43)', function (): array {
+    $repo = novyProjekt();
+    rename($repo . '/docs/03-rozhodovaci-denik.md', $repo . '/docs/03-rozhodovaci-dennik.md');
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 0, 'přejmenuj');
+});
+
+pripad('dokumentace: chybějící rozhodovací deník neprojde (N43)', function (): array {
+    $repo = novyProjekt();
+    unlink($repo . '/docs/03-rozhodovaci-denik.md');
+
+    return ocekavej(php('kontrola-dokumentace.php', $repo), 1, 'chybí docs/03-rozhodovaci-denik.md');
+});
+
 pripad('dokumentace: platný projekt projde', function (): array {
     $repo = novyProjekt();
 
@@ -73,7 +93,7 @@ pripad('dokumentace: dávka s kódem a změněným dokumentem projde', function 
     $repo = novyProjekt();
     $zaklad = git($repo, 'rev-parse', 'HEAD');
     zapis($repo, 'app/kod.php', "<?php\nfunction ahoj(): string { return 'svete'; }\n");
-    pripis($repo, 'docs/03-rozhodovaci-dennik.md', "\n## T2 - Pozdrav se změnil (23. 9. 2026)\n\nFunkce vrací jiný text.\n");
+    pripis($repo, 'docs/03-rozhodovaci-denik.md', "\n## T2 - Pozdrav se změnil (23. 9. 2026)\n\nFunkce vrací jiný text.\n");
     commit($repo, 'Kód i deník');
 
     // Počet dokumentů v hlášce: s rozsahem se dřív vypsal počet změněných
@@ -1123,7 +1143,7 @@ function novyProjekt(array $nastaveni = [], array $soubory = []): string
     zapis($repo, 'AGENTS.md', "# Zkušební projekt\n\nSlouží jen testům kontrol.\n");
     zapis($repo, 'CLAUDE.md', "@AGENTS.md\n");
     zapis($repo, 'docs/00-stav-projektu.md', "# Stav projektu\n\nZkušební projekt pro testy kontrol.\n");
-    zapis($repo, 'docs/03-rozhodovaci-dennik.md', "# Rozhodovací deník\n\n## T1 - Založení (" . DNES . ")\n\nZkušební projekt.\n");
+    zapis($repo, 'docs/03-rozhodovaci-denik.md', "# Rozhodovací deník\n\n## T1 - Založení (" . DNES . ")\n\nZkušební projekt.\n");
     zapis($repo, 'app/kod.php', "<?php\nfunction ahoj(): string { return 'ahoj'; }\n");
     foreach ($soubory as $cesta => $obsah) {
         zapis($repo, $cesta, $obsah);

@@ -45,7 +45,7 @@ v `~/.claude/CLAUDE.md`.
 | `.gitignore` | soubory s hesly, `vendor/`, `.claude/settings.local.json` |
 
 **4. Dokumentace** do `docs/`: `00-stav-projektu.md` (živý stav, generovaný blok
-přes `php stav-projektu.php . --zapsat`) a `03-rozhodovaci-dennik.md` (první
+přes `php stav-projektu.php . --zapsat`) a `03-rozhodovaci-denik.md` (první
 záznam je právě tenhle přesun na GitHub). Obojí musí být vypsané v README
 v sekci `## 📚 Dokumentace`.
 

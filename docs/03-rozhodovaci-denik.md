@@ -551,7 +551,7 @@ rozsah všechny repozitáře kromě Igrisu.
   nástroje AGENTS.md, ale text je jen jeden, takže se nemůže rozejít.
 - `docs/` nese dokumenty; data patří jinam, výjimkou jsou `docs/snimky/`
   a `docs/prilohy/`.
-- Povinné jsou `docs/00-stav-projektu.md` a `docs/03-rozhodovaci-dennik.md`.
+- Povinné jsou `docs/00-stav-projektu.md` a `docs/03-rozhodovaci-denik.md`.
 - Názvy se značkou dočasnosti na konci (`-FINAL`, `-new`, `-old`, `kopie`,
   `.bak`, `soubor (1).png`) neprojdou: nikdo nepozná, co platí.
 
@@ -1425,3 +1425,15 @@ tabulky žijí jen po dobu běhu. Složka, která se tak jen jmenuje
 migrace neprojde, test s vlastní databází projde, `contests/` výjimku nemá.
 Proti verzi 1.1.0 padal druhý, první a třetí hlídají, že výjimka není
 širší, než má být.
+
+## N43 - Rozhodovací deník má v názvu jedno n (22. 10. 2026)
+
+Zadavatel: „Aha tak to oprav i v ostatních projektech tento překlep“.
+Správná cesta je `docs/03-rozhodovaci-denik.md`; název, odkazy, šablony
+a kontrola se mění společně. Obsah rozhodnutí zůstává zachován.
+Kontrola 1.7.3 přijímá i původní název se dvěma n a upozorní na přejmenování,
+aby starší klony a postupně aktualizované projekty dál prošly.
+
+Nový regresní případ před opravou selhal, protože kontrola vyžadovala
+překlep. Po opravě prošly tři případy: správný název, starší název
+s upozorněním a odmítnutí projektu bez deníku.

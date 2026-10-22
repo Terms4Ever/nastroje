@@ -199,7 +199,7 @@ před každým pushem do nastroje spolu s kontrolou kompatibility.
 | `docs/00-stav-projektu.md` | živý stav: co je hotové, co se dělá, co je dál, a které repozitáře jsou zapojené |
 | `docs/01-postup-prace.md` | jak se mění pravidlo nebo kontrola, pořadí pushů a pasti z Windows |
 | `docs/02-nasazeni.md` | jak se pravidla dostanou do projektů: sdílená workflow, nasazení webů, hooky, zapojení projektu |
-| `docs/03-rozhodovaci-dennik.md` | co bylo kdy rozhodnuto a proč. Nové rozhodnutí je nový záznam, staré se nepřepisuje |
+| `docs/03-rozhodovaci-denik.md` | co bylo kdy rozhodnuto a proč. Nové rozhodnutí je nový záznam, staré se nepřepisuje |
 | `docs/04-overeni.md` | co testy kontrol dokazují a co ne, kde běží, co se přeskočí |
 | `docs/05-standard-issues.md` | tvar, zařazení, snímky a zavření issue s důkazem, kde se to vynucuje |
 | `docs/06-standard-migraci.md` | migrace, jejich nasazení a spouštěč s otisky |

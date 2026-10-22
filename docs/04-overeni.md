@@ -160,3 +160,11 @@ běh opozdit nebo vynechat, nepřetržitou dostupnost tato měření nedokazují
   nastroje #2: odebrání a vrácení štítku (N31, N33).
 - **Okno trezoru.** `hooky/test-trezor.ps1` ho proklikává přes UI Automation,
   ale jen ručně, v CI neběží.
+
+## Oprava názvu deníku (N43, 22. 10. 2026)
+
+Případ se správnou cestou před opravou skončil chybou a požadoval
+původní překlep. Po opravě prošly všechny tři případy N43. Celá místní
+sada: 199 případů, 195 úspěšných, 0 neúspěšných a 4 přeskočené testy
+spouštěče migrací bez testovací databáze. Syntaxe změněných PHP souborů,
+README, dokumentace a online výběr sady prošly.
