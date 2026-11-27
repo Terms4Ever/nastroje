@@ -21,16 +21,16 @@ seznamu ve funkce.php a testů. Samotné zapojení pravidel monitoring nezapín�
 
 <!-- monitoring:zacatek -->
 
-**Poslední měření:** 2026-11-27T18:20:51+01:00 (Europe/Prague).
+**Poslední měření:** 2026-11-27T19:22:21+01:00 (Europe/Prague).
 
 | Web | HTTP | Odezva | Certifikát do (UTC) | Výsledek |
 |---|---|---|---|---|
-| [zvedavka.cz](https://zvedavka.cz/) | 200 | 305 ms | 2027-01-01 | V pořádku |
-| [onlinefakturuj.cz](https://onlinefakturuj.cz/) | 200 | 652 ms | 2027-02-09 | V pořádku |
-| [vyridimestavbu.cz](https://vyridimestavbu.cz/) | 200 | 581 ms | 2027-02-09 | V pořádku |
-| [tomas.saroun.me](https://tomas.saroun.me/) | 200 | 420 ms | 2027-01-17 | V pořádku |
+| [zvedavka.cz](https://zvedavka.cz/) | 200 | 720 ms | 2027-01-01 | V pořádku |
+| [onlinefakturuj.cz](https://onlinefakturuj.cz/) | 200 | 1047 ms | 2027-02-09 | V pořádku |
+| [vyridimestavbu.cz](https://vyridimestavbu.cz/) | 200 | 1075 ms | 2027-02-09 | V pořádku |
+| [tomas.saroun.me](https://tomas.saroun.me/) | 200 | 1022 ms | 2027-01-17 | V pořádku |
 
-[Hodinový záznam](../monitoring/vysledky/2026-11/2026-11-27T17Z.json). Jednorázové měření, nikoli nepřetržitá dostupnost.
+[Hodinový záznam](../monitoring/vysledky/2026-11/2026-11-27T18Z.json). Jednorázové měření, nikoli nepřetržitá dostupnost.
 
 <!-- monitoring:konec -->
 
